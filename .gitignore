@@ -1,1 +1,4 @@
 .build/
+build/
+grammar/.antlr/
+grammar/demo/.antlr/
