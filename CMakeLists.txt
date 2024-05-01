@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 project(PallasSpec2IR)
 
-# 17 required by antlr
+# 17 required by antlr4
 SET (CMAKE_CXX_STANDARD 17)
 
 ###########################################################################################
@@ -30,27 +30,6 @@ set(ANTLR_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/res/dependencies/antlr-4.13.1-c
 
 # add macros to generate ANTLR Cpp code from grammar
 find_package(ANTLR REQUIRED)
-
-# Call macro to add lexer and grammar to your build dependencies.
-# TODO: Modify to match the actual grammars
-antlr_target(DemoGrammarLexer grammar/demo/TLexer.g4 LEXER
-             PACKAGE antlrcpptest
-             COMPILE_FLAGS -Xexact-output-dir)
-antlr_target(DemoGrammarParser grammar/demo/TParser.g4 PARSER
-             PACKAGE antlrcpptest
-             DEPENDS_ANTLR DemoGrammarLexer
-             COMPILE_FLAGS -lib ${ANTLR_DemoGrammarLexer_OUTPUT_DIR} -Xexact-output-dir)
-
-# include generated files in project environment
-include_directories(${ANTLR_DemoGrammarLexer_OUTPUT_DIR})
-include_directories(${ANTLR_DemoGrammarParser_OUTPUT_DIR})
-
-# add generated grammar to demo binary target
-add_executable(demo tools/demo/main.cpp
-               ${ANTLR_DemoGrammarLexer_CXX_OUTPUTS}
-               ${ANTLR_DemoGrammarParser_CXX_OUTPUTS})
-target_link_libraries(demo antlr4_static)
-
 
 #############################################################################################
 #   LLVM include based on https://llvm.org/docs/CMake.html#embedding-llvm-in-your-project   #

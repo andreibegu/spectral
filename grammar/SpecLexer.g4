@@ -1,8 +1,9 @@
 lexer grammar SpecLexer;
 
 @lexer::members {
-    private static boolean inBlockSpec = false;
-    private static boolean inLineSpec = false;
+    private: 
+		bool inBlockSpec = false;
+    	bool inLineSpec = false;
 }
 
 /*
