@@ -1,7 +1,7 @@
 parser grammar SpecParser;
 options { tokenVocab = SpecLexer; }
 
-file: .*? (spec .*?)+;
+file: .*? (spec .*?)* EOF;
 
 spec: specStatementBlock | specContractBlock;
 
