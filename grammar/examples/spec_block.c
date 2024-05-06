@@ -7,9 +7,10 @@ int foo () {
 }
 
 /*@
- * requires a >= b ;
- * ensures \result >= a && \result >= b;
- */
+ requires a >= b ;
+ ensures \result >= a && \result >= b;
+ @*/
 int bar (int a, int b) {
     return a + b ;
 }
+

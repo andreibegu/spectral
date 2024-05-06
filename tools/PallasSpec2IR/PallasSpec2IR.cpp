@@ -13,11 +13,13 @@ int main(int argc, char **argv) {
     pallasspec2ir::SpecLexer lexer(&inStream);
     antlr4::CommonTokenStream tokens(&lexer);
 
+    std::cout << "TOKENS: " << std::endl;
     tokens.fill();
     for (auto token : tokens.getTokens()) {
         std::cout << token->toString() << std::endl;
     }
 
+    std::cout << "TREE: " << std::endl;
     pallasspec2ir::SpecParser parser(&tokens);
     antlr4::tree::ParseTree* tree = parser.file();
 
