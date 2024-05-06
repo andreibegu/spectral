@@ -21,23 +21,3 @@ spec_statement
     ;
 
 spec_expression: (~';')+ ;
-
-/*
-file: .*? (spec .*?)* EOF;
-
-spec: specStatementBlock | specContractBlock;
-
-specContractBlock: startSpec specContractClause+ endSpec;
-
-specStatementBlock: startSpec specStatement+ endSpec;
-
-specContractClause: 'requires' (~';')+ ';' | 'ensures' (~';')+ ';' | 'loop_invariant' (~';')+ ';';
-
-specStatement: 'assert' (~';')+ ';' | 'assume' (~';')+ ';';
-
-
-startSpec: StartLineSpec | StartBlockSpec;
-
-endSpec: EndSpec;
-
-*/
