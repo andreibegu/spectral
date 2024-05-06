@@ -8,7 +8,8 @@ int foo () {
 
 /*@
  * requires a >= b ;
+ * ensures \result >= a && \result >= b;
  */
-void bar (int a, int b) {
-    a + b ;
+int bar (int a, int b) {
+    return a + b ;
 }

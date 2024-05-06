@@ -14,9 +14,9 @@ int main(int argc, char **argv) {
     antlr4::CommonTokenStream tokens(&lexer);
 
     tokens.fill();
-    //for (auto token : tokens.getTokens()) {
-    //    std::cout << token->toString() << std::endl;
-    //}
+    for (auto token : tokens.getTokens()) {
+        std::cout << token->toString() << std::endl;
+    }
 
     pallasspec2ir::SpecParser parser(&tokens);
     antlr4::tree::ParseTree* tree = parser.file();
