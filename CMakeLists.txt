@@ -69,3 +69,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 add_subdirectory(lib)
 add_subdirectory(tools)
 add_subdirectory(test)
+
+# Required to fix import errors in VSCode
+add_definitions(-DCMAKE_EXPORT_COMPILE_COMMANDS=ON)

@@ -3,6 +3,7 @@
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
+#include "transform/SourceSpecTransformer.h"
 
 int main(int argc, char **argv) {
     std::ifstream srcFileStream;
@@ -28,6 +29,9 @@ int main(int argc, char **argv) {
     
 
     std::cout << tree->toStringTree(&parser) << std::endl << std::endl;
+
+    auto specTransformer = sourcespec2ir::SourceSpecTransformer();
+    specTransformer.test();
 
     // std::cout << " Leberkäse " << std::endl;
     std::cout.flush();
