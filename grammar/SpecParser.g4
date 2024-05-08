@@ -3,21 +3,21 @@ options { tokenVocab = SpecLexer; }
 
 file: .*? (spec .*?)*;
 
-spec: spec_contract_block | spec_statement_block ;
+spec: specContractBlock | specStatementBlock ;
 
-spec_contract_block: SPEC_START spec_contract_clause+ SPEC_END;
+specContractBlock: SPEC_START specContractClause+ SPEC_END;
 
-spec_statement_block: SPEC_START spec_statement+ SPEC_END;
+specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
-spec_contract_clause
-    : ('requires' spec_expression ';')
-    | ('ensures'  spec_expression ';')
-    | ('loop_invariant' spec_expression ';')
+specContractClause
+    : ('requires' specExpression ';') # requiresClause
+    | ('ensures'  specExpression ';') # ensuresClause
+    | ('loop_invariant' specExpression ';') # invariantClause
     ;
 
-spec_statement
-    : ('assert' spec_expression ';')
-    | ('assume' spec_expression ';')
+specStatement
+    : ('assert' specExpression ';') # assertStatement
+    | ('assume' specExpression ';') # assumeStatement
     ;
 
-spec_expression: (~';')+ ;
+specExpression: (~';')+ ;

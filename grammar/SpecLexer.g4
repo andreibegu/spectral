@@ -16,6 +16,6 @@ ASSUME: 'assume';
 LOOP_INVARIANT: 'loop_invariant';
 
 SEMI: ';';
-Whitespace: [ \t]+ -> skip; // channel(HIDDEN);
-Newline: ( '\r' '\n'? | '\n') -> skip; // channel(HIDDEN);
+Whitespace: [ \t]+ -> channel(HIDDEN);
+Newline: ( '\r' '\n'? | '\n') -> channel(HIDDEN);
 SPEC_OTHER: . ;
