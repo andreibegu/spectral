@@ -12,6 +12,7 @@ antlr_target(SpecificationParser ${CMAKE_SOURCE_DIR}/grammar/SpecParser.g4 PARSE
 
 add_library(sourceSpec2IR STATIC
     SourceSpecTransformer.cpp
+    DummySourceSpecContextProvider.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 
     ${ANTLR_SpecificationParser_CXX_OUTPUTS} 
 )
@@ -25,4 +26,5 @@ target_include_directories(sourceSpec2IR PUBLIC
 
 target_link_libraries(sourceSpec2IR
         antlr4_static 
+        pallasUtils
 )

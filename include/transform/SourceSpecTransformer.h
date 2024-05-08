@@ -10,13 +10,13 @@ namespace sourcespec2ir
     class SourceSpecTransformer : SpecParserBaseVisitor
     {
     public:
-        void printSpecifications(char *inputPath);
-        void test(char *inputPath);
+        void printSpecifications(char *srcInputPath, char *irInputPath);
 
         // Overwritten visitor-methods
-        std::any visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx) override;
-        std::any visitRequiresClause(SpecParser::RequiresClauseContext *ctx) override;
+        std::any visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx) override; 
+        std::any visitRequiresClause(SpecParser::RequiresClauseContext *ctx) override; 
         std::any visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx) override; 
+        std::any visitInvariantClause(SpecParser::InvariantClauseContext *ctx) override;
 
     private:
         /**

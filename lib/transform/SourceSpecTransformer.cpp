@@ -1,6 +1,8 @@
 #include <iostream>
+#include <cassert>
 
 #include "transform/SourceSpecTransformer.h"
+#include "utils/IRVariableCollector.h"
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
@@ -8,10 +10,10 @@
 namespace sourcespec2ir
 {
 
-    void SourceSpecTransformer::printSpecifications(char *inputPath)
+    void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
     {
         std::ifstream srcFileStream;
-        srcFileStream.open(inputPath);
+        srcFileStream.open(srcInputPath);
 
         antlr4::ANTLRInputStream inStream(srcFileStream);
         SpecLexer lexer(&inStream);
@@ -27,37 +29,12 @@ namespace sourcespec2ir
 
         visit(tree);
 
-        std::cout.flush();
-    }
-
-    void SourceSpecTransformer::test(char *inputPath)
-    {
-
-        std::ifstream srcFileStream;
-        srcFileStream.open(inputPath);
-
-        antlr4::ANTLRInputStream inStream(srcFileStream);
-        SpecLexer lexer(&inStream);
-        antlr4::CommonTokenStream tokens(&lexer);
-
-        /*
-        std::cout << "TOKENS: " << std::endl;
-        tokens.fill();
-        for (auto token : tokens.getTokens()) {
-            std::cout << token->toString() << std::endl;
-            // std::cout << token->getChannel() << " - " << token->getText() << " - " << token->getType() << std::endl;
-        }
-        */
-
-        SpecParser parser(&tokens);
-        antlr4::tree::ParseTree *tree = parser.file();
-
-        std::cout << tree->toStringTree(&parser) << std::endl
-                  << std::endl;
+        // Test the IRVariableCollector
+        IRVariableCollector varCollector("", irInputStream);
 
         std::cout.flush();
     }
-
+    
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
         std::cout << "Entering SpecContractBlock: " << std::endl;
@@ -71,13 +48,19 @@ namespace sourcespec2ir
         auto expr = ctx->specExpression();
         std::cout << "Requires clause: " << getExprAsStr(expr) << std::endl;
         return 0;
-        // return visitChildren(ctx);
     }
 
     std::any SourceSpecTransformer::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
     {
         auto expr = ctx->specExpression();
         std::cout << "Requires clause: " << getExprAsStr(expr) << std::endl;
+        return 0;
+    }
+
+    std::any SourceSpecTransformer::visitInvariantClause(SpecParser::InvariantClauseContext *ctx)
+    {
+        std::cerr << "Loop invariants are currently not supported! " << std::endl;
+        assert(false);
         return 0;
     }
 

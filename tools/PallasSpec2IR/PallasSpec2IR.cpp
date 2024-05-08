@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 {
 
     sourcespec2ir::SourceSpecTransformer transformer;
-    transformer.printSpecifications(argv[1]);
+    transformer.printSpecifications(argv[1], argv[2]);
 
     return 0;
 }

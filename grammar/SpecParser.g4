@@ -9,6 +9,7 @@ specContractBlock: SPEC_START specContractClause+ SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
+// It might be better to put the loop-invariant into its own block. 
 specContractClause
     : ('requires' specExpression ';') # requiresClause
     | ('ensures'  specExpression ';') # ensuresClause
