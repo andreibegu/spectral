@@ -1,19 +1,18 @@
 #ifndef PALLAS_SOURCESPECTRANSFORMER_H
 #define PALLAS_SOURCESPECTRANSFORMER_H
 
-// #include "SpecParserBaseVisitor.h"
+#include "SpecParserBaseVisitor.h"
 
-// TODO: Do things
+namespace sourcespec2ir
+{
 
-namespace sourcespec2ir {
-
-    class SourceSpecTransformer /* : SpecParserBaseVisitor */ {
+    class SourceSpecTransformer : SpecParserBaseVisitor
+    {
     public:
-        void test();
+        void printSpecifications(char *inputPath);
+        void test(char *inputPath);
     };
 
 }
-
-
 
 #endif // PALLAS_SOURCESPECTRANSFORMER_H

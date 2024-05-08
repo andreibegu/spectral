@@ -3,6 +3,7 @@ project(PallasSpec2IR)
 
 # 17 required by antlr4
 SET (CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 ###########################################################################################
 #   Antlr4 build based on https://github.com/antlr/antlr4/tree/master/runtime/Cpp/cmake   #
