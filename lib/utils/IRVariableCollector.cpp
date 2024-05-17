@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <llvm/ADT/SmallPtrSet.h>
+#include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/IntrinsicInst.h>
@@ -54,6 +55,7 @@ namespace sourcespec2ir
         }
     }
 
+    // TODO: Return String-Map
     void IRVariableCollector::getVariablesForFunction(const llvm::Function &fun)
     {
         if (fun.isDeclaration())
@@ -61,7 +63,6 @@ namespace sourcespec2ir
             // This is an external declaration, not a definition
             std::cout << "Declaration: " << fun.getName().str() << std::endl;
             throw std::invalid_argument("Recieved a function declaration instead of a function definition");
-            // TODO: Process the arguments and return-type anyway
         }
 
         // Collect the IR-level arguments into a set
@@ -69,25 +70,28 @@ namespace sourcespec2ir
         for (auto &arg : fun.args())
         {
             argSet.insert(&arg);
-            // std::cout << "Param: " << arg.getName().str() << std::endl;
         }
 
         // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the function arguments
         for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
         {
             const llvm::Instruction* instr = &*i;
-            const llvm::CallInst* callInstr = llvm::dyn_cast<llvm::CallInst>(instr);
-            // Filter out calls to llvm intrinsics (llvm.dbg.declare)
-            if (llvm::isa_and_nonnull<llvm::IntrinsicInst>(callInstr))
+            // Only consider calls to llvm intrinsics (llvm.dbg.declare)
+            if (llvm::isa_and_nonnull<llvm::IntrinsicInst>(instr))
             {
-                if (callInstr->getCalledFunction() != nullptr && 
-                    callInstr->getCalledFunction()->getIntrinsicID() == llvm::Intrinsic::dbg_declare)
+                const llvm::IntrinsicInst* intrinsic = llvm::cast<llvm::IntrinsicInst>(instr);
+                if (intrinsic->getCalledFunction() != nullptr && 
+                    intrinsic->getCalledFunction()->getIntrinsicID() == llvm::Intrinsic::dbg_declare)
                 {
-                    std::cout << "Detected call to llvm.dbg.declare: " << std::endl;
+                    // TODO: Filter on function arguments
+                    // Potential alternative: Filter on scopes ???
+
+                    // Handle calls to llvm.dbg.declare
                     // The second argument of the function contains the metadata-description
-                    // llvm::cast<llvm::DILocalVariable>
-                    callInstr->getArgOperand(1);
-                    // TODO: Continue here
+                    const auto *op2AsMd = llvm::cast<llvm::MetadataAsValue>(intrinsic->getOperand(1))->getMetadata();
+                    const auto *varMd = llvm::cast<llvm::DIVariable>(op2AsMd); 
+                    // TODO: Differentiate local, and global variables ?!
+                    std::cout << "Detected variable: " << varMd->getName().str() << " : " << varMd->getType()->getName().str() << std::endl;
                 }
                 // TODO handle dbg_value. dbg_assign
             }
