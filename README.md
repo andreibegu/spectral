@@ -10,7 +10,7 @@ https://github.com/antlr/antlr4/tree/master/runtime/Cpp
 - Antlr4-build is based on the [CMake-template for the cpp-target](https://github.com/antlr/antlr4/tree/master/runtime/Cpp/cmake)
 - Build using cmake:
 > cmake -G "Unix Makefiles" -B .build -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15    
-> cmake --build .build --target pallas-spec2ir
+> cmake --build .build --target pallasSpec2ir
 
 ## Structure
 The structure of the repository is based on 
