@@ -1,8 +1,10 @@
 #ifndef PALLAS_IRVARIABLECOLLECTOR_H
 #define PALLAS_IRVARIABLECOLLECTOR_H
 
-#include <llvm/IR/Function.h>
 #include <string>
+#include <memory>
+#include <llvm/ADT/StringMap.h>
+#include <llvm/IR/Function.h>
 
 
 namespace sourcespec2ir
@@ -22,7 +24,7 @@ namespace sourcespec2ir
     public:
         IRVariableCollector(std::string srcFunctionName, std::string irFilePath);
     private:
-        void getVariablesForFunction(const llvm::Function &fun);
+        std::unique_ptr<llvm::StringMap<std::string>> getVariablesForFunction(const llvm::Function &fun);
     };
 
 }

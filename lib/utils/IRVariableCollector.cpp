@@ -55,8 +55,7 @@ namespace sourcespec2ir
         }
     }
 
-    // TODO: Return String-Map
-    void IRVariableCollector::getVariablesForFunction(const llvm::Function &fun)
+    std::unique_ptr<llvm::StringMap<std::string>> IRVariableCollector::getVariablesForFunction(const llvm::Function &fun)
     {
         if (fun.isDeclaration())
         {
@@ -64,6 +63,9 @@ namespace sourcespec2ir
             std::cout << "Declaration: " << fun.getName().str() << std::endl;
             throw std::invalid_argument("Recieved a function declaration instead of a function definition");
         }
+
+        // Map of source-variable names to their types.
+        auto sourceVarMap = std::make_unique<llvm::StringMap<std::string>>();
 
         // Collect the IR-level arguments into a set
         llvm::SmallPtrSet<const llvm::Argument*, 10> argSet;
@@ -90,14 +92,17 @@ namespace sourcespec2ir
                     // The second argument of the function contains the metadata-description
                     const auto *op2AsMd = llvm::cast<llvm::MetadataAsValue>(intrinsic->getOperand(1))->getMetadata();
                     const auto *varMd = llvm::cast<llvm::DIVariable>(op2AsMd); 
+                    auto srcName = varMd->getName().str();
+                    auto srcType = varMd->getType()->getName().str();
                     // TODO: Differentiate local, and global variables ?!
-                    std::cout << "Detected variable: " << varMd->getName().str() << " : " << varMd->getType()->getName().str() << std::endl;
+                    std::cout << "Detected variable: " << srcName << " : " << srcType << std::endl;
                 }
                 // TODO handle dbg_value. dbg_assign
             }
         }
 
         // TODO: Wrap the return-type of the function in an appropriate variable?!
+        return sourceVarMap;
     }
 
 }
