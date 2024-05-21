@@ -2,7 +2,7 @@
 #include <cassert>
 
 #include "transform/SourceSpecTransformer.h"
-#include "utils/IRVariableCollector.h"
+#include "utils/SrcVariableCollector.h"
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
@@ -30,7 +30,7 @@ namespace sourcespec2ir
         visit(tree);
 
         // Test the IRVariableCollector
-        IRVariableCollector varCollector("", irInputStream);
+        printAllSrcVars("", irInputStream);
 
         std::cout.flush();
     }

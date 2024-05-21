@@ -15,14 +15,14 @@
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/Instructions.h>
 
-#include "utils/IRVariableCollector.h"
+#include "utils/SrcVariableCollector.h"
 
 namespace
 {
 
     /**
      * Checks if the debug intrinsic refers to a function argument.
-     * 
+     *
      * TODO: Include global variables
      * TODO: Support llvm.dbg.declare
      */
@@ -47,24 +47,20 @@ namespace
 namespace sourcespec2ir
 {
 
-    IRVariableCollector::IRVariableCollector(std::string srcFunctionName, std::string irFilePath)
+    void printAllSrcVars(std::string srcFunctionName, std::string irFilePath)
     {
         // TODO: Modify to accept a module instead of a file-name.
-        // TODO: Report a name for the return variable.
 
         // Parse the given IR-file
         llvm::LLVMContext context;
         llvm::SMDiagnostic smDiag;
         auto pModule = llvm::parseIRFile(irFilePath, smDiag, context);
 
-        // TODO: Extract looking up a function by it's source-name into a separate class/ function.
-
         for (const auto &f : pModule->getFunctionList())
         {
             if (f.isIntrinsic())
             {
                 // Skip llvm-intrinsics
-                // std::cout << "Skipping intrinsic " << llvm::Intrinsic::getName(f.getIntrinsicID()).str() << std::endl;
                 continue;
             }
 
@@ -74,7 +70,10 @@ namespace sourcespec2ir
             {
                 auto fName = pDISubprog->getName().str();
                 std::cout << "Detected function with name: " << fName << std::endl;
-                getVariablesForFunction(f, true);
+                auto vars = getSrcVariablesForFunction(f, true);
+                for (auto &v: *vars) {
+                    std::cout << "Variable " << v.first().str() << " : " << v.second << std::endl;
+                } 
             }
             else
             {
@@ -84,7 +83,7 @@ namespace sourcespec2ir
         }
     }
 
-    std::unique_ptr<llvm::StringMap<std::string>> IRVariableCollector::getVariablesForFunction(const llvm::Function &fun, const bool argsOnly)
+    std::unique_ptr<llvm::StringMap<std::string>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly)
     {
         if (fun.isDeclaration())
         {
@@ -100,7 +99,7 @@ namespace sourcespec2ir
         {
             const llvm::Instruction *instr = &*i;
             // Only consider calls to llvm intrinsics
-            if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr)) 
+            if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
             {
                 const auto *srcVar = intrinsic->getVariable();
                 auto srcName = srcVar->getName().str();
@@ -116,12 +115,9 @@ namespace sourcespec2ir
                 auto currentVal = sourceVarMap->find(srcName);
                 if (currentVal != sourceVarMap->end() && currentVal->second != srcType)
                 {
-                    // Two different types for the same variable --> something is wrong
                     throw std::runtime_error("Found two different types for the same variable. This should not happen!");
                 }
                 sourceVarMap->insert(std::make_pair(srcName, srcType));
-
-                std::cout << "Detected variable: " << srcName << " : " << srcType << std::endl;
             }
         }
 

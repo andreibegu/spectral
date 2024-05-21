@@ -1,6 +1,6 @@
 
 add_library(pallasUtils STATIC
-    IRVariableCollector.cpp
+    SrcVariableCollector.cpp
 )
          
 
