@@ -19,12 +19,18 @@ namespace sourcespec2ir
      * TODO: Since these will be deprecated with LLVM-19 (https://llvm.org/docs/RemoveDIsDebugInfo.html) this will have to 
      * be migrated once we switch to LLVM-19. 
      */
+    
     class IRVariableCollector
     {
     public:
         IRVariableCollector(std::string srcFunctionName, std::string irFilePath);
     private:
-        std::unique_ptr<llvm::StringMap<std::string>> getVariablesForFunction(const llvm::Function &fun);
+        /**
+         * Collects the source-level names and types for the varibles in the given function 'fun'. 
+         * Parameter 'argsOnly' determines if only function arguments are considered. 
+         * The detection of function-arguments assuemes that the mem2reg pass has been run on the IR of the representation.
+         */
+        std::unique_ptr<llvm::StringMap<std::string>> getVariablesForFunction(const llvm::Function &fun, const bool argsOnly);
     };
 
 }
