@@ -124,4 +124,29 @@ namespace sourcespec2ir
         return sourceVarMap;
     }
 
+    const llvm::Function *getFunctionBySrcName(const llvm::Module &module, const std::string &src_name)
+    {
+        for (const auto &f : module.getFunctionList())
+        {
+            // Skip llvm-intrinsics
+            if (f.isIntrinsic())
+            {
+                continue;
+            }
+
+            // Look at the debug-metadata to find the source-name of the function.
+            auto pDISubprog = f.getSubprogram();
+            if (pDISubprog != nullptr)
+            {
+                auto fName = pDISubprog->getName().str();
+                if (fName == src_name) 
+                {
+                    return &f;
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
 }

@@ -3,8 +3,10 @@
 
 #include <string>
 #include <memory>
+
 #include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Module.h>
 
 namespace sourcespec2ir
 {
@@ -17,6 +19,8 @@ namespace sourcespec2ir
      *
      * TODO: Since these will be deprecated with LLVM-19 (https://llvm.org/docs/RemoveDIsDebugInfo.html) this will have to
      * be migrated once we switch to LLVM-19.
+     * 
+     * TODO: Rename to something better!
      */
 
     /**
@@ -26,6 +30,8 @@ namespace sourcespec2ir
      * Currently, global variables are not returned when argsOnly is set to true.
      */
     std::unique_ptr<llvm::StringMap<std::string>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly);
+
+    const llvm::Function *getFunctionBySrcName(const llvm::Module &module, const std::string &src_name);
 
     /**
      * Prints all the source-vars and their types. For testing purposes

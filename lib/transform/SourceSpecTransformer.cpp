@@ -33,8 +33,37 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformModule()
     {
-        // TODO: Do very smart things
+        // Traverse the specifications for all functions and dump the translated specifications somewhere
+        visit(srcParseTree);
+
+        // Assemble the specifications into a compilation-unit of the source-language
+
+        // Invoke the compiler-driver to compile the specifications into IR
+
+        // Transform the compiled specifications into common format (calls to specification-functions)
+
+        // Add the generated specifications to the original IR
+
+        // Dump the generated IR somewhere
     }
+
+
+    void SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
+    {
+        // Perform preprocessing of specification expression (e.g. replacement of \result)
+        // TODO: Not sure if this is required here
+
+        // Wrap the expression in a source-language function
+        auto irFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto srcVars = getSrcVariablesForFunction(*irFunction, true);
+        auto wrapperFun = getWrappingFunction(*srcVars, expr);
+
+        // Do things with the resulting wrapper-function
+        // TODO: Store the wrapper functions somewhere (i.e. StringStream)
+        std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
+        std::cout << wrapperFun << std::endl;
+    }
+
 
     void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
     {
@@ -48,15 +77,16 @@ namespace sourcespec2ir
         std::cout.flush();
     }
 
+
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
-        std::cout << "Entering SpecContractBlock: " << std::endl;
+        // std::cout << "Entering SpecContractBlock: " << std::endl;
 
         // Get the name of the function to which the contract-block belongs
         auto startLine = ctx->start->getLine();
         auto startCol = ctx->start->getCharPositionInLine();
-        auto endLine = ctx->start->getLine();
-        auto endCol = ctx->start->getCharPositionInLine();
+        auto endLine = ctx->stop->getLine();
+        auto endCol = ctx->stop->getCharPositionInLine();
         const auto specFun = specContextProvider->getContractBlockContext(startLine, startCol, endLine, endCol);
 
         // Get the variables that are accessible in the contract block
@@ -70,24 +100,28 @@ namespace sourcespec2ir
         // Reset source context
         currentSrcContext = std::nullopt;
 
-        std::cout << "Exiting SpecContractBlock: " << std::endl;
+        // std::cout << "Exiting SpecContractBlock: " << std::endl;
         return res;
     }
+
 
     std::any SourceSpecTransformer::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
     {
         auto expr = ctx->specExpression();
-        // auto srcVars = getSrcVariablesForFunction();
-        // auto wrapper =
+        auto exprStr = getExprAsStr(*expr);
+        transformExpression(exprStr, currentSrcContext.value());
 
-        std::cout << "Requires clause: " << getExprAsStr(*expr) << std::endl;
+        // std::cout << "Requires clause: " << exprStr << std::endl;
         return 0;
     }
 
     std::any SourceSpecTransformer::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
     {
         auto expr = ctx->specExpression();
-        std::cout << "Requires clause: " << getExprAsStr(*expr) << std::endl;
+        auto exprStr = getExprAsStr(*expr);
+        transformExpression(exprStr, currentSrcContext.value());
+
+        // std::cout << "Requires clause: " << getExprAsStr(*expr) << std::endl;
         return 0;
     }
 
@@ -108,7 +142,7 @@ namespace sourcespec2ir
         return charStream->getText(i);
     }
 
-    std::string SourceSpecTransformer::getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const SpecParser::SpecExpressionContext &expr)
+    std::string SourceSpecTransformer::getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr)
     {
         // Name of wrapping function
         auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
@@ -126,12 +160,9 @@ namespace sourcespec2ir
             argList += varType + " " + varName;
         }
 
-        // Expression as string
-        auto exprStr = this->getExprAsStr(expr);
-
         auto wFun = "bool " + funName + "(" + argList + ") \n" +
                     "{ \n " +
-                    "return " + exprStr + "; \n" +
+                    "return " + expr + "; \n" +
                     "} \n";
         return wFun;
     }

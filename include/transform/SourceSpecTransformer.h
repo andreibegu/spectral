@@ -68,13 +68,18 @@ namespace sourcespec2ir
          */
         std::optional<std::string> currentSrcContext = std::nullopt;
 
+
+        void transformExpression(std::string expr, std::string srcFunctionName);
+
+
         /**
          * Retrieving the textual representation of the specification expressions using getText() removes the whitespaces.
          * This method returns the full textual representatoin including whitespaces by using the underlying token-stream.
          */
         std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
 
-        std::string getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const SpecParser::SpecExpressionContext &expr);
+        // TODO: Move somewhere else as this is source-language specific
+        std::string getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
     };
 
 }
