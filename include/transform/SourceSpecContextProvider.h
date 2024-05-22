@@ -11,7 +11,7 @@ namespace sourcespec2ir
      * specifications in the source file.
      * The class has to be implemented for every supported source language.
      */
-    class AbstractSourceSpecContextProvider
+    class SourceSpecContextProvider
     {
     public:
         /**
