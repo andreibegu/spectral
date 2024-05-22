@@ -2,7 +2,6 @@
 #include <cassert>
 #include <memory>
 
-
 #include <llvm/IRReader/IRReader.h>
 
 #include "transform/SourceSpecTransformer.h"
@@ -33,16 +32,12 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformModule()
     {
-        // Traverse the specifications for all functions and dump the translated specifications somewhere
+        // Traverse the specifications for all functions and transform them into IR
         visit(srcParseTree);
-
-        // Assemble the specifications into a compilation-unit of the source-language
-
-        // Invoke the compiler-driver to compile the specifications into IR
 
         // Transform the compiled specifications into common format (calls to specification-functions)
 
-        // Add the generated specifications to the original IR
+        // Add the generated specifications to the original IR (merge IR files)
 
         // Dump the generated IR somewhere
     }
@@ -58,10 +53,16 @@ namespace sourcespec2ir
         auto srcVars = getSrcVariablesForFunction(*irFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
 
+        // Assemble the wrapper-function into a compilation-unit of the source-language
+        auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
+
+        // Invoke the compiler-driver to compile the specifications into IR
+
         // Do things with the resulting wrapper-function
         // TODO: Store the wrapper functions somewhere (i.e. StringStream)
         std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
         std::cout << wrapperFun << std::endl;
+
     }
 
 
@@ -90,7 +91,7 @@ namespace sourcespec2ir
         const auto specFun = specContextProvider->getContractBlockContext(startLine, startCol, endLine, endCol);
 
         // Get the variables that are accessible in the contract block
-        // TODO: Add field to class and query variables from IR.
+        // TODO: Add field to class and query variables from IR once instead of doing this for every statement again.
 
         // Set source context
         currentSrcContext = specFun;
@@ -103,7 +104,6 @@ namespace sourcespec2ir
         // std::cout << "Exiting SpecContractBlock: " << std::endl;
         return res;
     }
-
 
     std::any SourceSpecTransformer::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
     {
@@ -165,6 +165,12 @@ namespace sourcespec2ir
                     "return " + expr + "; \n" +
                     "} \n";
         return wFun;
+    }
+
+    std::string SourceSpecTransformer::assembleSrcCompilationUnit(std::string wrapperFunction)
+    {
+        // TODO: Implement and do smart things
+        return wrapperFunction;
     }
 
 }

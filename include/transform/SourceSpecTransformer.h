@@ -78,8 +78,22 @@ namespace sourcespec2ir
          */
         std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
 
-        // TODO: Move somewhere else as this is source-language specific
+        /**
+         * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
+         * to their types and generates a string-representation of a function in the source-language.
+         * 
+         * TODO: Move somewhere else as this is source-language specific
+         */
         std::string getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
+
+        /**
+         * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in 
+         * the source language.
+         * E.g. adds imports for the specification library, ...
+         * 
+         * TODO: Move somewhere else as this is source-language specific
+         */
+        std::string assembleSrcCompilationUnit(std::string wrapperFunction);
     };
 
 }
