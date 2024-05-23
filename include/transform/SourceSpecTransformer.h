@@ -14,9 +14,10 @@
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
-
 #include "SpecParserBaseVisitor.h"
+
 #include "SourceSpecContextProvider.h"
+#include "SourceCompilerDriver.h"
 
 namespace sourcespec2ir
 {
@@ -24,7 +25,8 @@ namespace sourcespec2ir
     class SourceSpecTransformer : SpecParserBaseVisitor
     {
     public:
-        SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, char *irInputPath, char *srcInputPath);
+        SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, 
+                              std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath);
 
         void transformModule();
 
@@ -43,6 +45,8 @@ namespace sourcespec2ir
         int specFunCnt = 0;
 
         std::unique_ptr<SourceSpecContextProvider> specContextProvider;
+
+        std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
 
         // Pointer to the context of the loaded llvm module
         std::unique_ptr<llvm::LLVMContext> irContext;

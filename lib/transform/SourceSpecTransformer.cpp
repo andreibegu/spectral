@@ -12,8 +12,10 @@
 
 namespace sourcespec2ir
 {
-    SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, char *irInputPath, char *srcInputPath)
+    SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider,
+                                                 std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath)
         : specContextProvider(std::move(specCtxProvider))
+        , srcCompilerDriver(std::move(compilerDriver))
     {
         // Parse the IR-file
         irContext = std::make_unique<llvm::LLVMContext>();
@@ -42,7 +44,6 @@ namespace sourcespec2ir
         // Dump the generated IR somewhere
     }
 
-
     void SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
     {
         // Perform preprocessing of specification expression (e.g. replacement of \result)
@@ -57,14 +58,16 @@ namespace sourcespec2ir
         auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
 
         // Invoke the compiler-driver to compile the specifications into IR
+        auto compiledSpec = srcCompilerDriver->compileSpecification(wrapperCU);
+
+        // Extract the IR-function that represents the compiled expression
+        // TODO
 
         // Do things with the resulting wrapper-function
         // TODO: Store the wrapper functions somewhere (i.e. StringStream)
         std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
         std::cout << wrapperFun << std::endl;
-
     }
-
 
     void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
     {
@@ -77,7 +80,6 @@ namespace sourcespec2ir
 
         std::cout.flush();
     }
-
 
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {

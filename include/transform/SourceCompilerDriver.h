@@ -20,10 +20,11 @@ namespace sourcespec2ir
         /**
          * Takes a string that contains a compilation unit of the source-language and returns a LLVM-Module that contains the 
          * compiled LLVM-representation of this function.
+         * Takes a string-representation of the source-language comilation unit as a parameter. 
          * 
          * The compilation is expected to generate debug information whch is needed for further processing.  
          */
-        virtual std::unique_ptr<llvm::Module> compileSpecification = 0;
+        virtual std::unique_ptr<llvm::Module> compileSpecification(const std::string &cu) = 0;
 
     };
 
