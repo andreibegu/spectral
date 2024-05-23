@@ -37,10 +37,6 @@ namespace sourcespec2ir
         // Traverse the specifications for all functions and transform them into IR
         visit(srcParseTree);
 
-        // Transform the compiled specifications into common format (calls to specification-functions)
-
-        // Add the generated specifications to the original IR (merge IR files)
-
         // Dump the generated IR somewhere
     }
 
@@ -50,18 +46,27 @@ namespace sourcespec2ir
         // TODO: Not sure if this is required here
 
         // Wrap the expression in a source-language function
-        auto irFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
-        auto srcVars = getSrcVariablesForFunction(*irFunction, true);
+        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto srcVars = getSrcVariablesForFunction(*irCtxFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
 
         // Assemble the wrapper-function into a compilation-unit of the source-language
         auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
 
         // Invoke the compiler-driver to compile the specifications into IR
-        auto compiledSpec = srcCompilerDriver->compileSpecification(wrapperCU);
+        auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU);
 
         // Extract the IR-function that represents the compiled expression
-        // TODO
+        // TODO: Remove the hardcoded function-name. 
+        //      (I.e. introduce struct wrapper-function that contains, the name, the string-repr, and the function that the specification refers to)
+        compiledSpecModule->getAliasList();
+        compiledSpecModule->getFunctionList().begin();
+        // TODO: Causes segmentation fault --> Try to introduce the ModuleWithScope-Struct to keep the LLVM-Scope alive (see desktop)
+        // auto irSpecFunction = getFunctionBySrcName(*compiledSpecModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
+
+        // Transform the compiled specifications into common format (calls to specification-functions)
+
+        // Add the generated specifications to the original IR (merge IR files)
 
         // Do things with the resulting wrapper-function
         // TODO: Store the wrapper functions somewhere (i.e. StringStream)
@@ -172,7 +177,7 @@ namespace sourcespec2ir
     std::string SourceSpecTransformer::assembleSrcCompilationUnit(std::string wrapperFunction)
     {
         // TODO: Implement and do smart things
-        return wrapperFunction;
+        return "#include <stdbool.h> \n " + wrapperFunction;
     }
 
 }

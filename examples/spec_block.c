@@ -13,8 +13,9 @@ int foo () {
 
 /*@
  requires a >= b ;
- ensures \result >= a && \result >= b;
+ ensures 0 >= a && a >= b;
  @*/
+// ensures \result >= a && \result >= b;
 int bar (int a, int b) {
     int c = 5;
     c += 2;
