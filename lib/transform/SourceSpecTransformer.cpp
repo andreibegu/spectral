@@ -3,6 +3,7 @@
 #include <memory>
 
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Linker/Linker.h>
 
 #include "transform/SourceSpecTransformer.h"
 #include "utils/SrcVariableCollector.h"
@@ -38,6 +39,9 @@ namespace sourcespec2ir
         visit(srcParseTree);
 
         // Dump the generated IR somewhere
+        std::cerr << "===============================================" << std::endl;
+        irModule->dump();
+        std::cerr << "===============================================" << std::endl;
     }
 
     void SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
@@ -50,19 +54,23 @@ namespace sourcespec2ir
         auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
 
         // Compile the specifications into IR
-        auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU);
-
-        // Extract the IR-function that represents the compiled expression
-        // TODO: Remove the hardcoded function-name. 
-        // TODO: Also retrieve all functions that are called from the specification.
-        //      (I.e. introduce struct wrapper-function that contains, the name, the string-repr, and the function that the specification refers to);
-        auto irSpecFunction = getFunctionBySrcName(*compiledSpecModule->llvmModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
+        auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU, *irContext);
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         // TODO: Implement
 
         // Add the generated specifications to the original IR (merge IR files)
-        
+        // TODO: Check if cloneFunctionInto is the better option
+        // TODO: Check for name-conflics/ renaming!
+        // TODO: Make sure to only link stuff that we actually need and do not include e.g. the spec-lib multiple times
+        auto linker = llvm::Linker(*irModule);
+        linker.linkInModule(std::move(compiledSpecModule));
+        // TODO: Check if it ok that the context of and SMDiagnostics of the compiled module go out of scope here
+
+        // Extract the IR-function that represents the compiled expression
+        // TODO: Remove the hardcoded function-name. 
+        auto irSpecFunction = getFunctionBySrcName(*irModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
+
         // Generate call to the specification-function
 
         // Do things with the resulting wrapper-function

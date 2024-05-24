@@ -52,7 +52,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs support core irreader linker)
 
 
 # Enable warnings

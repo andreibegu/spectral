@@ -11,7 +11,7 @@
 
 namespace sourcespec2ir {
 
-    std::unique_ptr<ModuleWithContext> CCompilerDriver::compileSpecification(const std::string &cu)
+    std::unique_ptr<llvm::Module> CCompilerDriver::compileSpecification(const std::string &cu, llvm::LLVMContext &context)
     {
         // TODO: Very ugly, try to use libclang or something like that.
         // TODO: Cleanup file handling (or better: avoid using files altogether)
@@ -24,12 +24,14 @@ namespace sourcespec2ir {
         // Run compiler to generate IR
         // std::cout << "Invoking clang " << std::endl;
         std::system("clang-15 -emit-llvm -S -g -O0 tmp_driver.c -o tmp_driver.ll -Xclang -disable-O0-optnone");
+        
+        // TODO: Run the opt-tool for the mem2reg-pass
 
         // Parse the resulting file as an LLVM-IR module
-        // TODO: Context and SMDiag probably go out of scope
-        auto irContext = std::make_unique<llvm::LLVMContext>();
-        auto irSMDiag = std::make_unique<llvm::SMDiagnostic>();
-        auto irModule = llvm::parseIRFile("tmp_driver.ll", *irSMDiag.get(), *irContext.get());
+        // TODO: Check if the SMDiagnostics has to stay in scope along with the module.
+        llvm::SMDiagnostic irSMDiag;
+        // auto irSMDiag = std::make_unique<llvm::SMDiagnostic>();
+        auto irModule = llvm::parseIRFile("tmp_driver.ll", irSMDiag, context);
 
         if (!irModule) 
         {   
@@ -37,12 +39,7 @@ namespace sourcespec2ir {
             throw std::runtime_error("Failed to read the ir of the compiled specification-expression.");
         }
 
-        auto res = std::make_unique<ModuleWithContext>();
-        res->llvmContext = std::move(irContext);
-        res->llvmSMDiagnostic = std::move(irSMDiag);
-        res->llvmModule = std::move(irModule);
-
-        return res;
+        return irModule;
     }
 
 }
