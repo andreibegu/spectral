@@ -1,6 +1,8 @@
 #ifndef PALLAS_SOURCECOMPILERDRIVER_H
 #define PALLAS_SOURCECOMPILERDRIVER_H
 
+#include "utils/ModuleWithContext.h"
+
 #include <string>
 #include <memory>
 
@@ -24,7 +26,7 @@ namespace sourcespec2ir
          * 
          * The compilation is expected to generate debug information whch is needed for further processing.  
          */
-        virtual std::unique_ptr<llvm::Module> compileSpecification(const std::string &cu) = 0;
+        virtual std::unique_ptr<ModuleWithContext> compileSpecification(const std::string &cu) = 0;
 
     };
 

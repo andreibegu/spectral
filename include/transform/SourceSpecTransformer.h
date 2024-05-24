@@ -48,6 +48,7 @@ namespace sourcespec2ir
 
         std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
 
+        // TODO: Replace with unique_ptr to ModuleWithContext
         // Pointer to the context of the loaded llvm module
         std::unique_ptr<llvm::LLVMContext> irContext;
 

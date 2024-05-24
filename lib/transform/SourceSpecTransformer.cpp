@@ -42,31 +42,28 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
     {
-        // Perform preprocessing of specification expression (e.g. replacement of \result)
-        // TODO: Not sure if this is required here
 
-        // Wrap the expression in a source-language function
+        // Wrap the expression first, into a source-language function and then into a source-compilation unit
         auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
         auto srcVars = getSrcVariablesForFunction(*irCtxFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
-
-        // Assemble the wrapper-function into a compilation-unit of the source-language
         auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
 
-        // Invoke the compiler-driver to compile the specifications into IR
+        // Compile the specifications into IR
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU);
 
         // Extract the IR-function that represents the compiled expression
         // TODO: Remove the hardcoded function-name. 
-        //      (I.e. introduce struct wrapper-function that contains, the name, the string-repr, and the function that the specification refers to)
-        compiledSpecModule->getAliasList();
-        compiledSpecModule->getFunctionList().begin();
-        // TODO: Causes segmentation fault --> Try to introduce the ModuleWithScope-Struct to keep the LLVM-Scope alive (see desktop)
-        // auto irSpecFunction = getFunctionBySrcName(*compiledSpecModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
+        // TODO: Also retrieve all functions that are called from the specification.
+        //      (I.e. introduce struct wrapper-function that contains, the name, the string-repr, and the function that the specification refers to);
+        auto irSpecFunction = getFunctionBySrcName(*compiledSpecModule->llvmModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
 
         // Transform the compiled specifications into common format (calls to specification-functions)
+        // TODO: Implement
 
         // Add the generated specifications to the original IR (merge IR files)
+        
+        // Generate call to the specification-function
 
         // Do things with the resulting wrapper-function
         // TODO: Store the wrapper functions somewhere (i.e. StringStream)

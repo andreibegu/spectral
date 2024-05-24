@@ -14,7 +14,7 @@ namespace sourcespec2ir
     {
     public:
 
-        std::unique_ptr<llvm::Module> compileSpecification(const std::string &cu);
+        std::unique_ptr<ModuleWithContext> compileSpecification(const std::string &cu);
 
     };
 
