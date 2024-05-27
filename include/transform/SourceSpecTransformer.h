@@ -74,7 +74,12 @@ namespace sourcespec2ir
         std::optional<std::string> currentSrcContext = std::nullopt;
 
 
-        void transformExpression(std::string expr, std::string srcFunctionName);
+        /**
+         * Transforms an expression in the source language into LLVM-IR by wrapping it into a function. 
+         * The generated function is added to the module of the SourceSpecTransformer. A pointer to the 
+         * newly generated function is returned. 
+         */
+        const llvm::Function *transformExpression(std::string expr, std::string srcFunctionName);
 
 
         /**
@@ -92,7 +97,7 @@ namespace sourcespec2ir
          * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
          * to their types and generates a string-representation of a function in the source-language.
          * 
-         * TODO: Move somewhere else as this is source-language specific
+         * TODO: Move somewhere else or make virtual as this is source-language specific
          */
         std::unique_ptr<SrcWrapperFunction> getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
 
@@ -101,7 +106,7 @@ namespace sourcespec2ir
          * the source language.
          * E.g. adds imports for the specification library, ...
          * 
-         * TODO: Move somewhere else as this is source-language specific
+         * TODO: Move somewhere else or make virtual as this is source-language specific
          */
         std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
     };

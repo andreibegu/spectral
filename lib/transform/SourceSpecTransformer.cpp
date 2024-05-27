@@ -47,7 +47,7 @@ namespace sourcespec2ir
         std::cerr << "===============================================" << std::endl;
     }
 
-    void SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
+    const llvm::Function *SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
     {
 
         // Wrap the expression first, into a source-language function and then into a source-compilation unit
@@ -75,9 +75,7 @@ namespace sourcespec2ir
         // Extract the IR-function that represents the compiled expression
         auto irSpecFunction = getFunctionBySrcName(*irModule, wrapperFun->name);
 
-        // Generate call to the specification-function
-
-
+        return irSpecFunction;
     }
 
     void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
@@ -141,9 +139,16 @@ namespace sourcespec2ir
 
     std::any SourceSpecTransformer::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
     {
+        // Generate LLVM-IR function for the specification expression.
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        transformExpression(exprStr, currentSrcContext.value());
+        auto specFunction = transformExpression(exprStr, currentSrcContext.value());
+
+        // Determine which variables are passed to the specification function:
+
+        // Generate call to the specification-function
+
+
 
         // std::cout << "Requires clause: " << exprStr << std::endl;
         return 0;
