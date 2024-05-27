@@ -15,15 +15,22 @@ namespace sourcespec2ir {
     {
         // TODO: Very ugly, try to use libclang or something like that.
         // TODO: Cleanup file handling (or better: avoid using files altogether)
+        const std::string tmpFileBase = "tmp_driver";
+        const std::string tmpSrcFile = tmpFileBase + ".c";
+        const std::string tmpIrFile = tmpFileBase + ".ll";
 
         // Put c-code into file
-        std::ofstream out("tmp_driver.c");
+        std::ofstream out(tmpSrcFile);
         out << cu;
         out.close();
         
         // Run compiler to generate IR
         // std::cout << "Invoking clang " << std::endl;
-        std::system("clang-15 -emit-llvm -S -g -O0 tmp_driver.c -o tmp_driver.ll -Xclang -disable-O0-optnone");
+        std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + tmpSrcFile + 
+            " -o " + tmpIrFile + 
+            " -Xclang -disable-O0-optnone" + 
+            " -I ../../res/spec_libs/c/";
+        std::system(clangCall.c_str());
 
         // Parse the resulting file as an LLVM-IR module
         // TODO: Check if the SMDiagnostics has to stay in scope along with the module.

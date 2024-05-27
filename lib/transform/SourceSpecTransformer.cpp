@@ -209,8 +209,10 @@ namespace sourcespec2ir
 
     std::string SourceSpecTransformer::assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction)
     {
-        // TODO: Implement and do smart things
-        return "#include <stdbool.h> \n " + wrapperFunction.stringRepr;
+        // TODO: add include-statements form the source-file
+        std::string includes = "#include <c_spec_lib.h> \n ";
+
+        return includes + wrapperFunction.stringRepr;
     }
 
 }
