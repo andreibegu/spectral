@@ -54,20 +54,18 @@ namespace sourcespec2ir
         auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
         auto srcVars = getSrcVariablesForFunction(*irCtxFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
-        auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
+        auto wrapperCU = assembleSrcCompilationUnit(*wrapperFun);
         // std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
         // std::cout << wrapperFun << std::endl;
 
-        // Compile the specifications into IR
+        // Compile the specifications into IR & run em2reg optimization
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU, *irContext);
-        // Run mem2reg on compiled specifications
         promoteMemToReg(*compiledSpecModule);
 
         // Transform the compiled specifications into common format (calls to specification-functions)
-        // TODO: Implement & Cleanup imports, llvm modules
+        // TODO: Implement
 
         // Add the generated specifications to the original IR (merge IR files)
-        // TODO: Check if cloneFunctionInto is the better option
         // TODO: Check for name-conflics/ renaming!
         // TODO: Make sure to only link stuff that we actually need and do not include e.g. the spec-lib multiple times
         auto linker = llvm::Linker(*irModule);
@@ -75,8 +73,7 @@ namespace sourcespec2ir
         // TODO: Check if it ok that the context of and SMDiagnostics of the compiled module go out of scope here
 
         // Extract the IR-function that represents the compiled expression
-        // TODO: Remove the hardcoded function-name. 
-        auto irSpecFunction = getFunctionBySrcName(*irModule, "PALLAS_SPEC_" + std::to_string(specFunCnt - 1));
+        auto irSpecFunction = getFunctionBySrcName(*irModule, wrapperFun->name);
 
         // Generate call to the specification-function
 
@@ -179,7 +176,7 @@ namespace sourcespec2ir
         return charStream->getText(i);
     }
 
-    std::string SourceSpecTransformer::getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr)
+    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr)
     {
         // Name of wrapping function
         auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
@@ -201,13 +198,14 @@ namespace sourcespec2ir
                     "{ \n " +
                     "return " + expr + "; \n" +
                     "} \n";
-        return wFun;
+
+        return std::make_unique<SrcWrapperFunction>(funName, wFun);
     }
 
-    std::string SourceSpecTransformer::assembleSrcCompilationUnit(std::string wrapperFunction)
+    std::string SourceSpecTransformer::assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction)
     {
         // TODO: Implement and do smart things
-        return "#include <stdbool.h> \n " + wrapperFunction;
+        return "#include <stdbool.h> \n " + wrapperFunction.stringRepr;
     }
 
 }

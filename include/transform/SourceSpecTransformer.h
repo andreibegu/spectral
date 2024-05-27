@@ -18,6 +18,7 @@
 
 #include "SourceSpecContextProvider.h"
 #include "SourceCompilerDriver.h"
+#include "utils/SrcWrapperFunction.h"
 
 namespace sourcespec2ir
 {
@@ -93,7 +94,7 @@ namespace sourcespec2ir
          * 
          * TODO: Move somewhere else as this is source-language specific
          */
-        std::string getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
+        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
 
         /**
          * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in 
@@ -102,7 +103,7 @@ namespace sourcespec2ir
          * 
          * TODO: Move somewhere else as this is source-language specific
          */
-        std::string assembleSrcCompilationUnit(std::string wrapperFunction);
+        std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
     };
 
 }

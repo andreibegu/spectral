@@ -1,6 +1,7 @@
 
 add_library(pallasUtils STATIC
     SrcVariableCollector.cpp
+    SrcWrapperFunction.cpp
 )
          
 
