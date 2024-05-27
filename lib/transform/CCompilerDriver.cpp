@@ -24,8 +24,6 @@ namespace sourcespec2ir {
         // Run compiler to generate IR
         // std::cout << "Invoking clang " << std::endl;
         std::system("clang-15 -emit-llvm -S -g -O0 tmp_driver.c -o tmp_driver.ll -Xclang -disable-O0-optnone");
-        
-        // TODO: Run the opt-tool for the mem2reg-pass
 
         // Parse the resulting file as an LLVM-IR module
         // TODO: Check if the SMDiagnostics has to stay in scope along with the module.

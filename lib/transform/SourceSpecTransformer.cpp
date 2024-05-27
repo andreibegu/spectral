@@ -2,8 +2,11 @@
 #include <cassert>
 #include <memory>
 
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/Transforms/Utils/Mem2Reg.h>
 
 #include "transform/SourceSpecTransformer.h"
 #include "utils/SrcVariableCollector.h"
@@ -52,12 +55,16 @@ namespace sourcespec2ir
         auto srcVars = getSrcVariablesForFunction(*irCtxFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
         auto wrapperCU = assembleSrcCompilationUnit(wrapperFun);
+        // std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
+        // std::cout << wrapperFun << std::endl;
 
         // Compile the specifications into IR
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU, *irContext);
+        // Run mem2reg on compiled specifications
+        promoteMemToReg(*compiledSpecModule);
 
         // Transform the compiled specifications into common format (calls to specification-functions)
-        // TODO: Implement
+        // TODO: Implement & Cleanup imports, llvm modules
 
         // Add the generated specifications to the original IR (merge IR files)
         // TODO: Check if cloneFunctionInto is the better option
@@ -73,10 +80,7 @@ namespace sourcespec2ir
 
         // Generate call to the specification-function
 
-        // Do things with the resulting wrapper-function
-        // TODO: Store the wrapper functions somewhere (i.e. StringStream)
-        std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
-        std::cout << wrapperFun << std::endl;
+
     }
 
     void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
@@ -89,6 +93,27 @@ namespace sourcespec2ir
         printAllSrcVars("", irInputStream);
 
         std::cout.flush();
+    }
+
+    void SourceSpecTransformer::promoteMemToReg(llvm::Module &module) {
+        llvm::LoopAnalysisManager lam;
+        llvm::FunctionAnalysisManager fam;
+        llvm::CGSCCAnalysisManager cgam;
+        llvm::ModuleAnalysisManager mam;
+
+        // While we do not use the PassBuilder directly, it is required by the ModuleAnalysisManager
+        // Causes SegmentationFault otherwise. 
+        llvm::PassBuilder passBuilder;
+
+        passBuilder.registerModuleAnalyses(mam);
+        passBuilder.registerCGSCCAnalyses(cgam);
+        passBuilder.registerFunctionAnalyses(fam);
+        passBuilder.registerLoopAnalyses(lam);
+        passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
+
+        llvm::ModulePassManager mpm;
+        mpm.addPass(llvm::createModuleToFunctionPassAdaptor(llvm::PromotePass()));
+        mpm.run(module, mam);
     }
 
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)

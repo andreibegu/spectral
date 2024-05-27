@@ -26,6 +26,7 @@ target_include_directories(sourceSpec2IR PUBLIC
 )
 
 target_link_libraries(sourceSpec2IR
+        ${llvm_libs} 
         antlr4_static 
         pallasUtils
 )

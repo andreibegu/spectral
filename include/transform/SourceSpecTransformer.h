@@ -83,6 +83,11 @@ namespace sourcespec2ir
         std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
 
         /**
+         * Runs the mem2reg-pass on the given module. 
+         */
+        void promoteMemToReg(llvm::Module &module);
+
+        /**
          * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
          * to their types and generates a string-representation of a function in the source-language.
          * 
