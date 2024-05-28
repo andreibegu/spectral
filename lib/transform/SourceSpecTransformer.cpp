@@ -2,6 +2,9 @@
 #include <cassert>
 #include <memory>
 
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/Metadata.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/IRReader/IRReader.h>
@@ -9,6 +12,7 @@
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 
 #include "transform/SourceSpecTransformer.h"
+#include "utils/IrSpecConstants.h"
 #include "utils/SrcVariableCollector.h"
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
@@ -39,7 +43,9 @@ namespace sourcespec2ir
     void SourceSpecTransformer::transformModule()
     {
         // Traverse the specifications for all functions and transform them into IR
-        visit(srcParseTree);
+        visit(srcParseTree); 
+
+        // TODO: Invoke LLVm verifier to check the generated IR
 
         // Dump the generated IR somewhere
         std::cerr << "===============================================" << std::endl;
@@ -47,12 +53,10 @@ namespace sourcespec2ir
         std::cerr << "===============================================" << std::endl;
     }
 
-    const llvm::Function *SourceSpecTransformer::transformExpression(std::string expr, std::string srcFunctionName)
+    llvm::Function *SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName)
     {
-
         // Wrap the expression first, into a source-language function and then into a source-compilation unit
-        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
-        auto srcVars = getSrcVariablesForFunction(*irCtxFunction, true);
+        auto srcVars = getSrcVariablesForFunction(contextFunction, true);
         auto wrapperFun = getWrappingFunction(*srcVars, expr);
         auto wrapperCU = assembleSrcCompilationUnit(*wrapperFun);
         // std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
@@ -63,15 +67,15 @@ namespace sourcespec2ir
         promoteMemToReg(*compiledSpecModule);
 
         // Transform the compiled specifications into common format (calls to specification-functions)
-        // TODO: Implement
+        // TODO: Implement !!!
 
         // Add the generated specifications to the original IR (merge IR files)
         // TODO: Check for name-conflics/ renaming!
         // TODO: Make sure to only link stuff that we actually need and do not include e.g. the spec-lib multiple times
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(compiledSpecModule));
-        // TODO: Check if it ok that the context of and SMDiagnostics of the compiled module go out of scope here
-
+        // TODO: Check if it ok that the context of and SMDiagnostics of the compiled module go out of scope here  
+        
         // Extract the IR-function that represents the compiled expression
         auto irSpecFunction = getFunctionBySrcName(*irModule, wrapperFun->name);
 
@@ -142,15 +146,23 @@ namespace sourcespec2ir
         // Generate LLVM-IR function for the specification expression.
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        auto specFunction = transformExpression(exprStr, currentSrcContext.value());
+        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto specFunction = transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
 
         // Determine which variables are passed to the specification function:
+        // TODO: Implement this
 
-        // Generate call to the specification-function
+        // Generate the metadata that encodes the requires clause:
+        llvm::SmallVector<llvm::Metadata*, 2> mdElems;
+        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunction);
+        mdElems.push_back(specFuncAsMd);
+        
+        // TODO: Pass the variables that make up the arguments of the specification functions
+        auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
+        
+        // Insert the metadata-node into the IR
+        irCtxFunction->setMetadata(PALLAS_REQUIRES, requiresNode);
 
-
-
-        // std::cout << "Requires clause: " << exprStr << std::endl;
         return 0;
     }
 
@@ -158,7 +170,8 @@ namespace sourcespec2ir
     {
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        transformExpression(exprStr, currentSrcContext.value());
+        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
+        transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
 
         // std::cout << "Requires clause: " << getExprAsStr(*expr) << std::endl;
         return 0;

@@ -31,7 +31,7 @@ namespace sourcespec2ir
      */
     std::unique_ptr<llvm::StringMap<std::string>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly);
 
-    const llvm::Function *getFunctionBySrcName(const llvm::Module &module, const std::string &src_name);
+    llvm::Function *getFunctionBySrcName(llvm::Module &module, const std::string &src_name);
 
     /**
      * Prints all the source-vars and their types. For testing purposes

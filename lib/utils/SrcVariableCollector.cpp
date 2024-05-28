@@ -124,9 +124,9 @@ namespace sourcespec2ir
         return sourceVarMap;
     }
 
-    const llvm::Function *getFunctionBySrcName(const llvm::Module &module, const std::string &src_name)
+    llvm::Function *getFunctionBySrcName(llvm::Module &module, const std::string &src_name)
     {
-        for (const auto &f : module.getFunctionList())
+        for (auto &f : module.getFunctionList())
         {
             // Skip llvm-intrinsics
             if (f.isIntrinsic())

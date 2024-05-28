@@ -7,6 +7,7 @@
 #include <optional>
 
 #include <llvm/ADT/StringMap.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
@@ -79,7 +80,7 @@ namespace sourcespec2ir
          * The generated function is added to the module of the SourceSpecTransformer. A pointer to the 
          * newly generated function is returned. 
          */
-        const llvm::Function *transformExpression(std::string expr, std::string srcFunctionName);
+        llvm::Function *transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName);
 
 
         /**
