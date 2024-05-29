@@ -60,7 +60,7 @@ namespace sourcespec2ir
         // std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
         // std::cout << wrapperFun << std::endl;
 
-        // Compile the specifications into IR & run em2reg optimization
+        // Compile the specifications into IR & run mem2reg optimization
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU, *irContext);
         promoteMemToReg(*compiledSpecModule);
 
@@ -68,11 +68,8 @@ namespace sourcespec2ir
         // TODO: Implement !!!
 
         // Add the generated specifications to the original IR (merge IR files)
-        // TODO: Check for name-conflics/ renaming!
-        // TODO: Make sure to only link stuff that we actually need and do not include e.g. the spec-lib multiple times
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(compiledSpecModule));
-        // TODO: Check if it ok that the context of and SMDiagnostics of the compiled module go out of scope here  
         
         // Extract the IR-function that represents the compiled expression
         auto irSpecFunction = getFunctionBySrcName(*irModule, wrapperFun->name);
@@ -93,6 +90,8 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module) {
+
+        // TODO: Add this setup-stuff to the SourceSpecTransformer to avoid doing this multiple times. 
         llvm::LoopAnalysisManager lam;
         llvm::FunctionAnalysisManager fam;
         llvm::CGSCCAnalysisManager cgam;
@@ -115,16 +114,13 @@ namespace sourcespec2ir
 
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
-        // std::cout << "Entering SpecContractBlock: " << std::endl;
-
         // Get the name of the function to which the contract-block belongs
+        // TODO: Do this once for the contract-block instead of multiple times for every statement
         auto startLine = ctx->start->getLine();
         auto startCol = ctx->start->getCharPositionInLine();
         auto endLine = ctx->stop->getLine();
         auto endCol = ctx->stop->getCharPositionInLine();
         const auto specFun = specContextProvider->getContractBlockContext(startLine, startCol, endLine, endCol);
-
-        // TODO: Add field to class and query variables from IR once instead of doing this for every statement again.
 
         // Get the IR-function that the contract belongs to
         auto irCtxFunction = getFunctionBySrcName(*irModule, specFun);
@@ -151,7 +147,6 @@ namespace sourcespec2ir
         currentSrcContext = std::nullopt;
         currentSpecMDNodes = std::nullopt;
 
-        // std::cout << "Exiting SpecContractBlock: " << std::endl;
         return res;
     }
 
@@ -193,7 +188,6 @@ namespace sourcespec2ir
         auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
         transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
 
-        // std::cout << "Requires clause: " << getExprAsStr(*expr) << std::endl;
         return 0;
     }
 
@@ -242,7 +236,7 @@ namespace sourcespec2ir
 
     std::string SourceSpecTransformer::assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction)
     {
-        // TODO: add include-statements form the source-file
+        // TODO: add include-statements from the source-file
         std::string includes = "#include <c_spec_lib.h> \n ";
 
         return includes + wrapperFunction.stringRepr;
