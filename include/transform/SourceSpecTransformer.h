@@ -6,9 +6,11 @@
 #include <memory>
 #include <optional>
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/SourceMgr.h>
 
@@ -73,6 +75,13 @@ namespace sourcespec2ir
          * Name of the function in the source-language to which the currently visited contract belongs.
          */
         std::optional<std::string> currentSrcContext = std::nullopt;
+
+        /*
+         * Vector that contains all metadata node that have to be added to the current specification-block. 
+         * (E.g. in the case of a SpecContractBlock this vector is used to store the metadata-nodes htat encode the 
+         *  specification statements within this block.)
+         */
+        std::optional<llvm::SmallVector<llvm::MDNode*>> currentSpecMDNodes = std::nullopt;
 
 
         /**

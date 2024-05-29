@@ -3,8 +3,6 @@
 #include <memory>
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/ADT/SmallVector.h>
-#include <llvm/IR/Metadata.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/IRReader/IRReader.h>
@@ -126,16 +124,32 @@ namespace sourcespec2ir
         auto endCol = ctx->stop->getCharPositionInLine();
         const auto specFun = specContextProvider->getContractBlockContext(startLine, startCol, endLine, endCol);
 
-        // Get the variables that are accessible in the contract block
         // TODO: Add field to class and query variables from IR once instead of doing this for every statement again.
 
-        // Set source context
-        currentSrcContext = specFun;
+        // Get the IR-function that the contract belongs to
+        auto irCtxFunction = getFunctionBySrcName(*irModule, specFun);
 
+        // Set context
+        currentSrcContext = specFun;
+        // TODO: Consider using unique-pointers because the added MD-Nodes are freshly allocated.
+        currentSpecMDNodes = std::make_optional<llvm::SmallVector<llvm::MDNode*>>();
+
+        // Transform specification statements
         auto res = visitChildren(ctx);
 
-        // Reset source context
+        // Bundle the metadata-encodings of the spec-statements in a MDTuple add add them to the IR.
+        llvm::SmallVector<llvm::Metadata*> specStatementNodes;
+        for (auto node : currentSpecMDNodes.value()) 
+        {
+            specStatementNodes.push_back(node);
+        }
+        auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
+        irCtxFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
+         
+
+        // Reset context
         currentSrcContext = std::nullopt;
+        currentSpecMDNodes = std::nullopt;
 
         // std::cout << "Exiting SpecContractBlock: " << std::endl;
         return res;
@@ -143,6 +157,8 @@ namespace sourcespec2ir
 
     std::any SourceSpecTransformer::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
     {
+        // TODO: Check for errors (i.e. contextfunction, ... empty)
+
         // Generate LLVM-IR function for the specification expression.
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
@@ -154,14 +170,18 @@ namespace sourcespec2ir
 
         // Generate the metadata that encodes the requires clause:
         llvm::SmallVector<llvm::Metadata*, 2> mdElems;
+
+        auto mdIdentifier = llvm::MDString::get(*irContext, PALLAS_REQUIRES);
+        mdElems.push_back(mdIdentifier);
+
         auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunction);
         mdElems.push_back(specFuncAsMd);
         
         // TODO: Pass the variables that make up the arguments of the specification functions
         auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
         
-        // Insert the metadata-node into the IR
-        irCtxFunction->setMetadata(PALLAS_REQUIRES, requiresNode);
+        // Add the metadata-node to the list of nodes in the current contract. 
+        currentSpecMDNodes.value().push_back(requiresNode);
 
         return 0;
     }
@@ -227,5 +247,6 @@ namespace sourcespec2ir
 
         return includes + wrapperFunction.stringRepr;
     }
+
 
 }
