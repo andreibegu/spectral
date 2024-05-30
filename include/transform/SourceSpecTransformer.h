@@ -102,6 +102,12 @@ namespace sourcespec2ir
         void promoteMemToReg(llvm::Module &module);
 
         /**
+         * Encodes a statement of a function contract into a metadata-node and adds it to the 
+         * current list of specification-nodes (currentSpecMDNodes). 
+         */
+        void encodeFunctionContractStatement(std::string specExpr, std::string metadataId);
+
+        /**
          * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
          * to their types and generates a string-representation of a function in the source-language.
          * The generated wrapping-function MUST use the same ordering of its arguments as is defined by parameter srcVars.

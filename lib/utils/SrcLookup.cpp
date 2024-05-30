@@ -1,16 +1,3 @@
-/*
-
-#include <llvm/IR/Metadata.h>
-#include <llvm/IR/Value.h>
-#include <llvm/IR/DebugInfoMetadata.h>
-#include <llvm/IR/Module.h>
-
-
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/IR/InstIterator.h>
-#include <llvm/IR/Instructions.h>
-*/
-
 #include "utils/SrcLookup.h"
 #include "utils/IrLookup.h"
 
