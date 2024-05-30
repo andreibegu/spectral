@@ -11,7 +11,8 @@
 
 #include "transform/SourceSpecTransformer.h"
 #include "utils/IrSpecConstants.h"
-#include "utils/SrcVariableCollector.h"
+#include "utils/IrLookup.h"
+#include "utils/SrcLookup.h"
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
@@ -20,8 +21,7 @@ namespace sourcespec2ir
 {
     SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider,
                                                  std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath)
-        : specContextProvider(std::move(specCtxProvider))
-        , srcCompilerDriver(std::move(compilerDriver))
+        : specContextProvider(std::move(specCtxProvider)), srcCompilerDriver(std::move(compilerDriver))
     {
         // Parse the IR-file
         irContext = std::make_unique<llvm::LLVMContext>();
@@ -40,8 +40,10 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformModule()
     {
+        // TODO: Ensure that context-variables are initialized
+
         // Traverse the specifications for all functions and transform them into IR
-        visit(srcParseTree); 
+        visit(srcParseTree);
 
         // TODO: Invoke LLVm verifier to check the generated IR
 
@@ -51,17 +53,18 @@ namespace sourcespec2ir
         std::cerr << "===============================================" << std::endl;
     }
 
-    llvm::Function *SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName)
+    std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function &contextFunction, std::string srcFunctionName)
     {
         // Wrap the expression first, into a source-language function and then into a source-compilation unit
-        auto srcVars = getSrcVariablesForFunction(contextFunction, true);
-        auto wrapperFun = getWrappingFunction(*srcVars, expr);
-        auto wrapperCU = assembleSrcCompilationUnit(*wrapperFun);
-        // std::cout << "Generated wrapper for " << srcFunctionName << std::endl;
-        // std::cout << wrapperFun << std::endl;
+        auto srcVars = utils::getSrcVariablesForFunction(contextFunction, true);
+        // Transfer src-variables to sequential container for explicit ordering
+        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars->begin(), srcVars->end());
+
+        auto srcWrapperFun = getWrappingFunction(*argList, expr);
+        auto srcWrapperCU = assembleSrcCompilationUnit(*srcWrapperFun);
 
         // Compile the specifications into IR & run mem2reg optimization
-        auto compiledSpecModule = srcCompilerDriver->compileSpecification(wrapperCU, *irContext);
+        auto compiledSpecModule = srcCompilerDriver->compileSpecification(srcWrapperCU, *irContext);
         promoteMemToReg(*compiledSpecModule);
 
         // Transform the compiled specifications into common format (calls to specification-functions)
@@ -70,35 +73,25 @@ namespace sourcespec2ir
         // Add the generated specifications to the original IR (merge IR files)
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(compiledSpecModule));
-        
+
         // Extract the IR-function that represents the compiled expression
-        auto irSpecFunction = getFunctionBySrcName(*irModule, wrapperFun->name);
+        auto irSpecFunction = utils::getFunctionBySrcName(*irModule, srcWrapperFun->name);
 
-        return irSpecFunction;
+        // Wrap & return function-ptr and arg-list
+        return std::make_unique<IRWrapperFunction>(irSpecFunction, std::move(argList));
     }
 
-    void SourceSpecTransformer::printSpecifications(char *srcInputPath, char *irInputStream)
+    void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
     {
-        std::cout << "Specification traversal:" << std::endl;
-        visit(srcParseTree);
 
-        // Test the IRVariableCollector
-        std::cout << "Variable-detection:" << std::endl;
-        printAllSrcVars("", irInputStream);
-
-        std::cout.flush();
-    }
-
-    void SourceSpecTransformer::promoteMemToReg(llvm::Module &module) {
-
-        // TODO: Add this setup-stuff to the SourceSpecTransformer to avoid doing this multiple times. 
+        // TODO: Add this setup-stuff to the SourceSpecTransformer to avoid doing this multiple times.
         llvm::LoopAnalysisManager lam;
         llvm::FunctionAnalysisManager fam;
         llvm::CGSCCAnalysisManager cgam;
         llvm::ModuleAnalysisManager mam;
 
         // While we do not use the PassBuilder directly, it is required by the ModuleAnalysisManager
-        // Causes SegmentationFault otherwise. 
+        // Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
         passBuilder.registerModuleAnalyses(mam);
@@ -123,25 +116,24 @@ namespace sourcespec2ir
         const auto specFun = specContextProvider->getContractBlockContext(startLine, startCol, endLine, endCol);
 
         // Get the IR-function that the contract belongs to
-        auto irCtxFunction = getFunctionBySrcName(*irModule, specFun);
+        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, specFun);
 
         // Set context
         currentSrcContext = specFun;
         // TODO: Consider using unique-pointers because the added MD-Nodes are freshly allocated.
-        currentSpecMDNodes = std::make_optional<llvm::SmallVector<llvm::MDNode*>>();
+        currentSpecMDNodes = std::make_optional<llvm::SmallVector<llvm::MDNode *>>();
 
         // Transform specification statements
         auto res = visitChildren(ctx);
 
         // Bundle the metadata-encodings of the spec-statements in a MDTuple add add them to the IR.
-        llvm::SmallVector<llvm::Metadata*> specStatementNodes;
-        for (auto node : currentSpecMDNodes.value()) 
+        llvm::SmallVector<llvm::Metadata *> specStatementNodes;
+        for (auto node : currentSpecMDNodes.value())
         {
             specStatementNodes.push_back(node);
         }
         auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
         irCtxFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
-         
 
         // Reset context
         currentSrcContext = std::nullopt;
@@ -157,25 +149,28 @@ namespace sourcespec2ir
         // Generate LLVM-IR function for the specification expression.
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
-        auto specFunction = transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
-
-        // Determine which variables are passed to the specification function:
-        // TODO: Implement this
+        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto specFunctionWrapper = transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
 
         // Generate the metadata that encodes the requires clause:
-        llvm::SmallVector<llvm::Metadata*, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
 
         auto mdIdentifier = llvm::MDString::get(*irContext, PALLAS_REQUIRES);
         mdElems.push_back(mdIdentifier);
 
-        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunction);
+        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunctionWrapper->function);
         mdElems.push_back(specFuncAsMd);
-        
-        // TODO: Pass the variables that make up the arguments of the specification functions
+
+        // Add references to the metadata-nodes that describe how the arguments of the
+        // specification-function relate to the original variables.
+        for (auto arg : *specFunctionWrapper->argListDescr)
+        {
+            mdElems.push_back(arg);
+        }
+
         auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
-        
-        // Add the metadata-node to the list of nodes in the current contract. 
+
+        // Add the metadata-node to the list of nodes in the current contract.
         currentSpecMDNodes.value().push_back(requiresNode);
 
         return 0;
@@ -185,7 +180,7 @@ namespace sourcespec2ir
     {
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        auto irCtxFunction = getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
         transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
 
         return 0;
@@ -208,21 +203,22 @@ namespace sourcespec2ir
         return charStream->getText(i);
     }
 
-    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr)
+    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
     {
         // Name of wrapping function
         auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
 
         // Argument-list
         std::string argList = "";
-        for (auto it = srcVarsToTypes.begin(), end = srcVarsToTypes.end(); it != end; ++it)
+        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
         {
-            if (it != srcVarsToTypes.begin())
+            if (it != srcVars.begin())
             {
-                argList += " ,";
+                argList += ", ";
             }
-            const auto varName = it->getKey().str();
-            const auto varType = it->getValue();
+
+            const auto varName = utils::getSrcVarName(**it);
+            const auto varType = utils::getSrcVarType(**it);
             argList += varType + " " + varName;
         }
 
@@ -241,6 +237,5 @@ namespace sourcespec2ir
 
         return includes + wrapperFunction.stringRepr;
     }
-
 
 }

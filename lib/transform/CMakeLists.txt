@@ -14,6 +14,8 @@ add_library(sourceSpec2IR STATIC
     SourceSpecTransformer.cpp
     DummySourceSpecContextProvider.cpp
     CCompilerDriver.cpp
+    IRWrapperFunction.cpp
+    SrcWrapperFunction.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 
     ${ANTLR_SpecificationParser_CXX_OUTPUTS} 
 )

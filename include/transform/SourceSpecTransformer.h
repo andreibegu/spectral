@@ -6,8 +6,8 @@
 #include <memory>
 #include <optional>
 
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
-#include <llvm/ADT/StringMap.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Metadata.h>
@@ -21,7 +21,8 @@
 
 #include "SourceSpecContextProvider.h"
 #include "SourceCompilerDriver.h"
-#include "utils/SrcWrapperFunction.h"
+#include "IRWrapperFunction.h"
+#include "SrcWrapperFunction.h"
 
 namespace sourcespec2ir
 {
@@ -33,8 +34,6 @@ namespace sourcespec2ir
                               std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath);
 
         void transformModule();
-
-        void printSpecifications(char *srcInputPath, char *irInputPath);
 
         // Overwritten visitor-methods
         std::any visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx) override;
@@ -83,14 +82,13 @@ namespace sourcespec2ir
          */
         std::optional<llvm::SmallVector<llvm::MDNode*>> currentSpecMDNodes = std::nullopt;
 
-
         /**
          * Transforms an expression in the source language into LLVM-IR by wrapping it into a function. 
-         * The generated function is added to the module of the SourceSpecTransformer. A pointer to the 
-         * newly generated function is returned. 
+         * The generated function is added to the module of the SourceSpecTransformer. 
+         * Returns an IRWrapper function that bundles a pointer to the newly generated function along with 
+         * a list of the metadata-nodes that describe the functions parameter-list. 
          */
-        llvm::Function *transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName);
-
+        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName);
 
         /**
          * Retrieving the textual representation of the specification expressions using getText() removes the whitespaces.
@@ -106,10 +104,11 @@ namespace sourcespec2ir
         /**
          * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
          * to their types and generates a string-representation of a function in the source-language.
+         * The generated wrapping-function MUST use the same ordering of its arguments as is defined by parameter srcVars.
          * 
          * TODO: Move somewhere else or make virtual as this is source-language specific
          */
-        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(const llvm::StringMap<std::string> &srcVarsToTypes, const std::string &expr);
+        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable*> srcVars, const std::string &expr);
 
         /**
          * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in 
