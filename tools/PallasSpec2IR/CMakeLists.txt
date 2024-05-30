@@ -9,6 +9,5 @@ target_include_directories(pallasSpec2ir
 )
 
 target_link_libraries(pallasSpec2ir 
-        ${llvm_libs} 
         sourceSpec2IR
 )

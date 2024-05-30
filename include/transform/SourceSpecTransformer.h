@@ -12,6 +12,8 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/PassManager.h>
+#include <llvm/Passes/PassBuilder.h>
 #include <llvm/Support/SourceMgr.h>
 
 #include "antlr4-runtime.h"
@@ -69,6 +71,19 @@ namespace sourcespec2ir
         std::unique_ptr<antlr4::CommonTokenStream> srcTokens;
         std::unique_ptr<SpecParser> srcParser;
         SpecParser::FileContext *srcParseTree;
+
+        /**
+         * Analysis managers and pass builder that are used to run optimization-passes on the loaded IR
+         */
+        llvm::LoopAnalysisManager lam;
+        llvm::FunctionAnalysisManager fam;
+        llvm::CGSCCAnalysisManager cgam;
+        llvm::ModuleAnalysisManager mam;
+
+        // While we do not use the PassBuilder directly, it is required by the ModuleAnalysisManager
+        // Causes SegmentationFault otherwise.
+        llvm::PassBuilder passBuilder;
+
 
         /*
          * Name of the function in the source-language to which the currently visited contract belongs.

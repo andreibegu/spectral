@@ -1,5 +1,5 @@
 
-# Generation of lexer & arser for the specification-grammar
+# Generation of lexer & parser for the specification-grammar
 antlr_target(SpecificationLexer ${CMAKE_SOURCE_DIR}/grammar/SpecLexer.g4 LEXER
              PACKAGE sourcespec2ir
              COMPILE_FLAGS -Xexact-output-dir)
