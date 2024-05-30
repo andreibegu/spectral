@@ -105,6 +105,36 @@ namespace sourcespec2ir
         mpm.run(module, mam);
     }
 
+    void SourceSpecTransformer::encodeFunctionContractStatement(std::string specExpr, std::string metadataId)
+    {
+        // TODO: Check for errors (i.e. contextfunction, ... empty)
+        
+        // Generate LLVM-IR function for the specification expression.
+        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
+        auto specFunctionWrapper = transformExpression(specExpr, *irCtxFunction, currentSrcContext.value());
+
+        // Generate the metadata that encodes the requires clause:
+        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+
+        auto mdIdentifier = llvm::MDString::get(*irContext, metadataId);
+        mdElems.push_back(mdIdentifier);
+
+        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunctionWrapper->function);
+        mdElems.push_back(specFuncAsMd);
+
+        // Add references to the metadata-nodes that describe how the arguments of the
+        // specification-function relate to the original variables.
+        for (auto arg : *specFunctionWrapper->argListDescr)
+        {
+            mdElems.push_back(arg);
+        }
+
+        auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
+
+        // Add the metadata-node to the list of nodes in the current contract.
+        currentSpecMDNodes.value().push_back(requiresNode);
+    }
+
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
         // Get the name of the function to which the contract-block belongs
@@ -146,43 +176,21 @@ namespace sourcespec2ir
     {
         // TODO: Check for errors (i.e. contextfunction, ... empty)
 
-        // Generate LLVM-IR function for the specification expression.
+        // Get string representation of specification expression
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
-        auto specFunctionWrapper = transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
-
-        // Generate the metadata that encodes the requires clause:
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
-
-        auto mdIdentifier = llvm::MDString::get(*irContext, PALLAS_REQUIRES);
-        mdElems.push_back(mdIdentifier);
-
-        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunctionWrapper->function);
-        mdElems.push_back(specFuncAsMd);
-
-        // Add references to the metadata-nodes that describe how the arguments of the
-        // specification-function relate to the original variables.
-        for (auto arg : *specFunctionWrapper->argListDescr)
-        {
-            mdElems.push_back(arg);
-        }
-
-        auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
-
-        // Add the metadata-node to the list of nodes in the current contract.
-        currentSpecMDNodes.value().push_back(requiresNode);
-
+        // Encode as metadata-node and add to list of nodes within current function contract.
+        encodeFunctionContractStatement(exprStr, PALLAS_REQUIRES);
         return 0;
     }
+
 
     std::any SourceSpecTransformer::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
     {
         auto expr = ctx->specExpression();
         auto exprStr = getExprAsStr(*expr);
-        auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
-        transformExpression(exprStr, *irCtxFunction, currentSrcContext.value());
-
+        // Encode as metadata-node and add to list of nodes within current function contract.
+        encodeFunctionContractStatement(exprStr, PALLAS_ENSURES);
         return 0;
     }
 
