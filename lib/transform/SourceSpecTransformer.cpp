@@ -72,11 +72,12 @@ namespace sourcespec2ir
 
     std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function &contextFunction, std::string srcFunctionName)
     {
-        // Wrap the expression first, into a source-language function and then into a source-compilation unit
+        // Collect the variables that can be referenced in the context of the contract.
         auto srcVars = utils::getSrcVariablesForFunction(contextFunction, true);
         // Transfer src-variables to sequential container for explicit ordering
         auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars->begin(), srcVars->end());
 
+        // Wrap the expression first, into a source-language function and then into a source-compilation unit
         auto srcWrapperFun = getWrappingFunction(*argList, expr);
         auto srcWrapperCU = assembleSrcCompilationUnit(*srcWrapperFun);
 

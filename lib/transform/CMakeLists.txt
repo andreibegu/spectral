@@ -9,18 +9,18 @@ antlr_target(SpecificationParser ${CMAKE_SOURCE_DIR}/grammar/SpecParser.g4 PARSE
              COMPILE_FLAGS -lib ${ANTLR_SpecificationLexer_OUTPUT_DIR} -Xexact-output-dir
              VISITOR)
 
-
 add_library(sourceSpec2IR STATIC
     SourceSpecTransformer.cpp
     DummySourceSpecContextProvider.cpp
     CCompilerDriver.cpp
-    IRWrapperFunction.cpp
-    SrcWrapperFunction.cpp
+    #wrapper/IRWrapperFunction.cpp
+    #wrapper/SrcWrapperFunction.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 
     ${ANTLR_SpecificationParser_CXX_OUTPUTS} 
 )
-         
 
+add_subdirectory(wrapper)
+         
 target_include_directories(sourceSpec2IR PUBLIC
     "${CMAKE_SOURCE_DIR}/include"
     "${ANTLR_SpecificationParser_OUTPUT_DIR}"

@@ -23,8 +23,8 @@
 
 #include "SourceSpecContextProvider.h"
 #include "SourceCompilerDriver.h"
-#include "IRWrapperFunction.h"
-#include "SrcWrapperFunction.h"
+#include "wrapper/IRWrapperFunction.h"
+#include "wrapper/SrcWrapperFunction.h"
 
 namespace sourcespec2ir
 {
