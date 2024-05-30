@@ -1,12 +1,13 @@
 #include <iostream>
 #include <cassert>
 #include <memory>
+#include <stdexcept>
 
 #include <llvm/ADT/StringRef.h>
-#include <llvm/IR/PassManager.h>
-#include <llvm/Passes/PassBuilder.h>
+#include <llvm/IR/Verifier.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 
 #include "transform/SourceSpecTransformer.h"
@@ -27,6 +28,9 @@ namespace sourcespec2ir
         irContext = std::make_unique<llvm::LLVMContext>();
         irSMDiag = std::make_unique<llvm::SMDiagnostic>();
         irModule = llvm::parseIRFile(irInputPath, *irSMDiag.get(), *irContext.get());
+        if (!irModule) {
+            throw std::invalid_argument("Unable to parse the provided IR file."); 
+        }
 
         // Parse the source-file
         srcFileStream = std::make_unique<std::ifstream>();
@@ -36,6 +40,17 @@ namespace sourcespec2ir
         srcTokens = std::make_unique<antlr4::CommonTokenStream>(srcLexer.get());
         srcParser = std::make_unique<SpecParser>(srcTokens.get());
         srcParseTree = srcParser->file();
+
+        if (!srcParseTree) {
+            throw std::invalid_argument("Unable to parse the provided source file."); 
+        }
+
+        // Setup the PassBuilder 
+        passBuilder.registerModuleAnalyses(mam);
+        passBuilder.registerCGSCCAnalyses(cgam);
+        passBuilder.registerFunctionAnalyses(fam);
+        passBuilder.registerLoopAnalyses(lam);
+        passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
     }
 
     void SourceSpecTransformer::transformModule()
@@ -45,7 +60,9 @@ namespace sourcespec2ir
         // Traverse the specifications for all functions and transform them into IR
         visit(srcParseTree);
 
-        // TODO: Invoke LLVm verifier to check the generated IR
+        // Check wellformedness of module
+        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+
 
         // Dump the generated IR somewhere
         std::cerr << "===============================================" << std::endl;
@@ -83,23 +100,6 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
     {
-
-        // TODO: Add this setup-stuff to the SourceSpecTransformer to avoid doing this multiple times.
-        llvm::LoopAnalysisManager lam;
-        llvm::FunctionAnalysisManager fam;
-        llvm::CGSCCAnalysisManager cgam;
-        llvm::ModuleAnalysisManager mam;
-
-        // While we do not use the PassBuilder directly, it is required by the ModuleAnalysisManager
-        // Causes SegmentationFault otherwise.
-        llvm::PassBuilder passBuilder;
-
-        passBuilder.registerModuleAnalyses(mam);
-        passBuilder.registerCGSCCAnalyses(cgam);
-        passBuilder.registerFunctionAnalyses(fam);
-        passBuilder.registerLoopAnalyses(lam);
-        passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
-
         llvm::ModulePassManager mpm;
         mpm.addPass(llvm::createModuleToFunctionPassAdaptor(llvm::PromotePass()));
         mpm.run(module, mam);
@@ -183,7 +183,6 @@ namespace sourcespec2ir
         encodeFunctionContractStatement(exprStr, PALLAS_REQUIRES);
         return 0;
     }
-
 
     std::any SourceSpecTransformer::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
     {
