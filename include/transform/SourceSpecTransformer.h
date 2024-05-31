@@ -14,7 +14,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
-#include <llvm/Support/SourceMgr.h>
 
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
@@ -33,7 +32,7 @@ namespace sourcespec2ir
     {
     public:
         SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, 
-                              std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath);
+                              std::unique_ptr<SourceCompilerDriver> compilerDriver, char *srcInputPath);
 
         void transformModule();
 
@@ -53,11 +52,8 @@ namespace sourcespec2ir
 
         std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
 
-        // Pointer to the context of the loaded llvm module
+        // Pointer to the LLVM context
         std::unique_ptr<llvm::LLVMContext> irContext;
-
-        // Pointer to the SMDagnostics associated with the loaded llvm module
-        std::unique_ptr<llvm::SMDiagnostic> irSMDiag;
 
         // Pointer to the loaded llvm-ir module
         std::unique_ptr<llvm::Module> irModule;
