@@ -1,11 +1,9 @@
 #include <iostream>
 #include <cassert>
-#include <memory>
 #include <stdexcept>
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Verifier.h>
-#include <llvm/IRReader/IRReader.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
@@ -21,18 +19,27 @@
 namespace sourcespec2ir
 {
     SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider,
-                                                 std::unique_ptr<SourceCompilerDriver> compilerDriver, char *irInputPath, char *srcInputPath)
+                                                 std::unique_ptr<SourceCompilerDriver> compilerDriver, char *srcInputPath)
         : specContextProvider(std::move(specCtxProvider)), srcCompilerDriver(std::move(compilerDriver))
     {
-        // Parse the IR-file
+        // Create global IRContext
         irContext = std::make_unique<llvm::LLVMContext>();
-        irSMDiag = std::make_unique<llvm::SMDiagnostic>();
-        irModule = llvm::parseIRFile(irInputPath, *irSMDiag.get(), *irContext.get());
-        if (!irModule) {
-            throw std::invalid_argument("Unable to parse the provided IR file."); 
-        }
 
-        // Parse the source-file
+        // Setup the PassBuilder 
+        passBuilder.registerModuleAnalyses(mam);
+        passBuilder.registerCGSCCAnalyses(cgam);
+        passBuilder.registerFunctionAnalyses(fam);
+        passBuilder.registerLoopAnalyses(lam);
+        passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
+
+        // Compile the source-file into IR
+        std::string srcPathStr(srcInputPath);
+        irModule = srcCompilerDriver->compileSource(srcPathStr, *irContext);
+
+        // Run mem2reg pass on IR module
+        promoteMemToReg(*irModule);
+
+        // Parse the source-file to extract the specifications
         srcFileStream = std::make_unique<std::ifstream>();
         srcFileStream->open(srcInputPath);
         srcInStream = std::make_unique<antlr4::ANTLRInputStream>(*srcFileStream);
@@ -45,12 +52,6 @@ namespace sourcespec2ir
             throw std::invalid_argument("Unable to parse the provided source file."); 
         }
 
-        // Setup the PassBuilder 
-        passBuilder.registerModuleAnalyses(mam);
-        passBuilder.registerCGSCCAnalyses(cgam);
-        passBuilder.registerFunctionAnalyses(fam);
-        passBuilder.registerLoopAnalyses(lam);
-        passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
     }
 
     void SourceSpecTransformer::transformModule()

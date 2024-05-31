@@ -17,6 +17,14 @@ namespace sourcespec2ir
     class SourceCompilerDriver
     {
     public:
+
+        /**
+         * Compiles the provided source-file into an IR-representation. 
+         * Returns a pointer to the IR representation and transfers ownership to the caller. 
+         */
+        virtual std::unique_ptr<llvm::Module> compileSource(const std::string &srcFilePath, llvm::LLVMContext &context) = 0;
+
+
         /**
          * Takes a string that contains a compilation unit of the source-language and returns a LLVM-Module that contains the 
          * compiled LLVM-representation of this function.
