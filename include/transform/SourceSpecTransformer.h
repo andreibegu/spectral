@@ -22,6 +22,7 @@
 
 #include "SourceSpecContextProvider.h"
 #include "SourceCompilerDriver.h"
+#include "SpecUnifier.h"
 #include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 
@@ -32,7 +33,9 @@ namespace sourcespec2ir
     {
     public:
         SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, 
-                              std::unique_ptr<SourceCompilerDriver> compilerDriver, char *srcInputPath);
+                              std::unique_ptr<SourceCompilerDriver> compilerDriver, 
+                              std::unique_ptr<SpecUnifier> specUnifier,
+                              char *srcInputPath);
 
         void transformModule();
 
@@ -51,6 +54,8 @@ namespace sourcespec2ir
         std::unique_ptr<SourceSpecContextProvider> specContextProvider;
 
         std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
+
+        std::unique_ptr<SpecUnifier> specUnifier;
 
         // Pointer to the LLVM context
         std::unique_ptr<llvm::LLVMContext> irContext;
@@ -80,26 +85,25 @@ namespace sourcespec2ir
         // Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
-
         /*
          * Name of the function in the source-language to which the currently visited contract belongs.
          */
         std::optional<std::string> currentSrcContext = std::nullopt;
 
         /*
-         * Vector that contains all metadata node that have to be added to the current specification-block. 
-         * (E.g. in the case of a SpecContractBlock this vector is used to store the metadata-nodes htat encode the 
+         * Vector that contains all metadata node that have to be added to the current specification-block.
+         * (E.g. in the case of a SpecContractBlock this vector is used to store the metadata-nodes htat encode the
          *  specification statements within this block.)
          */
-        std::optional<llvm::SmallVector<llvm::MDNode*>> currentSpecMDNodes = std::nullopt;
+        std::optional<llvm::SmallVector<llvm::MDNode *>> currentSpecMDNodes = std::nullopt;
 
         /**
-         * Transforms an expression in the source language into LLVM-IR by wrapping it into a function. 
-         * The generated function is added to the module of the SourceSpecTransformer. 
-         * Returns an IRWrapper function that bundles a pointer to the newly generated function along with 
-         * a list of the metadata-nodes that describe the functions parameter-list. 
+         * Transforms an expression in the source language into LLVM-IR by wrapping it into a function.
+         * The generated function is added to the module of the SourceSpecTransformer.
+         * Returns an IRWrapper function that bundles a pointer to the newly generated function along with
+         * a list of the metadata-nodes that describe the functions parameter-list.
          */
-        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function& contextFunction, std::string srcFunctionName);
+        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function &contextFunction, std::string srcFunctionName);
 
         /**
          * Retrieving the textual representation of the specification expressions using getText() removes the whitespaces.
@@ -108,33 +112,34 @@ namespace sourcespec2ir
         std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
 
         /**
-         * Runs the mem2reg-pass on the given module. 
+         * Runs the mem2reg-pass on the given module.
          */
         void promoteMemToReg(llvm::Module &module);
 
         /**
-         * Encodes a statement of a function contract into a metadata-node and adds it to the 
-         * current list of specification-nodes (currentSpecMDNodes). 
+         * Encodes a statement of a function contract into a metadata-node and adds it to the
+         * current list of specification-nodes (currentSpecMDNodes).
          */
         void encodeFunctionContractStatement(std::string specExpr, std::string metadataId);
 
         /**
-         * Takes a string that contains a source-language expression along with a map that maps the names of source-variables 
+         * Takes a string that contains a source-language expression along with a map that maps the names of source-variables
          * to their types and generates a string-representation of a function in the source-language.
          * The generated wrapping-function MUST use the same ordering of its arguments as is defined by parameter srcVars.
-         * 
+         *
          * TODO: Move somewhere else or make virtual as this is source-language specific
          */
-        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable*> srcVars, const std::string &expr);
+        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr);
 
         /**
-         * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in 
+         * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in
          * the source language.
          * E.g. adds imports for the specification library, ...
-         * 
+         *
          * TODO: Move somewhere else or make virtual as this is source-language specific
          */
         std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
+
     };
 
 }

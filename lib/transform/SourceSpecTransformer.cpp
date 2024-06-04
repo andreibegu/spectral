@@ -3,6 +3,9 @@
 #include <stdexcept>
 
 #include <llvm/ADT/StringRef.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/raw_ostream.h>
@@ -19,13 +22,17 @@
 namespace sourcespec2ir
 {
     SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider,
-                                                 std::unique_ptr<SourceCompilerDriver> compilerDriver, char *srcInputPath)
-        : specContextProvider(std::move(specCtxProvider)), srcCompilerDriver(std::move(compilerDriver))
+                                                 std::unique_ptr<SourceCompilerDriver> compilerDriver,
+                                                 std::unique_ptr<SpecUnifier> specUnifier,
+                                                 char *srcInputPath)
+        : specContextProvider(std::move(specCtxProvider)),
+          srcCompilerDriver(std::move(compilerDriver)),
+          specUnifier(std::move(specUnifier))
     {
         // Create global IRContext
         irContext = std::make_unique<llvm::LLVMContext>();
 
-        // Setup the PassBuilder 
+        // Setup the PassBuilder
         passBuilder.registerModuleAnalyses(mam);
         passBuilder.registerCGSCCAnalyses(cgam);
         passBuilder.registerFunctionAnalyses(fam);
@@ -48,10 +55,10 @@ namespace sourcespec2ir
         srcParser = std::make_unique<SpecParser>(srcTokens.get());
         srcParseTree = srcParser->file();
 
-        if (!srcParseTree) {
-            throw std::invalid_argument("Unable to parse the provided source file."); 
+        if (!srcParseTree)
+        {
+            throw std::invalid_argument("Unable to parse the provided source file.");
         }
-
     }
 
     void SourceSpecTransformer::transformModule()
@@ -61,9 +68,11 @@ namespace sourcespec2ir
         // Traverse the specifications for all functions and transform them into IR
         visit(srcParseTree);
 
+        // Transform the compiled specifications into common format (calls to specification-functions)
+        specUnifier->unifySpecifications(irModule.get(), irContext.get());
+
         // Check wellformedness of module
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
-
 
         // Dump the generated IR somewhere
         std::cerr << "===============================================" << std::endl;
@@ -86,9 +95,6 @@ namespace sourcespec2ir
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(srcWrapperCU, *irContext);
         promoteMemToReg(*compiledSpecModule);
 
-        // Transform the compiled specifications into common format (calls to specification-functions)
-        // TODO: Implement !!!
-
         // Add the generated specifications to the original IR (merge IR files)
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(compiledSpecModule));
@@ -110,7 +116,7 @@ namespace sourcespec2ir
     void SourceSpecTransformer::encodeFunctionContractStatement(std::string specExpr, std::string metadataId)
     {
         // TODO: Check for errors (i.e. contextfunction, ... empty)
-        
+
         // Generate LLVM-IR function for the specification expression.
         auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
         auto specFunctionWrapper = transformExpression(specExpr, *irCtxFunction, currentSrcContext.value());
@@ -140,7 +146,6 @@ namespace sourcespec2ir
     std::any SourceSpecTransformer::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
         // Get the name of the function to which the contract-block belongs
-        // TODO: Do this once for the contract-block instead of multiple times for every statement
         auto startLine = ctx->start->getLine();
         auto startCol = ctx->start->getCharPositionInLine();
         auto endLine = ctx->stop->getLine();
