@@ -13,6 +13,7 @@ add_library(sourceSpec2IR STATIC
     SourceSpecTransformer.cpp
     DummySourceSpecContextProvider.cpp
     CCompilerDriver.cpp
+    SpecUnifier.cpp
     #wrapper/IRWrapperFunction.cpp
     #wrapper/SrcWrapperFunction.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 

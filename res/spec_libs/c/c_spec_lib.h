@@ -25,7 +25,7 @@ typedef struct {
 
 /* Macros for 'generic' ADTs */
 
-// Macro that expandt to the type of a sequence containing lements of type 'type'
+// Macro that expands to the type of a sequence containing elements of type 'type'
 #define SEQ(type) PALLAS_SEQ___ ## type
 
 // Macro that expands to the definition of the type of a sequence with content of type 'type'.

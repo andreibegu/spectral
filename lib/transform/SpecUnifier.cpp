@@ -1,0 +1,140 @@
+#include "transform/SpecUnifier.h"
+#include "utils/IrSpecConstants.h"
+
+#include <iostream>
+#include <stdexcept>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
+
+namespace sourcespec2ir
+{
+
+    void SpecUnifier::unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext)
+    {
+        // TODO: Move the arguments to the constructor
+        this->irModule = irModule;
+        this->irContext = irContext;
+
+        // TODO: Generate the required type-declarations
+
+        // Collect all used specification-functions from module
+        llvm::SmallVector<llvm::Function *, 32> srcSpecFuns;
+        for (auto &f : irModule->getFunctionList())
+        {
+            if (isSrcSpecificationFunction(f))
+            {
+                srcSpecFuns.push_back(&f);
+            }
+        }
+
+        // Replace all specification functions:
+        while (!srcSpecFuns.empty())
+        {
+            auto srcSpecFun = srcSpecFuns.pop_back_val();
+
+            // Replace all calls to the specification.
+            replaceCallsToSpecFunction(*srcSpecFun);
+
+            if (!srcSpecFun->users().empty())
+            {
+                auto srcSpecFunName = srcSpecFun->getName().str();
+                throw std::logic_error("Failed to remove specification function (" + srcSpecFunName + "). Remaining users exist.");
+            }
+
+            // Remove the function from the module
+            srcSpecFun->eraseFromParent();
+        }
+    }
+
+    bool SpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
+    {
+        // TODO: Implement this better (i.e. check for scope or sth like that)
+        auto fName = f.getName().str();
+        if (fName == "imply")
+        {
+            return true;
+        }
+        return false;
+    }
+
+    void SpecUnifier::replaceCallsToSpecFunction(llvm::Function &srcSpecFunction)
+    {
+        for (auto user : srcSpecFunction.users())
+        {
+            std::cerr << "===============================================" << std::endl;
+            std::cerr << "Detected user of " << srcSpecFunction.getName().str() << ":" << std::endl;
+            user->dump();
+            std::cerr << "===============================================" << std::endl;
+
+            auto oldCall = llvm::dyn_cast<llvm::CallInst>(user);
+            if (!oldCall)
+            {
+                // Not a function call
+                throw std::logic_error("Encountered a use of a specification-function that is not a call.");
+            }
+
+            auto newCall = createSpecCall(*oldCall);
+
+            if (!newCall)
+            {
+                auto srcSpecName = oldCall->getCalledFunction()->getName().str();
+                throw std::logic_error("Failed to generate a new call to replace use of " + srcSpecName);
+            }
+
+            // Transfer Metadata
+            /* TODO: Check if it makes sense to transfer the line/ column-info from the old call to the new call.
+             * The metadata from the old call is not very helpfull, as it refers to the line- and column-numbers
+             * within the generated temporary file. Hence we have to derive the approprate location information from
+             * the parser.
+             */
+
+            // Replace old call
+            if (!oldCall->use_empty())
+            {
+                oldCall->replaceAllUsesWith(newCall);
+            }
+            llvm::ReplaceInstWithInst(oldCall, newCall);
+        }
+    }
+
+    llvm::CallInst *SpecUnifier::createSpecCall(llvm::CallInst &oldCall)
+    {
+        auto srcSpecName = oldCall.getCalledFunction()->getName().str();
+        if (srcSpecName == "imply")
+        {
+            // Build new call
+            // TODO: Check if we need to copy the Values here, or if taking the pointer is fine
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+            // If we had to do some argument translation, this would happen here
+            auto newCall = llvm::CallInst::Create(getImplySpec(), newArgs);
+            return newCall;
+        }
+        else
+        {
+            throw std::runtime_error("Unification of " + srcSpecName + " is not yet supported!");
+        }
+    }
+
+    llvm::Function *SpecUnifier::getImplySpec()
+    {
+        if (!specImply)
+        {
+            // Generate and add declaration of imply-function
+            // TODO: Check if zeroext, noundef attributes should be added
+            llvm::Twine implySpecName(PALLAS_SPEC_IMPLY);
+            llvm::SmallVector<llvm::Type *> implySpecArgs({llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            auto implySpecFT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*irContext), implySpecArgs, false);
+            specImply = llvm::Function::Create(implySpecFT, llvm::Function::ExternalLinkage, implySpecName, irModule);
+
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specImply, PALLAS_SPEC_IMPLY);
+        }
+        return specImply;
+    }
+
+    void SpecUnifier::markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier)
+    {
+        auto idStr = llvm::MDString::get(*irContext, identifier);
+        specLib->setMetadata(PALLAS_SPEC_LIB_MARKER, llvm::MDNode::get(*irContext, idStr));
+    }
+}

@@ -16,6 +16,12 @@ namespace sourcespec2ir
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
 
+    // Metadata-identifier that is used to mark the IR speciifcation functions
+    const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
+
+    /* Constants used to name specification-functions */
+    const std::string PALLAS_SPEC_IMPLY = "pallas.imply";
+
 
 }
 

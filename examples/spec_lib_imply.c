@@ -4,7 +4,7 @@
 
 /*@
  requires imply(a >= b, a >= 0);
- ensures 0 >= a && a >= b;
+ ensures 0 >= a && imply(a >= b, b >= 0);
  @*/
 int bar (int a, int b) {
     int c = 5;
