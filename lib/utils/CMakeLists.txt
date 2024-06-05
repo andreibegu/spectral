@@ -2,6 +2,7 @@
 add_library(pallasUtils STATIC
     SrcLookup.cpp
     IrLookup.cpp
+    MetadataUtils.cpp
 )
          
 
