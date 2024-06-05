@@ -20,7 +20,7 @@
 #include "SpecParser.h"
 #include "SpecParserBaseVisitor.h"
 
-#include "SourceSpecContextProvider.h"
+#include "SourceSpecMatcher.h"
 #include "SourceCompilerDriver.h"
 #include "SpecUnifier.h"
 #include "wrapper/IRWrapperFunction.h"
@@ -32,26 +32,31 @@ namespace sourcespec2ir
     class SourceSpecTransformer : SpecParserBaseVisitor
     {
     public:
-        SourceSpecTransformer(std::unique_ptr<SourceSpecContextProvider> specCtxProvider, 
-                              std::unique_ptr<SourceCompilerDriver> compilerDriver, 
+        SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver, 
                               std::unique_ptr<SpecUnifier> specUnifier,
                               char *srcInputPath);
 
         void transformModule();
 
         // Overwritten visitor-methods
-        std::any visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx) override;
         std::any visitRequiresClause(SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx) override;
         std::any visitInvariantClause(SpecParser::InvariantClauseContext *ctx) override;
+
+    protected:
+        /*
+         *  Factory methods
+         */
+
+        // TODO: Make virtual, add path to source-file as argument if required. 
+        std::unique_ptr<SourceSpecMatcher> createSpecMatcher(SpecParser::FileContext *specParseTree, 
+            llvm::Module *irModule);
 
     private:
         /* Counter for generating names for the specification functions.
          * TODO: Replace with something more elaborate that takes exisiting names into account.
          */
         int specFunCnt = 0;
-
-        std::unique_ptr<SourceSpecContextProvider> specContextProvider;
 
         std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
 
@@ -88,7 +93,7 @@ namespace sourcespec2ir
         /*
          * Name of the function in the source-language to which the currently visited contract belongs.
          */
-        std::optional<std::string> currentSrcContext = std::nullopt;
+        std::optional<llvm::Function*> currentSrcContext = std::nullopt;
 
         /*
          * Vector that contains all metadata node that have to be added to the current specification-block.
@@ -103,7 +108,7 @@ namespace sourcespec2ir
          * Returns an IRWrapper function that bundles a pointer to the newly generated function along with
          * a list of the metadata-nodes that describe the functions parameter-list.
          */
-        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function &contextFunction, std::string srcFunctionName);
+        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function &contextFunction);
 
         /**
          * Retrieving the textual representation of the specification expressions using getText() removes the whitespaces.
