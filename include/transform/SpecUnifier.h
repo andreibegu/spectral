@@ -54,6 +54,7 @@ namespace sourcespec2ir
         void markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier);
 
     private:
+    
         // Pointers to the loaded llvm-ir module and context
         llvm::Module *irModule;
         llvm::LLVMContext *irContext;
