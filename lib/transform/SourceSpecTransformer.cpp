@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cassert>
 #include <stdexcept>
 
@@ -8,6 +9,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 
@@ -25,8 +27,12 @@ namespace sourcespec2ir
 {
     SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver,
                                                  std::unique_ptr<SpecUnifier> specUnifier,
-                                                 char *srcInputPath)
-        : srcCompilerDriver(std::move(compilerDriver)),
+                                                 const char *srcInputPath,
+                                                 const char *outputPath,
+                                                 const bool printDebugInfo)
+        : outputPath(outputPath),
+          printDebugInfo(printDebugInfo),
+          srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
     {
         // Create global IRContext
@@ -98,10 +104,8 @@ namespace sourcespec2ir
         // Check wellformedness of module
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
 
-        // Dump the generated IR somewhere
-        std::cerr << "===============================================" << std::endl;
-        irModule->dump();
-        std::cerr << "===============================================" << std::endl;
+        // Dump the generated IR
+        writeToFile(*irModule, outputPath);
     }
 
     std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function &contextFunction)
@@ -145,7 +149,7 @@ namespace sourcespec2ir
         // TODO: Check for errors (i.e. contextfunction, ... empty)
 
         // Generate LLVM-IR function for the specification expression.
-        //auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
+        // auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
         auto irCtxFunction = currentSrcContext.value();
         auto specFunctionWrapper = transformExpression(specExpr, *irCtxFunction);
 
@@ -242,6 +246,35 @@ namespace sourcespec2ir
         std::string includes = "#include <c_spec_lib.h> \n ";
 
         return includes + wrapperFunction.stringRepr;
+    }
+
+    void SourceSpecTransformer::writeToFile(const llvm::Module &module, const char *outPath)
+    {
+        if (*outPath == '\0' || printDebugInfo)
+        {
+            // Print to console if no output-path is given or if debug-info is enabled
+            std::cout << "===============================================" << std::endl;
+            irModule->dump();
+            std::cout << "===============================================" << std::endl;
+            return;
+        }
+
+        if (*outPath != '\0')
+        {
+            // Write the IR-representation to the given file.
+            std::error_code eCode;
+            llvm::raw_fd_ostream outStream(outPath, eCode, llvm::sys::fs::CD_CreateAlways);
+            if (!eCode)
+            {
+                // Use IRPrintingPasses alternatively
+                module.print(outStream, nullptr, false, true);
+            }
+            else
+            {
+                throw std::runtime_error("Failed to write output to " + std::string(outPath) + ". Error code: " + eCode.message());
+            }
+            outStream.close();
+        }
     }
 
     /*

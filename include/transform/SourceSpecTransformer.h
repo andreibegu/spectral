@@ -34,7 +34,9 @@ namespace sourcespec2ir
     public:
         SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver, 
                               std::unique_ptr<SpecUnifier> specUnifier,
-                              char *srcInputPath);
+                              const char *srcInputPath, 
+                              const char *outputPath, 
+                              const bool printDebugInfo);
 
         void transformModule();
 
@@ -53,6 +55,10 @@ namespace sourcespec2ir
             llvm::Module *irModule);
 
     private:
+
+        const char *outputPath;
+        const bool printDebugInfo;
+
         /* Counter for generating names for the specification functions.
          * TODO: Replace with something more elaborate that takes exisiting names into account.
          */
@@ -126,6 +132,11 @@ namespace sourcespec2ir
          * current list of specification-nodes (currentSpecMDNodes).
          */
         void encodeFunctionContractStatement(std::string specExpr, std::string metadataId);
+
+        /**
+         * Write the IR-representation of the given module into a file at the given path.
+         */
+        void writeToFile(const llvm::Module &module, const char *outPath);
 
         /**
          * Takes a string that contains a source-language expression along with a map that maps the names of source-variables
