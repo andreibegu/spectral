@@ -51,6 +51,10 @@ typedef struct {
  *              Quantifiers                *
  *******************************************/
 
+// Macros to define bound variables. 
+#define BV(type) PALLAS_BOUND_VAR___ ## type
+#define DEF_BV(type) type BV(type) (char *id)
+
 bool exists(bool range, bool expr);
 bool forall(bool range, bool expr);
 bool forallP(bool range, bool expr);
