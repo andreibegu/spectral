@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace sourcespec2ir
@@ -50,15 +51,16 @@ namespace sourcespec2ir
     {
         // TODO: Implement this better (i.e. check for scope or sth like that)
         auto fName = f.getName().str();
-        if (fName == C_SPEC_IMPLY)
+        if (fName == C_SPEC_IMPLY ||
+            fName == C_SPEC_EXISTS ||
+            fName == C_SPEC_FORALL ||
+            fName == C_SPEC_FORALL_SEP)
         {
             return true;
         }
-        else if (f.getName().startswith(C_SPEC_OLD_BASE))
-        {
-            return true;
-        }
-        else if (f.getName().startswith(C_SPEC_RESULT_BASE))
+        else if (f.getName().startswith(C_SPEC_OLD_BASE) ||
+                 f.getName().startswith(C_SPEC_RESULT_BASE) ||
+                 f.getName().startswith(C_SPEC_BOUND_VAR))
         {
             return true;
         }
@@ -114,7 +116,7 @@ namespace sourcespec2ir
     {
         auto srcSpecName = oldCall.getCalledFunction()->getName().str();
         if (srcSpecName == C_SPEC_IMPLY)
-        {   
+        {
             // Imply
             // Build new call
             // TODO: Check if we need to copy the Values here, or if taking the pointer is fine
@@ -122,6 +124,24 @@ namespace sourcespec2ir
             // If we had to do some argument translation, this would happen here
             auto newCall = llvm::CallInst::Create(getImplySpec(), newArgs);
             return newCall;
+        }
+        else if (srcSpecName == C_SPEC_EXISTS)
+        {
+            // exists
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+            return llvm::CallInst::Create(getExistsSpec(), newArgs);
+        }
+        else if (srcSpecName == C_SPEC_FORALL)
+        {
+            // forall
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+            return llvm::CallInst::Create(getForallSpec(), newArgs);
+        }
+        else if (srcSpecName == C_SPEC_FORALL_SEP)
+        {
+            // forall*
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+            return llvm::CallInst::Create(getForallSepSpec(), newArgs);
         }
         else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_OLD_BASE))
         {
@@ -139,6 +159,14 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(getResultSpec(type), newArgs);
             return newCall;
         }
+        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_BOUND_VAR))
+        {
+            // Bound variable
+            auto type = oldCall.getCalledFunction()->getReturnType();
+            llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+            auto newCall = llvm::CallInst::Create(getBoundVarSpec(type), newArgs);
+            return newCall;
+        }
         else
         {
             throw std::runtime_error("Unification of " + srcSpecName + " is not yet supported!");
@@ -151,7 +179,6 @@ namespace sourcespec2ir
         {
             // Generate and add declaration of imply-function
             // TODO: Check if zeroext, noundef attributes should be added
-            llvm::Twine implySpecName(PALLAS_SPEC_IMPLY);
             llvm::SmallVector<llvm::Type *> implySpecArgs({llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
             auto implySpecFT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*irContext), implySpecArgs, false);
             specImply = llvm::Function::Create(implySpecFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_IMPLY, irModule);
@@ -194,6 +221,62 @@ namespace sourcespec2ir
         }
 
         return specResult[type];
+    }
+
+    llvm::Function *SpecUnifier::getBoundVarSpec(llvm::Type *type)
+    {
+        if (specBoundVar.find(type) == specBoundVar.end())
+        {
+            // Generate declaration
+            auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(specBoundVarCounter++);
+            llvm::SmallVector<llvm::Type *> specArgs({llvm::PointerType::get(*irContext, 0)});
+            auto specFType = llvm::FunctionType::get(type, specArgs, false);
+            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            specBoundVar[type] = specFun;
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specFun, PALLAS_SPEC_BOUND_VAR);
+        }
+
+        return specBoundVar[type];
+    }
+
+    llvm::Function *SpecUnifier::getExistsSpec()
+    {
+        if (!specExists)
+        {
+            specExists = createSpecLibFunction(PALLAS_SPEC_EXISTS, llvm::Type::getInt1Ty(*irContext),
+                                               {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+        }
+        return specExists;
+    }
+
+    llvm::Function *SpecUnifier::getForallSpec()
+    {
+        if (!specForall)
+        {
+            specForall = createSpecLibFunction(PALLAS_SPEC_FORALL, llvm::Type::getInt1Ty(*irContext),
+                                               {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+        }
+        return specForall;
+    }
+
+    llvm::Function *SpecUnifier::getForallSepSpec()
+    {
+        if (!specForallSep)
+        {
+            specForallSep = createSpecLibFunction(PALLAS_SPEC_FORALL_SEP, llvm::Type::getInt1Ty(*irContext),
+                                                  {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+        }
+        return specForallSep;
+    }
+
+    llvm::Function *SpecUnifier::createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes)
+    {
+        auto specFunType = llvm::FunctionType::get(returnType, argTypes, false);
+        auto specFunction = llvm::Function::Create(specFunType, llvm::Function::ExternalLinkage, name, irModule);
+        // Add metadata-marker to mark as specification-library-function
+        markAsSpecLibFunction(specFunction, name);
+        return specFunction;
     }
 
     void SpecUnifier::markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier)

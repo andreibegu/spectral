@@ -30,6 +30,11 @@ namespace sourcespec2ir
         const std::string C_SPEC_IMPLY = "imply";
         const std::string C_SPEC_OLD_BASE = "PALLAS_OLD___";
         const std::string C_SPEC_RESULT_BASE = "PALLAS_RESULT___";
+        const std::string C_SPEC_BOUND_VAR = "PALLAS_BOUND_VAR___";
+        const std::string C_SPEC_EXISTS = "exists";
+        const std::string C_SPEC_FORALL = "forall";
+        const std::string C_SPEC_FORALL_SEP = "forallP";
+
 
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
 
@@ -45,16 +50,37 @@ namespace sourcespec2ir
         llvm::Function *getImplySpec();
 
         /* Returns a pointer to the specification-function for the \old-construct.
-         * If the declaration does not exist yet, it is created. For every returned type, 
-         * a different function is created. 
+         * If the declaration does not exist yet, it is created. For every returned type,
+         * a different function is created.
          */
         llvm::Function *getOldSpec(llvm::Type *type);
 
         /* Returns a pointer to the specification-function for the \result-construct.
-         * If the declaration does not exist yet, it is created. For every returned type, 
-         * a different function is created. 
+         * If the declaration does not exist yet, it is created. For every returned type,
+         * a different function is created.
          */
         llvm::Function *getResultSpec(llvm::Type *type);
+
+        /* Returns a pointer to the specification-function for the bound-variables-construct.
+         * If the declaration does not exist yet, it is created. For every returned type,
+         * a different function is created.
+         */
+        llvm::Function *getBoundVarSpec(llvm::Type *type);
+
+        /* Return pointer to the specification-function for the existential quantifier. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::Function *getExistsSpec();
+
+        /* Return pointer to the specification-function for the universal quantifier. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::Function *getForallSpec();
+
+        /* Return pointer to the specification-function for the separating universal quantifier. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::Function *getForallSepSpec();
 
         /**
          * Creates a new function-call that is used to replace the call-instruction that was passed
@@ -63,16 +89,7 @@ namespace sourcespec2ir
          */
         llvm::CallInst *createSpecCall(llvm::CallInst &oldCall);
 
-        /**
-         * Attaches a metadata-node to the given declaration that identifies it as a delaration
-         * from the Pallas specification.
-         * The added node uses IrSpecConstants::PALLAS_SPEC_LIB_MARKER as an identifer and
-         * contains a MDString with the gien identifier.
-         */
-        void markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier);
-
     private:
-    
         // Pointers to the loaded llvm-ir module and context
         llvm::Module *irModule;
         llvm::LLVMContext *irContext;
@@ -84,16 +101,38 @@ namespace sourcespec2ir
         llvm::Function *specImply = nullptr;
 
         int specOldCounter = 0; // Counter used to generate unique names for the different old-functions of the spec-lib.
-        llvm::DenseMap<llvm::Type*, llvm::Function*> specOld;
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
 
         int specResultCounter = 0; // Counter used to generate unique names for the different result-functions of the spec-lib.
-        llvm::DenseMap<llvm::Type*, llvm::Function*> specResult;
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
+
+        int specBoundVarCounter = 0; // Counter used to generate unique names for the different bound-variable-functions of the spec-lib.
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
+
+        llvm::Function *specExists = nullptr;
+
+        llvm::Function *specForall = nullptr;
+
+        llvm::Function *specForallSep = nullptr;
 
         /**
          * Replace all uses of the given source-language specific specification function with a
          * unified specification function.
          */
         void replaceCallsToSpecFunction(llvm::Function &srcSpecFunction);
+
+        /**
+         * Helper to generate the functions of the unified specification library
+         */
+        llvm::Function* createSpecLibFunction(const std::string &name, llvm::Type* returnType, llvm::SmallVector<llvm::Type*> argTypes);
+
+        /**
+         * Attaches a metadata-node to the given declaration that identifies it as a delaration
+         * from the Pallas specification.
+         * The added node uses IrSpecConstants::PALLAS_SPEC_LIB_MARKER as an identifer and
+         * contains a MDString with the gien identifier.
+         */
+        void markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier);
     };
 
 }

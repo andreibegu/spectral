@@ -29,6 +29,14 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_RESULT_BASE = "pallas.result";
 
+    const std::string PALLAS_SPEC_BOUND_VAR = "pallas.boundVar";
+
+    const std::string PALLAS_SPEC_EXISTS = "pallas.exists";
+
+    const std::string PALLAS_SPEC_FORALL = "pallas.forall";
+
+    const std::string PALLAS_SPEC_FORALL_SEP = "pallas.forallSep";
+
 
 }
 
