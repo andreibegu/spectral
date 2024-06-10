@@ -1,10 +1,12 @@
 #ifndef PALLAS_SPECUNIFIER_H
 #define PALLAS_SPECUNIFIER_H
 
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/Type.h>
 
 namespace sourcespec2ir
 {
@@ -25,6 +27,10 @@ namespace sourcespec2ir
     class SpecUnifier
     {
     public:
+        const std::string C_SPEC_IMPLY = "imply";
+        const std::string C_SPEC_OLD_BASE = "PALLAS_OLD___";
+        const std::string C_SPEC_RESULT_BASE = "PALLAS_RESULT___";
+
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
 
     protected:
@@ -37,6 +43,18 @@ namespace sourcespec2ir
          * If the declaration does not exist yet, it is created.
          */
         llvm::Function *getImplySpec();
+
+        /* Returns a pointer to the specification-function for the \old-construct.
+         * If the declaration does not exist yet, it is created. For every returned type, 
+         * a different function is created. 
+         */
+        llvm::Function *getOldSpec(llvm::Type *type);
+
+        /* Returns a pointer to the specification-function for the \result-construct.
+         * If the declaration does not exist yet, it is created. For every returned type, 
+         * a different function is created. 
+         */
+        llvm::Function *getResultSpec(llvm::Type *type);
 
         /**
          * Creates a new function-call that is used to replace the call-instruction that was passed
@@ -60,10 +78,16 @@ namespace sourcespec2ir
         llvm::LLVMContext *irContext;
 
         /**
-         * Pointer to the unified specification functions within irModule.
+         * Pointers to the unified specification functions within irModule.
          * Raw pointer, ownership lies with module.
          */
         llvm::Function *specImply = nullptr;
+
+        int specOldCounter = 0; // Counter used to generate unique names for the different old-functions of the spec-lib.
+        llvm::DenseMap<llvm::Type*, llvm::Function*> specOld;
+
+        int specResultCounter = 0; // Counter used to generate unique names for the different result-functions of the spec-lib.
+        llvm::DenseMap<llvm::Type*, llvm::Function*> specResult;
 
         /**
          * Replace all uses of the given source-language specific specification function with a

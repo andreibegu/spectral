@@ -44,7 +44,7 @@ typedef struct {
 
 // Macros to define a version of \old(...) for every possible parameter-type
 #define OLD(type) PALLAS_OLD___ ## type
-#define DEF_OLD(type) type OLD(type) (type var);
+#define DEF_OLD(type) type OLD(type) (type var)
 
 
 /*******************************************

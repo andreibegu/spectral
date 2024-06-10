@@ -16,6 +16,7 @@ add_library(sourceSpec2IR STATIC
     SpecUnifier.cpp
     SourceSpecMatcher.cpp
     IRBasedSourceSpecMatcher.cpp
+    SpecDeclarationCollector.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 
     ${ANTLR_SpecificationParser_CXX_OUTPUTS} 
 )

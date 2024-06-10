@@ -50,7 +50,15 @@ namespace sourcespec2ir
     {
         // TODO: Implement this better (i.e. check for scope or sth like that)
         auto fName = f.getName().str();
-        if (fName == "imply")
+        if (fName == C_SPEC_IMPLY)
+        {
+            return true;
+        }
+        else if (f.getName().startswith(C_SPEC_OLD_BASE))
+        {
+            return true;
+        }
+        else if (f.getName().startswith(C_SPEC_RESULT_BASE))
         {
             return true;
         }
@@ -59,8 +67,10 @@ namespace sourcespec2ir
 
     void SpecUnifier::replaceCallsToSpecFunction(llvm::Function &srcSpecFunction)
     {
-        for (auto user : srcSpecFunction.users())
+        while (!srcSpecFunction.user_empty())
+        // for (auto user : srcSpecFunction.users())
         {
+            llvm::User *user = *srcSpecFunction.user_begin();
             std::cerr << "===============================================" << std::endl;
             std::cerr << "Detected user of " << srcSpecFunction.getName().str() << ":" << std::endl;
             user->dump();
@@ -97,16 +107,36 @@ namespace sourcespec2ir
         }
     }
 
+    /**
+     * TODO: Merge this with isSrcSpecificationFunction by returning a pointer instead of a bool.
+     */
     llvm::CallInst *SpecUnifier::createSpecCall(llvm::CallInst &oldCall)
     {
         auto srcSpecName = oldCall.getCalledFunction()->getName().str();
-        if (srcSpecName == "imply")
-        {
+        if (srcSpecName == C_SPEC_IMPLY)
+        {   
+            // Imply
             // Build new call
             // TODO: Check if we need to copy the Values here, or if taking the pointer is fine
             llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
             // If we had to do some argument translation, this would happen here
             auto newCall = llvm::CallInst::Create(getImplySpec(), newArgs);
+            return newCall;
+        }
+        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_OLD_BASE))
+        {
+            // \old
+            auto type = oldCall.getCalledFunction()->getReturnType();
+            llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+            auto newCall = llvm::CallInst::Create(getOldSpec(type), newArgs);
+            return newCall;
+        }
+        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_RESULT_BASE))
+        {
+            // \result
+            auto type = oldCall.getCalledFunction()->getReturnType();
+            llvm::SmallVector<llvm::Value *, 1> newArgs;
+            auto newCall = llvm::CallInst::Create(getResultSpec(type), newArgs);
             return newCall;
         }
         else
@@ -124,12 +154,46 @@ namespace sourcespec2ir
             llvm::Twine implySpecName(PALLAS_SPEC_IMPLY);
             llvm::SmallVector<llvm::Type *> implySpecArgs({llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
             auto implySpecFT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*irContext), implySpecArgs, false);
-            specImply = llvm::Function::Create(implySpecFT, llvm::Function::ExternalLinkage, implySpecName, irModule);
+            specImply = llvm::Function::Create(implySpecFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_IMPLY, irModule);
 
             // Add metadata-marker to mark as specification-library-function
             markAsSpecLibFunction(specImply, PALLAS_SPEC_IMPLY);
         }
         return specImply;
+    }
+
+    llvm::Function *SpecUnifier::getOldSpec(llvm::Type *type)
+    {
+        if (specOld.find(type) == specOld.end())
+        {
+            // Generate declaration for new old-function with the given type
+            auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(specOldCounter++);
+            llvm::SmallVector<llvm::Type *> specArgs({type});
+            auto specFType = llvm::FunctionType::get(type, specArgs, false);
+            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            specOld[type] = specFun;
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specFun, PALLAS_SPEC_OLD_BASE);
+        }
+
+        return specOld[type];
+    }
+
+    llvm::Function *SpecUnifier::getResultSpec(llvm::Type *type)
+    {
+        if (specResult.find(type) == specResult.end())
+        {
+            // Generate declaration for new result-function with the given type
+            auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(specResultCounter++);
+            llvm::SmallVector<llvm::Type *> specArgs;
+            auto specFType = llvm::FunctionType::get(type, specArgs, false);
+            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            specResult[type] = specFun;
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specFun, PALLAS_SPEC_RESULT_BASE);
+        }
+
+        return specResult[type];
     }
 
     void SpecUnifier::markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier)

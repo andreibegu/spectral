@@ -13,6 +13,7 @@ REQUIRES: 'requires';
 ENSURES: 'ensures';
 ASSERT: 'assert';
 ASSUME: 'assume';
+DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 
 SEMI: ';';
