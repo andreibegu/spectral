@@ -15,6 +15,7 @@
 
 #include "transform/IRBasedSourceSpecMatcher.h"
 #include "transform/SourceSpecTransformer.h"
+#include "transform/SpecDeclarationCollector.h"
 #include "utils/IrSpecConstants.h"
 #include "utils/IrLookup.h"
 #include "utils/MetadataUtils.h"
@@ -69,6 +70,10 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformModule()
     {
+        // Collect declarations
+        SpecDeclarationCollector declCollector(srcParseTree);
+        specDeclarations = declCollector.collectDeclarations();
+
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
         auto matchedSpecs = specMatcher->matchSpecifications();
@@ -97,6 +102,11 @@ namespace sourcespec2ir
             currentSrcContext = std::nullopt;
             currentSpecMDNodes = std::nullopt;
         }
+
+        // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        // std::cout << "PRE-Unification" << std::endl;
+        // writeToFile(*irModule, "");
+        // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
@@ -215,6 +225,7 @@ namespace sourcespec2ir
 
     std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
     {
+
         // Name of wrapping function
         auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
 
@@ -242,8 +253,15 @@ namespace sourcespec2ir
 
     std::string SourceSpecTransformer::assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction)
     {
+        // TODO: Use a sstream
         // TODO: add include-statements from the source-file
         std::string includes = "#include <c_spec_lib.h> \n ";
+
+        // Add any declarations that were defined in the declaration-block of the specifications.
+        for (auto decl : *specDeclarations)
+        {
+            includes += (decl + "; \n ");
+        }
 
         return includes + wrapperFunction.stringRepr;
     }

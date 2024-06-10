@@ -109,6 +109,11 @@ namespace sourcespec2ir
         std::optional<llvm::SmallVector<llvm::MDNode *>> currentSpecMDNodes = std::nullopt;
 
         /**
+         * Contents of the declaration-block of the specifications.
+         */
+        std::unique_ptr<llvm::SmallVector<std::string>> specDeclarations;
+
+        /**
          * Transforms an expression in the source language into LLVM-IR by wrapping it into a function.
          * The generated function is added to the module of the SourceSpecTransformer.
          * Returns an IRWrapper function that bundles a pointer to the newly generated function along with
