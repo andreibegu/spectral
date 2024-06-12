@@ -37,6 +37,13 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_FORALL_SEP = "pallas.forallSep";
 
+    const std::string PALLAS_SPEC_FRAC_OF = "pallas.fracOf";
+
+    const std::string PALLAS_SPEC_PERM = "pallas.perm";
+
+    /* Constants used to name specification-types */
+    const std::string PALLAS_SPEC_TYPE_FRAC = "pallas.fracT";
+
 
 }
 

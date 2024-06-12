@@ -103,10 +103,13 @@ namespace sourcespec2ir
             currentSpecMDNodes = std::nullopt;
         }
 
-        // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-        // std::cout << "PRE-Unification" << std::endl;
-        // writeToFile(*irModule, "");
-        // std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        // Check wellformedness of module
+        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+
+        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        std::cout << "PRE-Unification" << std::endl;
+        writeToFile(*irModule, "");
+        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
@@ -274,7 +277,7 @@ namespace sourcespec2ir
             std::cout << "===============================================" << std::endl;
             irModule->dump();
             std::cout << "===============================================" << std::endl;
-            return;
+            // return;
         }
 
         if (*outPath != '\0')

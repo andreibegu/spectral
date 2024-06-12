@@ -2,6 +2,7 @@
 #define PALLAS_SPECUNIFIER_H
 
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
@@ -34,6 +35,10 @@ namespace sourcespec2ir
         const std::string C_SPEC_EXISTS = "exists";
         const std::string C_SPEC_FORALL = "forall";
         const std::string C_SPEC_FORALL_SEP = "forallP";
+        const std::string C_SPEC_FRAC_OF = "fracOf";
+        const std::string C_SPEC_PERM = "Perm";
+
+        const std::string C_SPEC_FRAC_TYPE = "struct.frac";
 
 
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
@@ -82,12 +87,33 @@ namespace sourcespec2ir
          */
         llvm::Function *getForallSepSpec();
 
+        /* Return pointer to the specification-function for creating a fraction.
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::Function *getFracOfSpec();
+
+        /* Return pointer to the specification-function for specifying permission over a location. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::Function *getPermSpec();
+
+        /* Return pointer to the type that is used to represent fractions in the unified specification representation. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::StructType *getUSpecFracType();
+        
         /**
          * Creates a new function-call that is used to replace the call-instruction that was passed
          * as a parameter.
          * Ownership of the newly created instruction is transfered to the caller.
          */
         llvm::CallInst *createSpecCall(llvm::CallInst &oldCall);
+
+        /**
+         * Return a pointer to the type that is used by the source specification library 
+         * to represent fractions. 
+         */
+        llvm::Type *getSourceLibFracType();
 
     private:
         // Pointers to the loaded llvm-ir module and context
@@ -115,11 +141,26 @@ namespace sourcespec2ir
 
         llvm::Function *specForallSep = nullptr;
 
+        llvm::Function *specFracOf = nullptr;
+
+        llvm::Function *specPerm = nullptr;
+
         /**
          * Replace all uses of the given source-language specific specification function with a
          * unified specification function.
          */
         void replaceCallsToSpecFunction(llvm::Function &srcSpecFunction);
+
+        /**
+         * Replaces the type of all alloca-instructions that allocate memory for a type from the 
+         * source-specific specification library.
+         */
+        void replaceSpecTypes();
+
+
+        /**
+         * Helper-Functions
+         */
 
         /**
          * Helper to generate the functions of the unified specification library
@@ -133,6 +174,11 @@ namespace sourcespec2ir
          * contains a MDString with the gien identifier.
          */
         void markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier);
+
+        /**
+         * Returns pointer to the boolean-type (i.e. Int1Ty) in the current context.
+         */
+        inline llvm::Type* getBoolTy();
     };
 
 }
