@@ -1,10 +1,14 @@
 #include "transform/SpecUnifier.h"
 #include "utils/IrSpecConstants.h"
+#include "utils/MetadataUtils.h"
 
 #include <iostream>
 #include <stdexcept>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Instructions.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace sourcespec2ir
@@ -16,7 +20,8 @@ namespace sourcespec2ir
         this->irModule = irModule;
         this->irContext = irContext;
 
-        // TODO: Generate the required type-declarations
+        // Replace all allocations that use a type from the source-specification-library
+        replaceSpecTypes();
 
         // Collect all used specification-functions from module
         llvm::SmallVector<llvm::Function *, 32> srcSpecFuns;
@@ -54,7 +59,9 @@ namespace sourcespec2ir
         if (fName == C_SPEC_IMPLY ||
             fName == C_SPEC_EXISTS ||
             fName == C_SPEC_FORALL ||
-            fName == C_SPEC_FORALL_SEP)
+            fName == C_SPEC_FORALL_SEP ||
+            fName == C_SPEC_FRAC_OF ||
+            fName == C_SPEC_PERM)
         {
             return true;
         }
@@ -109,9 +116,45 @@ namespace sourcespec2ir
         }
     }
 
-    /**
-     * TODO: Merge this with isSrcSpecificationFunction by returning a pointer instead of a bool.
-     */
+    void SpecUnifier::replaceSpecTypes()
+    {
+        auto *srcFracType = getSourceLibFracType();
+        // If the type for fractions is not used, we do not need to replace anything.
+        if (srcFracType == nullptr) 
+        {   
+            std::cout << "Skipping replacement of spec-types." << std::endl;
+            return;
+        }
+
+
+        for (auto &f : irModule->getFunctionList())
+        {
+            // Skip all functions that do not contain generated specifications.
+            if (!utils::isGeneratedSpecFunction(f))
+                continue;
+
+            // Check all instructions in the function
+            for (llvm::inst_iterator it = llvm::inst_begin(f), end = llvm::inst_end(f); it != end; ++it)
+            {
+                // Filter for alloca-instructions
+                if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(&*it))
+                {
+                    // Handle fraction-type
+                    if (allocInstr->getAllocatedType() == srcFracType) 
+                    {
+                        // TODO: Repace call to setAllocatedType with something better (see doxygen)
+                        allocInstr->setAllocatedType(getUSpecFracType());
+                    }
+                }
+            }
+        }
+    }
+
+    llvm::Type *SpecUnifier::getSourceLibFracType()
+    {
+        return llvm::StructType::getTypeByName(*irContext, C_SPEC_FRAC_TYPE);
+    }
+
     llvm::CallInst *SpecUnifier::createSpecCall(llvm::CallInst &oldCall)
     {
         auto srcSpecName = oldCall.getCalledFunction()->getName().str();
@@ -125,25 +168,25 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(getImplySpec(), newArgs);
             return newCall;
         }
-        else if (srcSpecName == C_SPEC_EXISTS)
+        if (srcSpecName == C_SPEC_EXISTS)
         {
             // exists
             llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
             return llvm::CallInst::Create(getExistsSpec(), newArgs);
         }
-        else if (srcSpecName == C_SPEC_FORALL)
+        if (srcSpecName == C_SPEC_FORALL)
         {
             // forall
             llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
             return llvm::CallInst::Create(getForallSpec(), newArgs);
         }
-        else if (srcSpecName == C_SPEC_FORALL_SEP)
+        if (srcSpecName == C_SPEC_FORALL_SEP)
         {
             // forall*
             llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
             return llvm::CallInst::Create(getForallSepSpec(), newArgs);
         }
-        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_OLD_BASE))
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_OLD_BASE))
         {
             // \old
             auto type = oldCall.getCalledFunction()->getReturnType();
@@ -151,7 +194,7 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(getOldSpec(type), newArgs);
             return newCall;
         }
-        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_RESULT_BASE))
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_RESULT_BASE))
         {
             // \result
             auto type = oldCall.getCalledFunction()->getReturnType();
@@ -159,7 +202,7 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(getResultSpec(type), newArgs);
             return newCall;
         }
-        else if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_BOUND_VAR))
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_BOUND_VAR))
         {
             // Bound variable
             auto type = oldCall.getCalledFunction()->getReturnType();
@@ -167,10 +210,62 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(getBoundVarSpec(type), newArgs);
             return newCall;
         }
-        else
+        if (srcSpecName == C_SPEC_FRAC_OF)
         {
-            throw std::runtime_error("Unification of " + srcSpecName + " is not yet supported!");
+            // fracOf
+            llvm::SmallVector<llvm::Value *, 4> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1),
+                oldCall.getArgOperand(2)};
+            auto newCall = llvm::CallInst::Create(getFracOfSpec(), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecFracType()));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+
+            // Check that the type for fractions has been properly replaced. 
+            if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(oldCall.getArgOperand(0)))
+            {
+                if (allocInstr->getAllocatedType() != getUSpecFracType())
+                {
+                    throw std::runtime_error("The spec-lib type for fractions has not been properly replaced.");
+                }
+            }
+            else
+            {
+                throw std::runtime_error("Allocation for fractions is only supported using alloca.");
+            }
+            
+            return newCall;
         }
+        if (srcSpecName == C_SPEC_PERM)
+        {
+            // Perm
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getPermSpec(), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecFracType()));
+            return newCall;
+        }
+
+        throw std::runtime_error("Unification of " + srcSpecName + " is not yet supported!");
+    }
+
+    llvm::StructType *SpecUnifier::getUSpecFracType()
+    {
+        auto fracType = llvm::StructType::getTypeByName(*irContext, PALLAS_SPEC_TYPE_FRAC);
+        if (fracType == nullptr)
+        {
+            // Implement as identified struct-type ( could be made potentially opaque?!)
+            // The concrete contents of the type do not matter, only used as a 'placeholder'.
+            llvm::SmallVector<llvm::Type *, 4> elems = {
+                llvm::Type::getInt64Ty(*irContext), llvm::Type::getInt64Ty(*irContext),
+                llvm::Type::getInt64Ty(*irContext), llvm::Type::getInt64Ty(*irContext)};
+            fracType = llvm::StructType::create(elems, PALLAS_SPEC_TYPE_FRAC);
+        }
+        return fracType;
     }
 
     llvm::Function *SpecUnifier::getImplySpec()
@@ -244,8 +339,8 @@ namespace sourcespec2ir
     {
         if (!specExists)
         {
-            specExists = createSpecLibFunction(PALLAS_SPEC_EXISTS, llvm::Type::getInt1Ty(*irContext),
-                                               {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            specExists = createSpecLibFunction(PALLAS_SPEC_EXISTS,
+                                               getBoolTy(), {getBoolTy(), getBoolTy()});
         }
         return specExists;
     }
@@ -254,8 +349,8 @@ namespace sourcespec2ir
     {
         if (!specForall)
         {
-            specForall = createSpecLibFunction(PALLAS_SPEC_FORALL, llvm::Type::getInt1Ty(*irContext),
-                                               {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            specForall = createSpecLibFunction(PALLAS_SPEC_FORALL,
+                                               getBoolTy(), {getBoolTy(), getBoolTy()});
         }
         return specForall;
     }
@@ -264,10 +359,46 @@ namespace sourcespec2ir
     {
         if (!specForallSep)
         {
-            specForallSep = createSpecLibFunction(PALLAS_SPEC_FORALL_SEP, llvm::Type::getInt1Ty(*irContext),
-                                                  {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            specForallSep = createSpecLibFunction(PALLAS_SPEC_FORALL_SEP,
+                                                  getBoolTy(), {getBoolTy(), getBoolTy()});
         }
         return specForallSep;
+    }
+
+    llvm::Function *SpecUnifier::getFracOfSpec()
+    {
+        if (!specFracOf)
+        {
+
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(getUSpecFracType(), 0), // Opaque, or non-opaque pointer?
+                llvm::Type::getInt32Ty(*irContext),           // TODO: Change to systems default integer
+                llvm::Type::getInt32Ty(*irContext)};
+            auto specFun = createSpecLibFunction(PALLAS_SPEC_FRAC_OF,
+                                                 llvm::Type::getVoidTy(*irContext), argList);
+            specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecFracType()));
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+
+            specFracOf = specFun;
+        }
+        return specFracOf;
+    }
+
+    llvm::Function *SpecUnifier::getPermSpec()
+    {
+        if (!specPerm)
+        {
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(*irContext, 0),
+                llvm::PointerType::get(getUSpecFracType(), 0)};
+            auto specFun = createSpecLibFunction(PALLAS_SPEC_PERM, getBoolTy(), argList);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecFracType()));
+            specPerm = specFun;
+        }
+        return specPerm;
     }
 
     llvm::Function *SpecUnifier::createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes)
@@ -283,5 +414,10 @@ namespace sourcespec2ir
     {
         auto idStr = llvm::MDString::get(*irContext, identifier);
         specLib->setMetadata(PALLAS_SPEC_LIB_MARKER, llvm::MDNode::get(*irContext, idStr));
+    }
+
+    llvm::Type *SpecUnifier::getBoolTy()
+    {
+        return llvm::Type::getInt1Ty(*irContext);
     }
 }
