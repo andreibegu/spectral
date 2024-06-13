@@ -37,8 +37,13 @@ namespace sourcespec2ir
         const std::string C_SPEC_FORALL_SEP = "forallP";
         const std::string C_SPEC_FRAC_OF = "fracOf";
         const std::string C_SPEC_PERM = "Perm";
+        const std::string C_SPEC_SEQ_NEW_BASE = "PALLAS_SEQ_NEW___";
+        const std::string C_SPEC_SEQ_SIZE_BASE = "PALLAS_SEQ_SIZE___";
+        const std::string C_SPEC_SEQ_GET_BASE = "PALLAS_SEQ_AT___";
+        const std::string C_SPEC_SEQ_APPEND_BASE = "PALLAS_SEQ_APPEND___";
 
         const std::string C_SPEC_FRAC_TYPE = "struct.frac";
+        const std::string C_SPEC_SEQ_TYPE_BASE = "PALLAS_SEQ___";
 
 
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
@@ -48,6 +53,28 @@ namespace sourcespec2ir
          * Return wether or not the given function is a source-language specific specification function.
          */
         bool isSrcSpecificationFunction(const llvm::Function &f);
+
+        /**
+         * Checks if the given type represents a sequence in the source-language specific
+         * specification-library.
+         */
+        bool isSrcSeqType(const llvm::StructType &t);
+
+        /**
+         * Takes a value that represents an ADT from the source-specific specification-library 
+         * and returns the content-type of this ADT.
+         * The default-implementation assumes that ADTs are encoded as structs where 
+         * the type of the first element matches the content-type. 
+         */
+        llvm::Type *getContentTypeOfADT(const llvm::Value &v);
+
+        /**
+         * Takes a type that represents an ADT from the source-specific specification-library 
+         * and returns the content-type of this ADT.
+         * The default-implementation assumes that ADTs are encoded as structs where 
+         * the type of the first element matches the content-type. 
+         */
+        llvm::Type *getContentTypeOfADT(const llvm::Type &t);
 
         /* Return pointer to the specification-function for implications.
          * If the declaration does not exist yet, it is created.
@@ -97,10 +124,40 @@ namespace sourcespec2ir
          */
         llvm::Function *getPermSpec();
 
+        /* Returns a pointer to the specification-function for creating empty sequences.
+         * For every content-type, a different function is created.
+         */
+        llvm::Function *getSeqNewSpec(llvm::Type *type);
+
+        /* Returns a pointer to the specification-function for getting the size of a sequence
+         * with the given content-type.
+         * For every content-type, a different function is created.
+         */
+        llvm::Function *getSeqSizeSpec(llvm::Type *type);
+
+        /* Returns a pointer to the specification-function for accessing an 
+         * element of a sequence. 
+         * For every content-type, a different function is created.
+         */
+        llvm::Function *getSeqGetSpec(llvm::Type *type);
+
+        /* Returns a pointer to the specification-function for
+         * appending an element to a sequence.
+         * For every content-type, a different function is created.
+         */
+        llvm::Function *getSeqAppendSpec(llvm::Type *type);
+
+
         /* Return pointer to the type that is used to represent fractions in the unified specification representation. 
          * If the declaration does not exist yet, it is created.
          */
         llvm::StructType *getUSpecFracType();
+
+        /* Return pointer to the type that is used to represent sequences with the given content-type 
+         * in the unified specification representation. 
+         * If the declaration does not exist yet, it is created.
+         */
+        llvm::StructType *getUSpecSeqType(llvm::Type *type);
         
         /**
          * Creates a new function-call that is used to replace the call-instruction that was passed
@@ -145,6 +202,21 @@ namespace sourcespec2ir
 
         llvm::Function *specPerm = nullptr;
 
+        int specSeqNewCounter = 0; // Counter used to generate unique names for the different sequence-constructors.
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqNew;
+
+        int specSeqSizeCounter = 0; 
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSize;
+
+        int specSeqGetCounter = 0; 
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
+
+        int specSeqAppendCounter = 0; 
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqAppend;
+
+        int specSeqTypeCounter = 0; // Counter used to generate unique names for the different sequence-types of the spec-lib.
+        llvm::DenseMap<llvm::Type *, llvm::StructType *> specSeqTypes;
+
         /**
          * Replace all uses of the given source-language specific specification function with a
          * unified specification function.
@@ -156,7 +228,6 @@ namespace sourcespec2ir
          * source-specific specification library.
          */
         void replaceSpecTypes();
-
 
         /**
          * Helper-Functions
@@ -179,6 +250,11 @@ namespace sourcespec2ir
          * Returns pointer to the boolean-type (i.e. Int1Ty) in the current context.
          */
         inline llvm::Type* getBoolTy();
+
+        /**
+         * Returns pointer to the void-type in the current context.
+         */
+        inline llvm::Type* getVoidTy();
     };
 
 }

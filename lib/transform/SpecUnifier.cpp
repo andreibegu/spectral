@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -67,11 +68,36 @@ namespace sourcespec2ir
         }
         else if (f.getName().startswith(C_SPEC_OLD_BASE) ||
                  f.getName().startswith(C_SPEC_RESULT_BASE) ||
-                 f.getName().startswith(C_SPEC_BOUND_VAR))
+                 f.getName().startswith(C_SPEC_BOUND_VAR) ||
+                 f.getName().startswith(C_SPEC_SEQ_NEW_BASE) ||
+                 f.getName().startswith(C_SPEC_SEQ_SIZE_BASE) ||
+                 f.getName().startswith(C_SPEC_SEQ_GET_BASE) ||
+                 f.getName().startswith(C_SPEC_SEQ_APPEND_BASE))
         {
             return true;
         }
         return false;
+    }
+
+    llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)
+    {
+        // Get the content-type of the ADT from the first element of the struct
+        // Currently, only types allocated via alloca are supported.
+        // TODO: Expand this (arguments, ...)
+        if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(&v))
+        {
+            return getContentTypeOfADT(*allocInstr->getAllocatedType());
+        }
+        throw std::runtime_error("Failed to extract the content-type of the sequence-type.");
+    }
+
+    llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Type &t)
+    {
+        if (auto *adtType = llvm::dyn_cast<llvm::StructType>(&t))
+        {
+            return adtType->getElementType(0);
+        }
+        throw std::runtime_error("Failed to extract the content-type of the sequence-type.");
     }
 
     void SpecUnifier::replaceCallsToSpecFunction(llvm::Function &srcSpecFunction)
@@ -119,13 +145,23 @@ namespace sourcespec2ir
     void SpecUnifier::replaceSpecTypes()
     {
         auto *srcFracType = getSourceLibFracType();
+
+        // Collect all of the sequence-types that are used.
+        llvm::SmallPtrSet<llvm::StructType *, 8> seqTypes;
+        for (auto st : irModule->getIdentifiedStructTypes())
+        {
+            if (isSrcSeqType(*st))
+            {
+                seqTypes.insert(st);
+            }
+        }
+
         // If the type for fractions is not used, we do not need to replace anything.
-        if (srcFracType == nullptr) 
-        {   
+        if (srcFracType == nullptr && seqTypes.empty())
+        {
             std::cout << "Skipping replacement of spec-types." << std::endl;
             return;
         }
-
 
         for (auto &f : irModule->getFunctionList())
         {
@@ -139,15 +175,38 @@ namespace sourcespec2ir
                 // Filter for alloca-instructions
                 if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(&*it))
                 {
+                    llvm::Type *newType = nullptr;
+                    auto oldType = allocInstr->getAllocatedType();
+
                     // Handle fraction-type
-                    if (allocInstr->getAllocatedType() == srcFracType) 
+                    if (oldType == srcFracType)
+                    {
+                        newType = getUSpecFracType();
+                        // allocInstr->setAllocatedType(getUSpecFracType());
+                    }
+                    else if (auto *sType = llvm::dyn_cast<llvm::StructType>(oldType))
+                    {
+                        // Handle sequence-types
+                        if (seqTypes.contains(sType))
+                        {
+                            auto contentType = getContentTypeOfADT(*sType);
+                            newType = getUSpecSeqType(contentType);
+                        }
+                    }
+
+                    if (newType != nullptr)
                     {
                         // TODO: Repace call to setAllocatedType with something better (see doxygen)
-                        allocInstr->setAllocatedType(getUSpecFracType());
+                        allocInstr->setAllocatedType(newType);
                     }
                 }
             }
         }
+    }
+
+    bool SpecUnifier::isSrcSeqType(const llvm::StructType &t)
+    {
+        return t.getName().startswith("struct." + C_SPEC_SEQ_TYPE_BASE);
     }
 
     llvm::Type *SpecUnifier::getSourceLibFracType()
@@ -222,7 +281,7 @@ namespace sourcespec2ir
             newCall->addParamAttr(1, llvm::Attribute::NoUndef);
             newCall->addParamAttr(2, llvm::Attribute::NoUndef);
 
-            // Check that the type for fractions has been properly replaced. 
+            // Check that the type for fractions has been properly replaced.
             if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(oldCall.getArgOperand(0)))
             {
                 if (allocInstr->getAllocatedType() != getUSpecFracType())
@@ -234,7 +293,7 @@ namespace sourcespec2ir
             {
                 throw std::runtime_error("Allocation for fractions is only supported using alloca.");
             }
-            
+
             return newCall;
         }
         if (srcSpecName == C_SPEC_PERM)
@@ -247,6 +306,56 @@ namespace sourcespec2ir
             newCall->addParamAttr(0, llvm::Attribute::NoUndef);
             newCall->addParamAttr(1, llvm::Attribute::NoUndef);
             newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecFracType()));
+            return newCall;
+        }
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_SEQ_NEW_BASE))
+        {
+            // New sequence
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+            llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+            auto newCall = llvm::CallInst::Create(getSeqNewSpec(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(cType)));
+            return newCall;
+        }
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_SEQ_SIZE_BASE))
+        {
+            // Size of sequences
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+            llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+            auto newCall = llvm::CallInst::Create(getSeqSizeSpec(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
+            return newCall;
+        }
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_SEQ_GET_BASE))
+        {
+            // Get on sequences
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1),
+            };
+            auto newCall = llvm::CallInst::Create(getSeqGetSpec(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            return newCall;
+        }
+        if (oldCall.getCalledFunction()->getName().startswith(C_SPEC_SEQ_APPEND_BASE))
+        {
+            // Append on sequences
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+            auto seqType = getUSpecSeqType(cType);
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1),
+                oldCall.getArgOperand(2),
+            };
+            auto newCall = llvm::CallInst::Create(getSeqAppendSpec(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, seqType));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
+            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
             return newCall;
         }
 
@@ -266,6 +375,27 @@ namespace sourcespec2ir
             fracType = llvm::StructType::create(elems, PALLAS_SPEC_TYPE_FRAC);
         }
         return fracType;
+    }
+
+    llvm::StructType *SpecUnifier::getUSpecSeqType(llvm::Type *type)
+    {
+        if (specSeqTypes.find(type) == specSeqTypes.end())
+        {
+            // Generate declaration for new sequence-type
+            auto tName = PALLAS_SPEC_TYPE_SEQ_BASE + "." + std::to_string(specSeqTypeCounter++);
+            // The first value in the sequence type determines the content-type of the sequence
+            // The remaining values are dummy-values to increase the size which prevents
+            // ABI optimizations when the struct is passed to a function.
+            llvm::SmallVector<llvm::Type *, 4> elems = {
+                type,
+                llvm::Type::getInt64Ty(*irContext),
+                llvm::Type::getInt64Ty(*irContext),
+                llvm::Type::getInt64Ty(*irContext)};
+            auto seqT = llvm::StructType::create(elems, tName);
+            specSeqTypes[type] = seqT;
+        }
+
+        return specSeqTypes[type];
     }
 
     llvm::Function *SpecUnifier::getImplySpec()
@@ -372,7 +502,7 @@ namespace sourcespec2ir
 
             llvm::SmallVector<llvm::Type *> argList = {
                 llvm::PointerType::get(getUSpecFracType(), 0), // Opaque, or non-opaque pointer?
-                llvm::Type::getInt32Ty(*irContext),           // TODO: Change to systems default integer
+                llvm::Type::getInt32Ty(*irContext),            // TODO: Change to systems default integer
                 llvm::Type::getInt32Ty(*irContext)};
             auto specFun = createSpecLibFunction(PALLAS_SPEC_FRAC_OF,
                                                  llvm::Type::getVoidTy(*irContext), argList);
@@ -401,6 +531,78 @@ namespace sourcespec2ir
         return specPerm;
     }
 
+    llvm::Function *SpecUnifier::getSeqNewSpec(llvm::Type *type)
+    {
+        if (specSeqNew.find(type) == specSeqNew.end())
+        {
+            // Generate function declaration
+            auto specName = PALLAS_SPEC_SEQ_NEW_BASE + "." + std::to_string(specSeqNewCounter++);
+            auto retType = llvm::PointerType::get(getUSpecSeqType(type), 0);
+            auto specFun = createSpecLibFunction(specName, getVoidTy(), {retType});
+            specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
+            specSeqNew[type] = specFun;
+        }
+
+        return specSeqNew[type];
+    }
+
+    llvm::Function *SpecUnifier::getSeqSizeSpec(llvm::Type *type)
+    {
+        if (specSeqSize.find(type) == specSeqSize.end())
+        {
+            // Generate function declaration
+            auto name = PALLAS_SPEC_SEQ_SIZE_BASE + "." + std::to_string(specSeqSizeCounter++);
+            auto argType = llvm::PointerType::get(getUSpecSeqType(type), 0);
+            auto specFun = createSpecLibFunction(name, llvm::Type::getInt64Ty(*irContext), {argType});
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+            specSeqSize[type] = specFun;
+        }
+
+        return specSeqSize[type];
+    }
+
+    llvm::Function *SpecUnifier::getSeqGetSpec(llvm::Type *type)
+    {
+        if (specSeqGet.find(type) == specSeqGet.end())
+        {
+            // Generate function declaration
+            auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(specSeqGetCounter++);
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(getUSpecSeqType(type), 0),
+                llvm::Type::getInt64Ty(*irContext) // TODO: Remove the hardcoded 64-bit-type
+            };
+            auto specFun = createSpecLibFunction(name, type, argList);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specSeqGet[type] = specFun;
+        }
+
+        return specSeqGet[type];
+    }
+
+    llvm::Function *SpecUnifier::getSeqAppendSpec(llvm::Type *type)
+    {
+        if (specSeqAppend.find(type) == specSeqAppend.end())
+        {
+            // Generate function declaration
+            auto name = PALLAS_SPEC_SEQ_APPEND_BASE + "." + std::to_string(specSeqAppendCounter++);
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(getUSpecSeqType(type), 0),
+                llvm::PointerType::get(getUSpecSeqType(type), 0),
+                type};
+            auto specFun = createSpecLibFunction(name, getVoidTy(), argList);
+            specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+            specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+            specSeqAppend[type] = specFun;
+        }
+
+        return specSeqAppend[type];
+    }
+
     llvm::Function *SpecUnifier::createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes)
     {
         auto specFunType = llvm::FunctionType::get(returnType, argTypes, false);
@@ -419,5 +621,10 @@ namespace sourcespec2ir
     llvm::Type *SpecUnifier::getBoolTy()
     {
         return llvm::Type::getInt1Ty(*irContext);
+    }
+
+    llvm::Type *SpecUnifier::getVoidTy()
+    {
+        return llvm::Type::getVoidTy(*irContext);
     }
 }

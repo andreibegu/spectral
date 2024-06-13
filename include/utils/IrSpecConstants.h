@@ -41,8 +41,19 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_PERM = "pallas.perm";
 
+    const std::string PALLAS_SPEC_SEQ_NEW_BASE = "pallas.seq.new";
+
+    const std::string PALLAS_SPEC_SEQ_SIZE_BASE = "pallas.seq.size";
+
+    const std::string PALLAS_SPEC_SEQ_GET_BASE = "pallas.seq.get";
+
+    const std::string PALLAS_SPEC_SEQ_APPEND_BASE = "pallas.seq.append";
+
+
     /* Constants used to name specification-types */
     const std::string PALLAS_SPEC_TYPE_FRAC = "pallas.fracT";
+
+    const std::string PALLAS_SPEC_TYPE_SEQ_BASE = "pallas.seq";
 
 
 }

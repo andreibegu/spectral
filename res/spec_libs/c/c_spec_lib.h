@@ -29,7 +29,11 @@ typedef struct {
 #define SEQ(type) PALLAS_SEQ___ ## type
 
 // Macro that expands to the definition of the type of a sequence with content of type 'type'.
+// The first element in the struct corresponds to the content-type of the sequence, 
+// the remaining integers are used to bloat-up the size du suppress ABI-specific optimizations
+// when passing the struct around.
 #define DEF_SEQ_T(type) typedef struct { \
+    type contentType; \
     int32_t dummy1, dummy2, dummy3, dummy4, dummy5; \
     } SEQ(type)
 
@@ -159,10 +163,3 @@ DEF_SEQ_APPEND(type); \
 DEF_SEQ_CONCAT(type); \
 DEF_SEQ_NEW(type); 
 
-
-/* Definitions for Sequences with commonly used, predefined content-types:*/
-DEF_SEQ(int)
-DEF_SEQ(float)
-DEF_SEQ(double)
-DEF_SEQ(char)
-DEF_SEQ(bool)
