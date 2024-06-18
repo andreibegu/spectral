@@ -16,3 +16,30 @@ https://github.com/antlr/antlr4/tree/master/runtime/Cpp
 The structure of the repository is based on 
 - [VCLLVM](https://github.com/Drevanoorschot/VCLLVM)
 - [LLVM Source Tree Layout](https://llvm.org/docs/Projects.html#source-tree-layout)
+
+
+## Project setup in VSCode
+
+- Ensure that the following packages are installed:
+    - cmake
+    - zlib1g-dev
+    - ninja-build
+    - llvm-15-dev
+    - clang-15
+    - build-essential
+    - gdb
+- Install the C/C++ Extension Pack for VSCode
+- Clone repo
+- Open repo-folder in VSCode
+- In VSCode:
+	- Select gcc as build-kit for CMake
+    - Check that Ninja is used as the cmake-generator
+	- CMake configure
+	- CMake build
+	- Add program arguments to the cmake-debug-config (CMake-Options --> Debug Config, or edit directly in the user settings.json-file):
+    ```
+	"cmake.debugConfig": {
+    	"args": ["${workspaceFolder}/examples/spec_seq.c", "-o", "${workspaceFolder}/.tmp/spec2ir_out.ll", "-d"]
+    },
+    ``` 
+	
