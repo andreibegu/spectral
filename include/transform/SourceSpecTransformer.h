@@ -161,6 +161,15 @@ namespace sourcespec2ir
          */
         std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
 
+        /**
+         * Returns a string representation of the given DIType that matches the types representation on the source-level. 
+         * If the stirng-representation cannot be generated, an error is raised. 
+         * 
+         * TODO: Move somewhere else or make virtual as this is source-language specific
+         *      Or even better: Extract the source-language specific aspects.
+         */
+        std::string getSrcReprOfType (const llvm::DIType *type);
+
     };
 
 }

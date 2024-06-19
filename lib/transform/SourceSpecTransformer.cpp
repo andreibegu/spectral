@@ -4,6 +4,7 @@
 #include <stdexcept>
 
 #include <llvm/ADT/StringRef.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Type.h>
@@ -52,6 +53,13 @@ namespace sourcespec2ir
 
         // Run mem2reg pass on IR module
         promoteMemToReg(*irModule);
+
+        /*
+        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        std::cout << "PRE-Transformation" << std::endl;
+        writeToFile(*irModule, "");
+        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        */
 
         // Parse the source-file to extract the specifications
         srcFileStream = std::make_unique<std::ifstream>();
@@ -106,10 +114,12 @@ namespace sourcespec2ir
         // Check wellformedness of module
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
 
+        /*
         std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
         std::cout << "PRE-Unification" << std::endl;
         writeToFile(*irModule, "");
         std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        */
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
@@ -242,7 +252,7 @@ namespace sourcespec2ir
             }
 
             const auto varName = utils::getSrcVarName(**it);
-            const auto varType = utils::getSrcVarType(**it);
+            const auto varType = getSrcReprOfType((*it)->getType());
             argList += varType + " " + varName;
         }
 
@@ -296,6 +306,45 @@ namespace sourcespec2ir
             }
             outStream.close();
         }
+    }
+
+    /**
+     * TODO: Clean this up, and make it more source-language independent!!!
+     * TODO: Support more Tags
+     */
+    std::string SourceSpecTransformer::getSrcReprOfType (const llvm::DIType *type)
+    {
+        // Check if type is a pointer:
+        if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
+        {
+            auto tag = dType->getTag();
+            auto baseType = dType->getBaseType();
+
+            if (tag == llvm::dwarf::DW_TAG_pointer_type) 
+            {
+                // Handle Pointer-type
+                // Recursively unwrap the pointer 
+                auto baseRepr = getSrcReprOfType(baseType);
+                return baseRepr + "*";
+            } 
+            else if (tag == llvm::dwarf::DW_TAG_const_type)
+            {
+                // Handle const-types
+                return getSrcReprOfType(baseType) + " const ";
+            }
+            else
+            {
+                throw std::logic_error("Encountered an unsupported type-tag: " + dType->getTag());
+            }
+        } 
+
+        // Assume that the DIType is a plain DIType and just get the name
+        auto typeName = type->getName().str();
+        if (typeName.empty()) 
+        {
+            throw std::logic_error("Failed to generate string-representation for type.");
+        }
+        return typeName;
     }
 
     /*
