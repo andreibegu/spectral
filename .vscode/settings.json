@@ -65,5 +65,4 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp"
     },
-    "C_Cpp.clang_format_style": "{BasedOnStyle: Microsoft, AllowShortIfStatementsOnASingleLine: AllIfsAndElse}"
 }
