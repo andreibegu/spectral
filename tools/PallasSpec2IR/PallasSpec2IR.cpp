@@ -1,5 +1,5 @@
 #include "transform/SourceSpecTransformer.h"
-#include "transform/SpecUnifier.h"
+#include "transform/CSpecUnifier.h"
 #include "transform/CCompilerDriver.h"
 
 #include <llvm/Support/CommandLine.h>
@@ -25,14 +25,13 @@ int main(int argc, char **argv)
     std::cout << "From: " << clInFile << " to: " << clOutFile << std::endl;
 
     auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>();
-    auto specUnifier = std::make_unique<sourcespec2ir::SpecUnifier>();
+    auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
     sourcespec2ir::SourceSpecTransformer transformer(
         std::move(compilerDriver), 
         std::move(specUnifier), 
         clInFile.c_str(), 
         clOutFile.c_str(),
         clPrintDebug);
-
     transformer.transformModule();
 
     return 0;

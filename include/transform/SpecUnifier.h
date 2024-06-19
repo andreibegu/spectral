@@ -1,6 +1,7 @@
 #ifndef PALLAS_SPECUNIFIER_H
 #define PALLAS_SPECUNIFIER_H
 
+#include <optional>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -18,178 +19,212 @@ namespace sourcespec2ir
      * This involves replacing the calls to source-language specific specification-functions to calls with
      * the unified pallas-specification-functions.
      *
-     * Does not take ownership of the passed Module.
-     *
-     * TODO: separate the source-language specific aspects into virtual functions and implement in subclass.
-     * - Add an enum with a case for all possible specification-constructs (i.e. imply, exists, ...)
-     * - Make "isSrcSpecificationFunction" return an optinal of this enum
-     * - Add virtual methods for every specification-construct to replace the more general "createSpecCall" method.
+     * Does not take ownership of the passed module or context.
      */
     class SpecUnifier
     {
     public:
-        const std::string C_SPEC_IMPLY = "imply";
-        const std::string C_SPEC_OLD_BASE = "PALLAS_OLD___";
-        const std::string C_SPEC_RESULT_BASE = "PALLAS_RESULT___";
-        const std::string C_SPEC_BOUND_VAR = "PALLAS_BOUND_VAR___";
-        const std::string C_SPEC_EXISTS = "exists";
-        const std::string C_SPEC_FORALL = "forall";
-        const std::string C_SPEC_FORALL_SEP = "forallP";
-        const std::string C_SPEC_FRAC_OF = "fracOf";
-        const std::string C_SPEC_PERM = "Perm";
-        const std::string C_SPEC_SEQ_NEW_BASE = "PALLAS_SEQ_NEW___";
-        const std::string C_SPEC_SEQ_SIZE_BASE = "PALLAS_SEQ_SIZE___";
-        const std::string C_SPEC_SEQ_GET_BASE = "PALLAS_SEQ_AT___";
-        const std::string C_SPEC_SEQ_APPEND_BASE = "PALLAS_SEQ_APPEND___";
+        /**
+         * Enum to identify the different constructs of the specification library
+         */
+        enum SpecLibElement
+        {
+            Imply,      // Implication
+            Old,        // Old value of variable
+            Result,     // Result in fucntion contract
+            BoundVar,   // Bound variable of a quantifier
+            Exists,     // Existential quantifier         
+            Forall,     // Universal quantifier
+            ForallSep,  // Universal quantifier with separating conjunction between elements
+            FracOf,     // Construct fraction from two ints
+            Perm,       // Assert permission over memory location
+            SeqNew,     // New sequence
+            SeqSize,    // Size of sequence
+            SeqGet,     // Get element from sequence
+            SeqAppend   // Append element to sequence
+        };
 
-        const std::string C_SPEC_FRAC_TYPE = "struct.frac";
-        const std::string C_SPEC_SEQ_TYPE_BASE = "PALLAS_SEQ___";
-
-
+        /**
+         * Invokes the specification-unification on the given module.
+         */
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
 
     protected:
-        /**
-         * Return wether or not the given function is a source-language specific specification function.
+        // Pointers to the loaded llvm-ir module and context
+        llvm::Module *irModule;
+        llvm::LLVMContext *irContext;
+
+        /*
+         * Functions that contain source-language specific behavior.
          */
-        bool isSrcSpecificationFunction(const llvm::Function &f);
+
+        /**
+         * If the given function is a function from the source specification-library, 
+         * returns the corresponding value from the SpecLibElement-enum. Otherwise, an empty 
+         * optional is returned.
+         */
+        virtual std::optional<SpecLibElement> isSrcSpecificationFunction(const llvm::Function &f) = 0;
+
+        /**
+         * Return a pointer to the type that is used by the source specification library
+         * to represent fractions.
+         */
+        virtual llvm::Type *getSrcLibFracType() = 0;
 
         /**
          * Checks if the given type represents a sequence in the source-language specific
          * specification-library.
          */
-        bool isSrcSeqType(const llvm::StructType &t);
+        virtual bool isSrcSeqType(const llvm::StructType &t) = 0;
 
         /**
-         * Takes a value that represents an ADT from the source-specific specification-library 
+         * Takes a type that represents an ADT from the source-specific specification-library
          * and returns the content-type of this ADT.
-         * The default-implementation assumes that ADTs are encoded as structs where 
-         * the type of the first element matches the content-type. 
+         */
+        virtual llvm::Type *getContentTypeOfADTTy(const llvm::Type &t) = 0;
+
+
+        /*
+         * Functions that are used to transform a specific call to the source-languages 
+         * specification-library into a call to the unified specification library. 
+         * These functions should be implemented by the source-language specific 
+         * specialization of the SpecUnifier.
+         */
+        virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformExists(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformForall(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformForallSep(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformFracOf(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformPerm(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformSeqSize(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) = 0;
+
+        virtual llvm::CallInst *transformSeqAppend(llvm::CallInst &oldCall) = 0;
+
+
+        /*
+         *  General Helper functions
+         */
+
+
+        /**
+         * Takes a value that represents an ADT from the source-specific specification-library
+         * and returns the content-type of this ADT.
          */
         llvm::Type *getContentTypeOfADT(const llvm::Value &v);
 
+
+        /*
+         * Functions to generate and get functions of the unified specification library. 
+         */
+
         /**
-         * Takes a type that represents an ADT from the source-specific specification-library 
-         * and returns the content-type of this ADT.
-         * The default-implementation assumes that ADTs are encoded as structs where 
-         * the type of the first element matches the content-type. 
+         * Returns pointer to the unified specification-function for implications.
          */
-        llvm::Type *getContentTypeOfADT(const llvm::Type &t);
+        llvm::Function *getUSpecImply();
 
-        /* Return pointer to the specification-function for implications.
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the unified specification-function for the \old-construct of the given type.
          */
-        llvm::Function *getImplySpec();
+        llvm::Function *getUSpecOld(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for the \old-construct.
-         * If the declaration does not exist yet, it is created. For every returned type,
-         * a different function is created.
+        /**
+         * Returns pointer to the unified specification-function for the \result-construct of the given type.
          */
-        llvm::Function *getOldSpec(llvm::Type *type);
+        llvm::Function *getUSpecResult(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for the \result-construct.
-         * If the declaration does not exist yet, it is created. For every returned type,
-         * a different function is created.
+        /**
+         * Returns pointer to the specification-function for the bound-variables-construct of the given type.
          */
-        llvm::Function *getResultSpec(llvm::Type *type);
+        llvm::Function *getUSpecBoundVar(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for the bound-variables-construct.
-         * If the declaration does not exist yet, it is created. For every returned type,
-         * a different function is created.
+        /**
+         * Returns pointer to the unified specification-function for the existential quantifier.
          */
-        llvm::Function *getBoundVarSpec(llvm::Type *type);
+        llvm::Function *getUSpecExists();
 
-        /* Return pointer to the specification-function for the existential quantifier. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the unified specification-function for the universal quantifier.
          */
-        llvm::Function *getExistsSpec();
+        llvm::Function *getUSpecForall();
 
-        /* Return pointer to the specification-function for the universal quantifier. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the unified specification-function for the separating universal quantifier.
          */
-        llvm::Function *getForallSpec();
+        llvm::Function *getUSpecForallSep();
 
-        /* Return pointer to the specification-function for the separating universal quantifier. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the unified specification-function for creating a fraction.
          */
-        llvm::Function *getForallSepSpec();
+        llvm::Function *getUSpecFracOf();
 
-        /* Return pointer to the specification-function for creating a fraction.
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Return pointer to the unified specification-function for specifying permission over a location.
          */
-        llvm::Function *getFracOfSpec();
+        llvm::Function *getUSpecPerm();
 
-        /* Return pointer to the specification-function for specifying permission over a location. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the unified specification-function for creating empty sequences 
+         * with the given content type.
          */
-        llvm::Function *getPermSpec();
+        llvm::Function *getUSpecSeqNew(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for creating empty sequences.
-         * For every content-type, a different function is created.
-         */
-        llvm::Function *getSeqNewSpec(llvm::Type *type);
-
-        /* Returns a pointer to the specification-function for getting the size of a sequence
+        /**
+         * Returns a pointer to the unified specification-function for getting the size of a sequence
          * with the given content-type.
-         * For every content-type, a different function is created.
          */
-        llvm::Function *getSeqSizeSpec(llvm::Type *type);
+        llvm::Function *getUSpecSeqSize(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for accessing an 
-         * element of a sequence. 
-         * For every content-type, a different function is created.
+        /**
+         * Returns a pointer to the unified specification-function for accessing an
+         * element of a sequence with the given content-type.
          */
-        llvm::Function *getSeqGetSpec(llvm::Type *type);
+        llvm::Function *getUSpecSeqGet(llvm::Type *type);
 
-        /* Returns a pointer to the specification-function for
-         * appending an element to a sequence.
-         * For every content-type, a different function is created.
+        /**
+         * Returns a pointer to the unified specification-function for
+         * appending an element to a sequence with the given content type.
          */
-        llvm::Function *getSeqAppendSpec(llvm::Type *type);
+        llvm::Function *getUSpecSeqAppend(llvm::Type *type);
 
-
-        /* Return pointer to the type that is used to represent fractions in the unified specification representation. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the type that is used to represent fractions 
+         * in the unified specification representation.
          */
         llvm::StructType *getUSpecFracType();
 
-        /* Return pointer to the type that is used to represent sequences with the given content-type 
-         * in the unified specification representation. 
-         * If the declaration does not exist yet, it is created.
+        /**
+         * Returns pointer to the type that is used to represent sequences 
+         * with the given content-type in the unified specification representation.
          */
         llvm::StructType *getUSpecSeqType(llvm::Type *type);
-        
-        /**
-         * Creates a new function-call that is used to replace the call-instruction that was passed
-         * as a parameter.
-         * Ownership of the newly created instruction is transfered to the caller.
-         */
-        llvm::CallInst *createSpecCall(llvm::CallInst &oldCall);
-
-        /**
-         * Return a pointer to the type that is used by the source specification library 
-         * to represent fractions. 
-         */
-        llvm::Type *getSourceLibFracType();
 
     private:
-        // Pointers to the loaded llvm-ir module and context
-        llvm::Module *irModule;
-        llvm::LLVMContext *irContext;
-
         /**
          * Pointers to the unified specification functions within irModule.
-         * Raw pointer, ownership lies with module.
+         * Raw pointers, ownership lies with module.
          */
         llvm::Function *specImply = nullptr;
 
-        int specOldCounter = 0; // Counter used to generate unique names for the different old-functions of the spec-lib.
         llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
 
-        int specResultCounter = 0; // Counter used to generate unique names for the different result-functions of the spec-lib.
         llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
 
-        int specBoundVarCounter = 0; // Counter used to generate unique names for the different bound-variable-functions of the spec-lib.
         llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
 
         llvm::Function *specExists = nullptr;
@@ -202,19 +237,14 @@ namespace sourcespec2ir
 
         llvm::Function *specPerm = nullptr;
 
-        int specSeqNewCounter = 0; // Counter used to generate unique names for the different sequence-constructors.
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqNew;
 
-        int specSeqSizeCounter = 0; 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSize;
 
-        int specSeqGetCounter = 0; 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
 
-        int specSeqAppendCounter = 0; 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqAppend;
 
-        int specSeqTypeCounter = 0; // Counter used to generate unique names for the different sequence-types of the spec-lib.
         llvm::DenseMap<llvm::Type *, llvm::StructType *> specSeqTypes;
 
         /**
@@ -224,7 +254,14 @@ namespace sourcespec2ir
         void replaceCallsToSpecFunction(llvm::Function &srcSpecFunction);
 
         /**
-         * Replaces the type of all alloca-instructions that allocate memory for a type from the 
+         * Determines the type of the given call to a specification-function from the 
+         * surce library and calls the appropriate transform-method of the source-specific 
+         * subclass. 
+         */
+        llvm::CallInst *transformSpecCall(llvm::CallInst &oldCall);
+
+        /**
+         * Replaces the type of all alloca-instructions that allocate memory for a type from the
          * source-specific specification library.
          */
         void replaceSpecTypes();
@@ -236,25 +273,25 @@ namespace sourcespec2ir
         /**
          * Helper to generate the functions of the unified specification library
          */
-        llvm::Function* createSpecLibFunction(const std::string &name, llvm::Type* returnType, llvm::SmallVector<llvm::Type*> argTypes);
+        llvm::Function *createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes);
 
         /**
          * Attaches a metadata-node to the given declaration that identifies it as a delaration
          * from the Pallas specification.
          * The added node uses IrSpecConstants::PALLAS_SPEC_LIB_MARKER as an identifer and
-         * contains a MDString with the gien identifier.
+         * contains a MDString with the given identifier.
          */
         void markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier);
 
         /**
          * Returns pointer to the boolean-type (i.e. Int1Ty) in the current context.
          */
-        inline llvm::Type* getBoolTy();
+        inline llvm::Type *getBoolTy();
 
         /**
          * Returns pointer to the void-type in the current context.
          */
-        inline llvm::Type* getVoidTy();
+        inline llvm::Type *getVoidTy();
     };
 
 }
