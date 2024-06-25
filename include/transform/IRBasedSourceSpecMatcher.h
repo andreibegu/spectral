@@ -4,6 +4,7 @@
 #include "SourceSpecMatcher.h"
 
 #include <llvm/IR/Module.h>
+#include <llvm/IR/PassManager.h>
 
 namespace sourcespec2ir 
 {
@@ -15,10 +16,14 @@ namespace sourcespec2ir
     class IRBasedSourceSpecMatcher : public SourceSpecMatcher {
     
     public:
-        IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule);
+        IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule, llvm::FunctionAnalysisManager *fam);
 
     protected:
-        std::string getContractBlockContext(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
+        std::string getContractBlockContext(size_t startLine, size_t startCol, size_t endLine, size_t endCol) override;
+        std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(size_t startLine, size_t startCol, size_t endLine, size_t endCol) override;
+    
+    private:
+        llvm::FunctionAnalysisManager *fam;
     };
 
 }
