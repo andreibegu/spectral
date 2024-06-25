@@ -16,6 +16,9 @@ namespace sourcespec2ir
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
 
+    const std::string PALLAS_LOOP_INV_BLOCK = "pallas.loopInv";
+
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 

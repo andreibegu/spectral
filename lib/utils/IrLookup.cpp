@@ -1,4 +1,8 @@
 #include "utils/IrLookup.h"
+
+#include <stdexcept>
+
+#include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
 
@@ -33,7 +37,7 @@ namespace sourcespec2ir
 {
     namespace utils
     {
-        std::unique_ptr<std::set<llvm::DILocalVariable*>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly)
+        std::unique_ptr<std::set<llvm::DILocalVariable *>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly)
         {
             if (fun.isDeclaration())
             {
@@ -41,7 +45,7 @@ namespace sourcespec2ir
                 throw std::invalid_argument("Recieved a function declaration instead of a function definition");
             }
 
-            auto srcVarSet = std::make_unique<std::set<llvm::DILocalVariable*>>();
+            auto srcVarSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
 
             // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
             for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
@@ -64,6 +68,28 @@ namespace sourcespec2ir
             }
 
             return srcVarSet;
+        }
+
+        std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForLoopInv(
+           llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader)
+        {
+            auto varSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
+            const llvm::DominatorTree domTree(*parentFunc);
+
+            // Get all llvm.dbg.-intrinsics that dominate the loop
+            for (auto i = llvm::inst_begin(parentFunc), 
+                      end = llvm::inst_end(parentFunc); i != end; ++i)
+            {
+                if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+                {
+                    if (!domTree.dominates(intr, loopHeader)) 
+                        continue;
+                    auto *srcVar = intr->getVariable();
+                    varSet->insert(srcVar);
+                }
+            }
+
+            return varSet;
         }
 
     }

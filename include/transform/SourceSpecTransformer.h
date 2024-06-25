@@ -2,9 +2,8 @@
 #define PALLAS_SOURCESPECTRANSFORMER_H
 
 #include <string>
-#include <iostream>
+#include <fstream>
 #include <memory>
-#include <optional>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
@@ -18,7 +17,6 @@
 #include "antlr4-runtime.h"
 #include "SpecLexer.h"
 #include "SpecParser.h"
-#include "SpecParserBaseVisitor.h"
 
 #include "SourceSpecMatcher.h"
 #include "SourceCompilerDriver.h"
@@ -29,33 +27,27 @@
 namespace sourcespec2ir
 {
 
-    class SourceSpecTransformer : SpecParserBaseVisitor
+    class SourceSpecTransformer
     {
     public:
-        SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver, 
+        SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver,
                               std::unique_ptr<SpecUnifier> specUnifier,
-                              const char *srcInputPath, 
-                              const char *outputPath, 
+                              const char *srcInputPath,
+                              const char *outputPath,
                               const bool printDebugInfo);
 
         void transformModule();
-
-        // Overwritten visitor-methods
-        std::any visitRequiresClause(SpecParser::RequiresClauseContext *ctx) override;
-        std::any visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx) override;
-        std::any visitInvariantClause(SpecParser::InvariantClauseContext *ctx) override;
 
     protected:
         /*
          *  Factory methods
          */
 
-        // TODO: Make virtual, add path to source-file as argument if required. 
-        std::unique_ptr<SourceSpecMatcher> createSpecMatcher(SpecParser::FileContext *specParseTree, 
-            llvm::Module *irModule);
+        // TODO: Make virtual, add path to source-file as argument if required.
+        std::unique_ptr<SourceSpecMatcher> createSpecMatcher(SpecParser::FileContext *specParseTree,
+                                                             llvm::Module *irModule);
 
     private:
-
         const char *outputPath;
         const bool printDebugInfo;
 
@@ -96,36 +88,21 @@ namespace sourcespec2ir
         // Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
-        /*
-         * Name of the function in the source-language to which the currently visited contract belongs.
-         */
-        std::optional<llvm::Function*> currentSrcContext = std::nullopt;
-
-        /*
-         * Vector that contains all metadata node that have to be added to the current specification-block.
-         * (E.g. in the case of a SpecContractBlock this vector is used to store the metadata-nodes htat encode the
-         *  specification statements within this block.)
-         */
-        std::optional<llvm::SmallVector<llvm::MDNode *>> currentSpecMDNodes = std::nullopt;
-
         /**
          * Contents of the declaration-block of the specifications.
          */
         std::unique_ptr<llvm::SmallVector<std::string>> specDeclarations;
 
         /**
-         * Transforms an expression in the source language into LLVM-IR by wrapping it into a function.
-         * The generated function is added to the module of the SourceSpecTransformer.
-         * Returns an IRWrapper function that bundles a pointer to the newly generated function along with
-         * a list of the metadata-nodes that describe the functions parameter-list.
+         * Transforms an expression in the source language into LLVM-IR by wrapping
+         * it into a function. The generated function is added to the module of the
+         * SourceSpecTransformer.
+         * Returns an IRWrapper function that bundles a pointer to the newly
+         * generated function along with a list of the metadata-nodes that
+         * describe the functions parameter-list.
          */
-        std::unique_ptr<IRWrapperFunction> transformExpression(std::string expr, const llvm::Function &contextFunction);
-
-        /**
-         * Retrieving the textual representation of the specification expressions using getText() removes the whitespaces.
-         * This method returns the full textual representatoin including whitespaces by using the underlying token-stream.
-         */
-        std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
+        std::unique_ptr<IRWrapperFunction> transformExpression(
+            std::string expr, const std::set<llvm::DILocalVariable *> &srcVars);
 
         /**
          * Runs the mem2reg-pass on the given module.
@@ -133,28 +110,56 @@ namespace sourcespec2ir
         void promoteMemToReg(llvm::Module &module);
 
         /**
-         * Encodes a statement of a function contract into a metadata-node and adds it to the
-         * current list of specification-nodes (currentSpecMDNodes).
+         * Encodes a block of function-contract statements and adds the 
+         * generated MD-nodes to the module.
          */
-        void encodeFunctionContractStatement(std::string specExpr, std::string metadataId);
+        void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
 
         /**
-         * Write the IR-representation of the given module into a file at the given path.
+         * Encodes a statement of a function contract into a metadata-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeFunctionContractStatement(
+            const llvm::Function &function,
+            const MatchedFContractStatement &stmnt);
+
+        /**
+         * Encodes a block of loop-invariants and adds the generated MD-nodes
+         * to the module.
+         */
+        void encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock);
+
+        /**
+         * Encodes a single loop-invariant into a metadata-node.
+         * The new Metadata node is added to the back of the given vector.
+         */
+        void encodeLoopInv(std::string specExpr,
+                           const std::set<llvm::DILocalVariable *> &vars,
+                           llvm::SmallVector<llvm::Metadata *> &nodes);
+
+        /**
+         * Write the IR-representation of the given module into
+         * a file at the given path.
          */
         void writeToFile(const llvm::Module &module, const char *outPath);
 
         /**
-         * Takes a string that contains a source-language expression along with a map that maps the names of source-variables
-         * to their types and generates a string-representation of a function in the source-language.
-         * The generated wrapping-function MUST use the same ordering of its arguments as is defined by parameter srcVars.
+         * Takes a string that contains a source-language expression along with a
+         * sequence of DILocalVariable that describe the source-variables that
+         * are accessible in the expression.
+         * The generated wrapping-function MUST use the same ordering of it's
+         * arguments as is defined by parameter srcVars.
          *
          * TODO: Move somewhere else or make virtual as this is source-language specific
          */
-        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr);
+        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(
+            llvm::ArrayRef<llvm::DILocalVariable *> srcVars,
+            const std::string &expr);
 
         /**
-         * Takes a string-representation of a source-labguage function and turns it into a full compilation unit in
-         * the source language.
+         * Takes a string-representation of a source-labguage function and turns 
+         * it into a full compilation unit in the source language.
          * E.g. adds imports for the specification library, ...
          *
          * TODO: Move somewhere else or make virtual as this is source-language specific
@@ -162,14 +167,14 @@ namespace sourcespec2ir
         std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
 
         /**
-         * Returns a string representation of the given DIType that matches the types representation on the source-level. 
-         * If the stirng-representation cannot be generated, an error is raised. 
-         * 
+         * Returns a string representation of the given DIType that matches the 
+         * types representation on the source-level.
+         * If the stirng-representation cannot be generated, an error is raised.
+         *
          * TODO: Move somewhere else or make virtual as this is source-language specific
          *      Or even better: Extract the source-language specific aspects.
          */
-        std::string getSrcReprOfType (const llvm::DIType *type);
-
+        std::string getSrcReprOfType(const llvm::DIType *type);
     };
 
 }

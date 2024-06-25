@@ -1,18 +1,13 @@
-#include <iostream>
-#include <fstream>
 #include <cassert>
 #include <stdexcept>
 
-#include <llvm/ADT/StringRef.h>
 #include <llvm/BinaryFormat/Dwarf.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/Instructions.h>
-#include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
+#include <llvm/Transforms/Utils/LoopSimplify.h>
 
 #include "transform/IRBasedSourceSpecMatcher.h"
 #include "transform/SourceSpecTransformer.h"
@@ -21,9 +16,6 @@
 #include "utils/IrLookup.h"
 #include "utils/MetadataUtils.h"
 #include "utils/SrcLookup.h"
-#include "antlr4-runtime.h"
-#include "SpecLexer.h"
-#include "SpecParser.h"
 
 namespace sourcespec2ir
 {
@@ -51,14 +43,20 @@ namespace sourcespec2ir
         std::string srcPathStr(srcInputPath);
         irModule = srcCompilerDriver->compileSource(srcPathStr, *irContext);
 
-        // Run mem2reg pass on IR module
+        // Simplify loops
+        llvm::ModulePassManager mpm;
+        mpm.addPass(
+            llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
+        mpm.run(*irModule, mam);
+
+        // Run mem2reg
         promoteMemToReg(*irModule);
 
         /*
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-        std::cout << "PRE-Transformation" << std::endl;
+        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        llvm::outs() << "PRE-Transformation\n";
         writeToFile(*irModule, "");
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
         */
 
         // Parse the source-file to extract the specifications
@@ -84,41 +82,33 @@ namespace sourcespec2ir
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
-        auto matchedSpecs = specMatcher->matchSpecifications();
+        specMatcher->matchSpecs();
 
-        // Transform the specifications into IR
-        for (auto &spec : *matchedSpecs)
+        // Transform the function-contract specifications into IR
+        const auto numFContracts = specMatcher->getNumMatchedFuncContracts();
+        for (size_t i = 0; i < numFContracts; ++i)
         {
-            // Set context
-            currentSrcContext = spec->function;
-            // TODO: Consider using unique-pointers because the added MD-Nodes are freshly allocated.
-            currentSpecMDNodes = std::make_optional<llvm::SmallVector<llvm::MDNode *>>();
+            auto contract = specMatcher->getMatchedFuncContract(i);
+            encodeFunctionContractBlock(*contract);
+        }
 
-            // Transform specification statements
-            visit(spec->ctx);
-
-            // Bundle the metadata-encodings of the spec-statements in a MDTuple add add them to the IR.
-            llvm::SmallVector<llvm::Metadata *> specStatementNodes;
-            for (auto node : currentSpecMDNodes.value())
-            {
-                specStatementNodes.push_back(node);
-            }
-            auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
-            currentSrcContext.value()->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
-
-            // Reset context
-            currentSrcContext = std::nullopt;
-            currentSpecMDNodes = std::nullopt;
+        // Transform loop-invariants into IR
+        // TODO: Consider dropping the representation of the invariant-statement
+        const auto numLoopInvBlocks = specMatcher->getNumMatchedLoopInv();
+        for (size_t i = 0; i < numLoopInvBlocks; ++i)
+        {
+            auto invBlock = specMatcher->getMatchedLoopInv(i);
+            encodeLoopInvBlock(*invBlock);
         }
 
         // Check wellformedness of module
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
 
         /*
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-        std::cout << "PRE-Unification" << std::endl;
+        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        llvm::outs() << "PRE-Unification\n";
         writeToFile(*irModule, "");
-        std::cout << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
         */
 
         // Transform the compiled specifications into common format (calls to specification-functions)
@@ -131,12 +121,62 @@ namespace sourcespec2ir
         writeToFile(*irModule, outputPath);
     }
 
-    std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(std::string expr, const llvm::Function &contextFunction)
+    void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
     {
-        // Collect the variables that can be referenced in the context of the contract.
-        auto srcVars = utils::getSrcVariablesForFunction(contextFunction, true);
+        const auto numInvs = invBlock.invariants.size();
+        if (numInvs == 0)
+            return;
+
+        // Determine the variables that can be referenced in the invariant
+        auto availableVars = utils::getVarsForLoopInv(
+            invBlock.parentFunction, invBlock.loopHeader);
+
+        // Vector of MD-nodes that makes up the tuple with the invariants
+        llvm::SmallVector<llvm::Metadata *> invNodes;
+
+        // MD-String that identifies the tuple as a set of loop-invariants
+        auto invIDNode = llvm::MDString::get(*irContext,
+                                             PALLAS_LOOP_INV_BLOCK);
+        invNodes.push_back(invIDNode);
+
+        // Transform the individual invariants and add them to invNodes
+        for (size_t j = 0; j < numInvs; ++j)
+        {
+            auto *inv = invBlock.invariants[j].get();
+            encodeLoopInv(inv->expr, *availableVars.get(), invNodes);
+        }
+
+        // Construct MD-tuple and add it to the loop's llvm.loop MD-node
+        auto loopMDTuple = invBlock.loopID;
+        auto invNode = llvm::MDTuple::get(*irContext, invNodes);
+        loopMDTuple->push_back(invNode);
+    }
+
+    void SourceSpecTransformer::encodeLoopInv(std::string specExpr,
+                                              const std::set<llvm::DILocalVariable *> &vars,
+                                              llvm::SmallVector<llvm::Metadata *> &nodes)
+    {
+        // Transform to IR
+        auto irEnc = transformExpression(specExpr, vars);
+
+        // Assemble MD-node to represent invariant-statement
+        // The encoding contains a ref to the function that encodes the
+        // inv-expression followed by a list of refs to the variables that
+        // make up the arguments of that function.
+        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        mdElems.push_back(llvm::ValueAsMetadata::get(irEnc->function));
+        for (auto arg : *irEnc->argListDescr)
+            mdElems.push_back(arg);
+        // Build new node and add it to the vector of the inv-block.
+        auto invAsMd = llvm::MDNode::get(*irContext, mdElems);
+        nodes.push_back(invAsMd);
+    }
+
+    std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(
+        std::string expr, const std::set<llvm::DILocalVariable *> &srcVars)
+    {
         // Transfer src-variables to sequential container for explicit ordering
-        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars->begin(), srcVars->end());
+        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars.begin(), srcVars.end());
 
         // Wrap the expression first, into a source-language function and then into a source-compilation unit
         auto srcWrapperFun = getWrappingFunction(*argList, expr);
@@ -167,19 +207,45 @@ namespace sourcespec2ir
         mpm.run(module, mam);
     }
 
-    void SourceSpecTransformer::encodeFunctionContractStatement(std::string specExpr, std::string metadataId)
+    void SourceSpecTransformer::encodeFunctionContractBlock(
+        const MatchedFunctionContract &contract)
     {
-        // TODO: Check for errors (i.e. contextfunction, ... empty)
+        const auto parentFunction = contract.function;
+
+        // Transform specification statements
+        llvm::SmallVector<llvm::Metadata *> specStatementNodes;
+        const auto numStatements = contract.statements.size();
+        for (size_t i = 0; i < numStatements; ++i)
+        {
+            auto mdNode = encodeFunctionContractStatement(
+                *parentFunction, *contract.statements[i].get());
+            specStatementNodes.push_back(mdNode);
+        }
+
+        auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
+        parentFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
+    }
+
+    llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(
+        const llvm::Function &function,
+        const MatchedFContractStatement &stmnt)
+    {
+        std::string mdId;
+        if (stmnt.type == Requires)
+            mdId = PALLAS_REQUIRES;
+        else if (stmnt.type == Ensures)
+            mdId = Ensures;
+        else
+            throw std::logic_error("Unsupported statement-type");
 
         // Generate LLVM-IR function for the specification expression.
-        // auto irCtxFunction = utils::getFunctionBySrcName(*irModule, currentSrcContext.value());
-        auto irCtxFunction = currentSrcContext.value();
-        auto specFunctionWrapper = transformExpression(specExpr, *irCtxFunction);
+        auto srcVars = utils::getSrcVariablesForFunction(function, true);
+        auto specFunctionWrapper = transformExpression(stmnt.expr, *srcVars.get());
 
         // Generate the metadata that encodes the requires clause:
         llvm::SmallVector<llvm::Metadata *, 2> mdElems;
 
-        auto mdIdentifier = llvm::MDString::get(*irContext, metadataId);
+        auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
         mdElems.push_back(mdIdentifier);
 
         auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunctionWrapper->function);
@@ -192,51 +258,11 @@ namespace sourcespec2ir
             mdElems.push_back(arg);
         }
 
-        auto requiresNode = llvm::MDNode::get(*irContext, mdElems);
-
-        // Add the metadata-node to the list of nodes in the current contract.
-        currentSpecMDNodes.value().push_back(requiresNode);
+        return llvm::MDNode::get(*irContext, mdElems);
     }
 
-    std::any SourceSpecTransformer::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
-    {
-        // TODO: Check for errors (i.e. contextfunction, ... empty)
-
-        // Get string representation of specification expression
-        auto expr = ctx->specExpression();
-        auto exprStr = getExprAsStr(*expr);
-        // Encode as metadata-node and add to list of nodes within current function contract.
-        encodeFunctionContractStatement(exprStr, PALLAS_REQUIRES);
-        return 0;
-    }
-
-    std::any SourceSpecTransformer::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
-    {
-        auto expr = ctx->specExpression();
-        auto exprStr = getExprAsStr(*expr);
-        // Encode as metadata-node and add to list of nodes within current function contract.
-        encodeFunctionContractStatement(exprStr, PALLAS_ENSURES);
-        return 0;
-    }
-
-    std::any SourceSpecTransformer::visitInvariantClause(SpecParser::InvariantClauseContext *ctx)
-    {
-        std::cerr << "Loop invariants are currently not supported! " << std::endl;
-        assert(false);
-        return 0;
-    }
-
-    std::string SourceSpecTransformer::getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx)
-    {
-        auto startToken = exprCtx.start;
-        auto stopToken = exprCtx.stop;
-        auto charStream = startToken->getTokenSource()->getInputStream();
-
-        antlr4::misc::Interval i(startToken->getStartIndex(), stopToken->getStopIndex());
-        return charStream->getText(i);
-    }
-
-    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
+    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(
+        llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
     {
 
         // Name of wrapping function
@@ -264,7 +290,8 @@ namespace sourcespec2ir
         return std::make_unique<SrcWrapperFunction>(funName, wFun);
     }
 
-    std::string SourceSpecTransformer::assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction)
+    std::string SourceSpecTransformer::assembleSrcCompilationUnit(
+        const SrcWrapperFunction &wrapperFunction)
     {
         // TODO: Use a sstream
         // TODO: add include-statements from the source-file
@@ -284,10 +311,9 @@ namespace sourcespec2ir
         if (*outPath == '\0' || printDebugInfo)
         {
             // Print to console if no output-path is given or if debug-info is enabled
-            std::cout << "===============================================" << std::endl;
+            llvm::outs() << "===============================================\n";
             irModule->dump();
-            std::cout << "===============================================" << std::endl;
-            // return;
+            llvm::outs() << "===============================================\n";
         }
 
         if (*outPath != '\0')
@@ -302,7 +328,8 @@ namespace sourcespec2ir
             }
             else
             {
-                throw std::runtime_error("Failed to write output to " + std::string(outPath) + ". Error code: " + eCode.message());
+                throw std::runtime_error("Failed to write output to " +
+                                         std::string(outPath) + ". Error code: " + eCode.message());
             }
             outStream.close();
         }
@@ -312,7 +339,7 @@ namespace sourcespec2ir
      * TODO: Clean this up, and make it more source-language independent!!!
      * TODO: Support more Tags
      */
-    std::string SourceSpecTransformer::getSrcReprOfType (const llvm::DIType *type)
+    std::string SourceSpecTransformer::getSrcReprOfType(const llvm::DIType *type)
     {
         // Check if type is a pointer:
         if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
@@ -320,13 +347,13 @@ namespace sourcespec2ir
             auto tag = dType->getTag();
             auto baseType = dType->getBaseType();
 
-            if (tag == llvm::dwarf::DW_TAG_pointer_type) 
+            if (tag == llvm::dwarf::DW_TAG_pointer_type)
             {
                 // Handle Pointer-type
-                // Recursively unwrap the pointer 
+                // Recursively unwrap the pointer
                 auto baseRepr = getSrcReprOfType(baseType);
                 return baseRepr + "*";
-            } 
+            }
             else if (tag == llvm::dwarf::DW_TAG_const_type)
             {
                 // Handle const-types
@@ -336,11 +363,11 @@ namespace sourcespec2ir
             {
                 throw std::logic_error("Encountered an unsupported type-tag: " + dType->getTag());
             }
-        } 
+        }
 
         // Assume that the DIType is a plain DIType and just get the name
         auto typeName = type->getName().str();
-        if (typeName.empty()) 
+        if (typeName.empty())
         {
             throw std::logic_error("Failed to generate string-representation for type.");
         }
@@ -350,9 +377,9 @@ namespace sourcespec2ir
     /*
      * Factory methods
      */
-    std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(SpecParser::FileContext *specParseTree,
-                                                                                llvm::Module *irModule)
+    std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(
+        SpecParser::FileContext *specParseTree, llvm::Module *irModule)
     {
-        return std::make_unique<IRBasedSourceSpecMatcher>(specParseTree, irModule);
+        return std::make_unique<IRBasedSourceSpecMatcher>(specParseTree, irModule, &fam);
     }
 }

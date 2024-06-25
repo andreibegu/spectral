@@ -4,7 +4,7 @@
 #include <memory>
 #include <set>
 
-#include <llvm/ADT/SetVector.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
 
@@ -29,6 +29,17 @@ namespace sourcespec2ir
          */
         std::unique_ptr<std::set<llvm::DILocalVariable*>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly);
 
+        /**
+         * Collects the DILocalVariable-nodes that represent variables that can 
+         * be referenced in the loop-invariant of the given loop. 
+         * 
+         * The current implementation assumes that the mem2reg-pass has been run
+         * on the module. 
+         * 
+         * Global variables are currently ignored.
+         */
+        std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForLoopInv(
+           llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader);
     }
 
 }

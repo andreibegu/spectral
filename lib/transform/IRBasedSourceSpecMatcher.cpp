@@ -1,30 +1,83 @@
 
 #include "transform/IRBasedSourceSpecMatcher.h"
 
-#include <iostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Analysis/LoopInfo.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/InstIterator.h>
+#include <llvm/IR/Metadata.h>
+#include <llvm/Support/raw_ostream.h>
 
 namespace
 {
-    void printMatchingInfo(size_t startLine, size_t startCol, size_t endLine, size_t endCol, std::string fName)
+    // Returns the given line- and column-info as a string
+    std::string getLocationString(size_t startLine, size_t endLine)
     {
-        auto locStr = std::to_string(startLine) + ":" + std::to_string(startCol) + "-" +
-                      std::to_string(endLine) + ":" + std::to_string(endCol);
-        std::cout << "Matched contract at " << locStr << " to " << fName << std::endl;
+        return std::to_string(startLine) + "-" + std::to_string(endLine);
     }
+
+    void printContractMatchingInfo(size_t startLine, size_t endLine,
+                                   std::string fName)
+    {
+        auto locStr = getLocationString(startLine, endLine);
+        llvm::outs() << "Matched contract at " << locStr
+                     << " to " << fName << "\n";
+    }
+
+    void printInvMatchingInfo(size_t specSLine, size_t specELine,
+                              size_t loopSLine, size_t loopELine)
+    {
+        auto specLocStr = getLocationString(specSLine, specELine);
+        auto loopLocStr = getLocationString(loopSLine, loopELine);
+        llvm::outs() << "Matched invariant at " << specLocStr
+                     << " to loop at " << loopLocStr << "\n";
+    }
+
+    /**
+     * Returns a tuple with the minimum and maximum line-numbers
+     * that are covered by the given loop.
+     */
+    std::pair<unsigned int, unsigned int> getLines(const llvm::Loop &loop)
+    {
+        auto mdTuple = llvm::dyn_cast_or_null<llvm::MDTuple>(loop.getLoopID());
+        if (!mdTuple || mdTuple->getNumOperands() < 3)
+        {
+            // TODO: Implement fallback-solution by iterating over instructions
+            throw std::logic_error("Failed to get llvm.loop MD-node.");
+        }
+
+        // Get the line-info from the llvm.loop md-node.
+        auto &startMd = mdTuple->getOperand(1);
+        auto &endMd = mdTuple->getOperand(2);
+
+        if (startMd == nullptr || endMd == nullptr)
+            throw std::logic_error("Failed to get dbg location for invariant");
+
+        auto startLoc = llvm::dyn_cast_or_null<llvm::DILocation>(startMd.get());
+        auto endLoc = llvm::dyn_cast_or_null<llvm::DILocation>(endMd.get());
+
+        if (startLoc == nullptr || endLoc == nullptr)
+            throw std::logic_error("Failed to get line-info for invariant");
+
+        auto minLine = startLoc->getLine();
+        auto maxLine = endLoc->getLine();
+
+        return std::make_pair(minLine, maxLine);
+    }
+
 }
 
 namespace sourcespec2ir
 {
 
-    IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule)
-        : SourceSpecMatcher(specParseTree, irModule)
+    IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule, llvm::FunctionAnalysisManager *fam)
+        : SourceSpecMatcher(specParseTree, irModule), fam(fam)
     {
     }
 
@@ -32,7 +85,7 @@ namespace sourcespec2ir
     {
         const llvm::Function *closestFunction = nullptr;
 
-        // Set that is used to check that all functions are declared on distinct lines.
+        // Set for checking that all functions are declared on distinct lines.
         llvm::SmallSet<unsigned int, 16> lineNumberSet;
 
         // Get first function under the contract
@@ -42,7 +95,8 @@ namespace sourcespec2ir
             auto diSubprog = f.getSubprogram();
             if (diSubprog != nullptr)
             {
-                // Check that all function are declared on distinct lines. (Otherwise this approach does not work)
+                // Check that all function are declared on distinct lines. 
+                // (Otherwise this approach does not work)
                 auto line = diSubprog->getLine();
                 if (lineNumberSet.contains(line))
                 {
@@ -86,7 +140,11 @@ namespace sourcespec2ir
         {
             for (auto it = inst_begin(f), end = inst_end(f); it != end; ++it)
             {
-                const auto iLine = it->getDebugLoc().getLine();
+                auto dbgLoc = it->getDebugLoc();
+                // Skip check if no dbg-info is present
+                if (!dbgLoc)
+                    continue;
+                const auto iLine = dbgLoc.getLine();
                 if (iLine >= endLine && iLine <= fLine)
                 {
                     throw std::runtime_error("Encountered an instruction between contract and function.");
@@ -109,8 +167,72 @@ namespace sourcespec2ir
         }
 
         // Print info about matched contract to the console
-        printMatchingInfo(startLine, startCol, endLine, endCol, closestFunction->getName().str());
+        printContractMatchingInfo(startLine, endLine, closestFunction->getName().str());
 
         return closestFunction->getName().str();
+    }
+
+    std::pair<llvm::Function *, llvm::Loop *> IRBasedSourceSpecMatcher::matchLoopInvBlock(
+        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    {
+        // Find the first function above the loop-invariant
+        llvm::Function *parentFunction = nullptr;
+        unsigned int parentStartLine = 0;
+        for (auto &f : *irModule)
+        {
+            // TODO: Fail if location cannot be determined?
+            if (auto subprog = f.getSubprogram())
+            {
+                // TODO: Determine the end of the scope by iterating over all
+                // instruction in the subscopes and comparing the line-numbers.
+                auto fLine = subprog->getLine();
+                // Skip all functions that start after the spec-block
+                if (fLine > startLine)
+                    continue;
+                if (parentFunction == nullptr || fLine > parentStartLine)
+                {
+                    // The current funct is below the current parent funct.
+                    parentFunction = &f;
+                    parentStartLine = fLine;
+                }
+            }
+        }
+
+        if (parentFunction == nullptr ||
+            parentFunction->isDeclaration() ||
+            parentFunction->isIntrinsic())
+        {
+            throw std::logic_error("Failed to determine parent function \
+                                    when matching loop-invariant");
+        }
+
+        // Find closest loop in the function that is below the spec-block.
+        llvm::LoopInfo &li = fam->getResult<llvm::LoopAnalysis>(*parentFunction);
+        llvm::Loop *closestLoop = nullptr;
+        unsigned int closestLoopStart = 0;
+        unsigned int closestLoopEnd = 0;
+        // for (auto *loop : li)
+        for (auto *loop : li.getLoopsInPreorder())
+        {
+            auto [loopStart, loopEnd] = getLines(*loop);
+            // Skip all loops that occur before the spec-block
+            if (loopStart < startLine)
+                continue;
+            if (closestLoop == nullptr || loopStart < closestLoopStart)
+            {
+                // The current loop is below the current closest loop.
+                closestLoop = loop;
+                closestLoopStart = loopStart;
+                closestLoopEnd = loopEnd;
+            }
+        }
+
+        if (closestLoop == nullptr)
+            throw std::logic_error("Failed to match the loop-invariant");
+
+        printInvMatchingInfo(startLine, endLine,
+                             closestLoopStart, closestLoopEnd);
+
+        return std::make_pair(parentFunction, closestLoop);
     }
 }

@@ -3,7 +3,7 @@ options { tokenVocab = SpecLexer; }
 
 file: .*? (specDeclarationBlock .*?)? (spec .*?)*;
 
-spec: specContractBlock | specStatementBlock | specInvariantBlock;
+spec: specContractBlock | specStatementBlock | specLoopInvariantBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -11,15 +11,15 @@ specContractBlock: SPEC_START specContractClause+ SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
-specInvariantBlock: SPEC_START specInvariant+ SPEC_END;
+specLoopInvariantBlock: SPEC_START specLoopInvariant+ SPEC_END;
 
 specContractClause
     : ('requires' specExpression ';') # requiresClause
     | ('ensures'  specExpression ';') # ensuresClause
     ;
 
-specInvariant
-    : ('loop_invariant' specExpression ';') # invariantClause
+specLoopInvariant
+    : ('loop_invariant' specExpression ';')
     ;
 
 specStatement
