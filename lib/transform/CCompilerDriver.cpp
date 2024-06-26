@@ -12,6 +12,11 @@
 namespace sourcespec2ir
 {
 
+    CCompilerDriver::CCompilerDriver(std::string specLibPath)
+        : specLibPath(specLibPath)
+    {
+    }
+
     /*
      * TODO: Very ugly, try to use libclang or something like that.
      * TODO: Cleanup file handling (or better: avoid using files altogether)
@@ -20,7 +25,7 @@ namespace sourcespec2ir
     std::unique_ptr<llvm::Module> CCompilerDriver::compileSource(const std::string &srcFilePath, llvm::LLVMContext &context)
     {
         // Run compiler to generate the IR
-        // srcFilePath.substr(0, srcFilePath.find_last_of(".")) + "_tmp.ll"; // 
+        // srcFilePath.substr(0, srcFilePath.find_last_of(".")) + "_tmp.ll"; //
         const std::string irFilePath = "tmp_ir_source.ll";
 
         // TODO: Handle include-headers, ...
@@ -58,7 +63,7 @@ namespace sourcespec2ir
         std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + tmpSrcFile +
                                 " -o " + tmpIrFile +
                                 " -Xclang -disable-O0-optnone" +
-                                " -I ../../res/spec_libs/c/";
+                                " -I " + specLibPath +"/";
         std::system(clangCall.c_str());
 
         // Parse the resulting file as an LLVM-IR module

@@ -13,11 +13,14 @@ namespace sourcespec2ir
     class CCompilerDriver : public SourceCompilerDriver
     {
     public:
+        CCompilerDriver(std::string specLibPath);
 
         std::unique_ptr<llvm::Module> compileSource(const std::string &srcFilePath, llvm::LLVMContext &context);
 
         std::unique_ptr<llvm::Module> compileSpecification(const std::string &cu, llvm::LLVMContext &context);
 
+    private:
+        std::string specLibPath;
     };
 
 }

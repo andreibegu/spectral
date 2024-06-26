@@ -19,13 +19,13 @@
 
 namespace sourcespec2ir
 {
-    SourceSpecTransformer::SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver,
-                                                 std::unique_ptr<SpecUnifier> specUnifier,
-                                                 const char *srcInputPath,
-                                                 const char *outputPath,
-                                                 const bool printDebugInfo)
-        : outputPath(outputPath),
-          printDebugInfo(printDebugInfo),
+    SourceSpecTransformer::SourceSpecTransformer(
+        std::unique_ptr<SourceCompilerDriver> compilerDriver,
+        std::unique_ptr<SpecUnifier> specUnifier,
+        std::string srcInPath, std::string outPath,
+        const utils::OutputConfig &outputConfig)
+        : outPath(outPath),
+          outputConfig(outputConfig),
           srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
     {
@@ -40,8 +40,7 @@ namespace sourcespec2ir
         passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
 
         // Compile the source-file into IR
-        std::string srcPathStr(srcInputPath);
-        irModule = srcCompilerDriver->compileSource(srcPathStr, *irContext);
+        irModule = srcCompilerDriver->compileSource(srcInPath, *irContext);
 
         // Simplify loops
         llvm::ModulePassManager mpm;
@@ -61,7 +60,7 @@ namespace sourcespec2ir
 
         // Parse the source-file to extract the specifications
         srcFileStream = std::make_unique<std::ifstream>();
-        srcFileStream->open(srcInputPath);
+        srcFileStream->open(srcInPath);
         srcInStream = std::make_unique<antlr4::ANTLRInputStream>(*srcFileStream);
         srcLexer = std::make_unique<SpecLexer>(srcInStream.get());
         srcTokens = std::make_unique<antlr4::CommonTokenStream>(srcLexer.get());
@@ -118,7 +117,7 @@ namespace sourcespec2ir
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
 
         // Dump the generated IR
-        writeToFile(*irModule, outputPath);
+        writeToFile(*irModule, outPath);
     }
 
     void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
@@ -306,9 +305,9 @@ namespace sourcespec2ir
         return includes + wrapperFunction.stringRepr;
     }
 
-    void SourceSpecTransformer::writeToFile(const llvm::Module &module, const char *outPath)
+    void SourceSpecTransformer::writeToFile(const llvm::Module &module, std::string outPath)
     {
-        if (*outPath == '\0' || printDebugInfo)
+        if (outPath.empty() || outputConfig.printDebugInfo)
         {
             // Print to console if no output-path is given or if debug-info is enabled
             llvm::outs() << "===============================================\n";
@@ -316,7 +315,7 @@ namespace sourcespec2ir
             llvm::outs() << "===============================================\n";
         }
 
-        if (*outPath != '\0')
+        if (!outPath.empty())
         {
             // Write the IR-representation to the given file.
             std::error_code eCode;
@@ -380,6 +379,7 @@ namespace sourcespec2ir
     std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(
         SpecParser::FileContext *specParseTree, llvm::Module *irModule)
     {
-        return std::make_unique<IRBasedSourceSpecMatcher>(specParseTree, irModule, &fam);
+        return std::make_unique<IRBasedSourceSpecMatcher>(specParseTree, irModule,
+                                                          &fam, outputConfig.printMatchingInfo);
     }
 }

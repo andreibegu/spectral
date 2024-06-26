@@ -38,9 +38,15 @@ The structure of the repository is based on
 	- CMake build
 	- Add program arguments to the cmake-debug-config (CMake-Options --> Debug Config, or edit directly in the user settings.json-file):
     ```
-	"cmake.debugConfig": {
-    	"args": ["${workspaceFolder}/examples/spec_seq.c", "-o", "${workspaceFolder}/.tmp/spec2ir_out.ll", "-d"]
-    },
+    "cmake.debugConfig": {
+        "args": [
+            "${workspaceFolder}/examples/spec_while.c", 
+            "-o", "${workspaceFolder}/.tmp/spec2ir_out.ll", 
+            "-d",
+            "-m",
+            "-lib", "${workspaceFolder}/res/spec_libs/c"
+        ]
+    }
     ``` 
 
 ## Testing:
