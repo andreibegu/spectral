@@ -18,4 +18,9 @@ config.test_exec_root = os.path.join(config.spec2ir_bin_root, 'test')
 
 # Substitution to refer to the Spec2IR tool
 config.substitutions.append(('%Spec2IR', 
-                             os.path.join(config.spec2ir_bin_root, 'pallasSpec2ir')))
+                             os.path.join(config.spec2ir_bin_root, 
+                             os.path.join('bin', 'pallasSpec2ir'))))
+
+# Substitution to get path of C specification library
+config.substitutions.append(('%CSpecLib', 
+                             os.path.join(config.spec2ir_src_root, 'res/spec_libs/c')))
