@@ -1,0 +1,12 @@
+import os
+
+# This file sets the required paths based on values from CMake and then 
+# loads the configuration in lit.cfg.py
+
+# Use source and bin repository from the CMake build.
+config.spec2ir_src_root = r'@CMAKE_SOURCE_DIR@'
+config.spec2ir_bin_root = r'@CMAKE_BINARY_DIR@'
+
+
+lit_config.load_config(
+        config, os.path.join(config.spec2ir_src_root, "test/lit.cfg.py"))
