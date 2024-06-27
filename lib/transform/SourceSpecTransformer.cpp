@@ -325,7 +325,8 @@ namespace sourcespec2ir
             if (!eCode)
             {
                 // Use IRPrintingPasses alternatively
-                module.print(outStream, nullptr, false, true);
+                // module.print(outStream, nullptr, false, true);
+                module.print(outStream, nullptr);
             }
             else
             {
