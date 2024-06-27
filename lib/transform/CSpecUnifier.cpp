@@ -1,4 +1,5 @@
 #include "transform/CSpecUnifier.h"
+#include "utils/PallasException.h"
 
 namespace sourcespec2ir
 {
@@ -34,7 +35,7 @@ llvm::Type *CSpecUnifier::getContentTypeOfADTTy(const llvm::Type &t)
     {
         return adtType->getElementType(0);
     }
-    throw std::runtime_error("Failed to extract the content-type of the sequence-type.");
+    throw utils::PallasException("Failed to extract the content-type of the sequence-type.");
 }
 
 bool CSpecUnifier::isSrcSeqType(const llvm::StructType &t)

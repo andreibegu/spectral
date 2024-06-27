@@ -1,6 +1,8 @@
 #include "transform/SourceSpecMatcher.h"
+#include "utils/PallasException.h"
 #include "utils/SrcLookup.h"
 
+#include <cassert>
 #include <stdexcept>
 
 namespace sourcespec2ir
@@ -23,7 +25,7 @@ namespace sourcespec2ir
     {
         // Safety-check that the state of the object is valid
         if (contract)
-            throw std::logic_error("Unexpected state while matching contract");
+            assert("Unexpected state while matching contract");
 
         // Match contract to function
         auto startLine = ctx->start->getLine();
@@ -65,7 +67,7 @@ namespace sourcespec2ir
                                                     SpecParser::SpecExpressionContext *expr)
     {
         if (!contract)
-            throw std::logic_error("No contract set while adding statement");
+            assert("No contract set while adding statement");
         auto exprStr = getExprAsStr(*expr);
         auto stmnt = std::make_unique<MatchedFContractStatement>(type, exprStr);
         contract->addStatement(std::move(stmnt));
@@ -84,13 +86,13 @@ namespace sourcespec2ir
         {
             // Should never happen, since matchLoopInvBlock should
             // throw the error.
-            throw std::logic_error("Failed to match loop-invariant");
+            throw utils::PallasException("Failed to match loop-invariant");
         }
 
         auto loopID = llvm::dyn_cast_or_null<llvm::MDTuple>(loop->getLoopID());
         if (loopID == nullptr)
         {
-            throw std::logic_error("Failed to get llvm.loop md-node for loop");
+            throw utils::PallasException("Failed to get llvm.loop md-node for loop");
         }
         auto loopHeader = loop->getHeader();
         auto invBlock = std::make_unique<MatchedLoopInvariantBlock>(

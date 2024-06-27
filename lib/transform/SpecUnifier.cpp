@@ -1,6 +1,7 @@
 #include "transform/SpecUnifier.h"
 #include "utils/IrSpecConstants.h"
 #include "utils/MetadataUtils.h"
+#include "utils/PallasException.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -45,7 +46,8 @@ namespace sourcespec2ir
             if (!srcSpecFun->users().empty())
             {
                 auto srcSpecFunName = srcSpecFun->getName().str();
-                throw std::logic_error("Failed to remove specification function (" + srcSpecFunName + "). Remaining users exist.");
+                throw utils::PallasException("Failed to remove specification function (" 
+                    + srcSpecFunName + "). Remaining users exist.");
             }
 
             // Remove the function from the module
@@ -62,7 +64,7 @@ namespace sourcespec2ir
         {
             return getContentTypeOfADTTy(*allocInstr->getAllocatedType());
         }
-        throw std::runtime_error("Failed to extract the content-type of the sequence-type.");
+        throw utils::PallasException("Failed to extract the content-type of the sequence-type.");
     }
 
     void SpecUnifier::replaceCallsToSpecFunction(llvm::Function &srcSpecFunction)
@@ -79,14 +81,15 @@ namespace sourcespec2ir
             if (!oldCall)
             {
                 // Not a function call
-                throw std::logic_error("Encountered a use of a specification-function that is not a call.");
+                throw utils::PallasException(
+                    "Encountered a use of a specification-function that is not a call.");
             }
             
             auto newCall = transformSpecCall(*oldCall);
             if (!newCall)
             {
                 auto srcSpecName = oldCall->getCalledFunction()->getName().str();
-                throw std::logic_error("Failed to generate a new call to replace use of " + srcSpecName);
+                throw utils::PallasException("Failed to generate a new call to replace use of " + srcSpecName);
             }
 
             // Transfer Metadata
@@ -111,7 +114,8 @@ namespace sourcespec2ir
         if (!specCallType.has_value())
         {
             auto fName = oldCall.getCalledFunction()->getName().str();
-            throw std::logic_error("Failed to identify call to specification library. Called function is " + fName);
+            throw utils::PallasException(
+                "Failed to identify call to specification library. Called function is " + fName);
         }
 
         switch (specCallType.value())
@@ -138,12 +142,12 @@ namespace sourcespec2ir
                 {
                     if (allocInstr->getAllocatedType() != getUSpecFracType())
                     {
-                        throw std::runtime_error("The spec-lib type for fractions has not been replaced properly.");
+                        throw utils::PallasException("The spec-lib type for fractions has not been replaced properly.");
                     }
                 }
                 else
                 {
-                    throw std::runtime_error("Allocation for fractions is only supported using alloca.");
+                    throw utils::PallasException("Allocation for fractions is only supported using alloca.");
                 }
                 return newCall;
             }
@@ -158,7 +162,7 @@ namespace sourcespec2ir
         case SeqAppend:
             return transformSeqAppend(oldCall);
         default:
-            throw std::logic_error("Encountered an unsupported type of specification-call.");
+            throw utils::PallasException("Encountered an unsupported type of specification-call.");
         }
     }
 
