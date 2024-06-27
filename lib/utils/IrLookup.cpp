@@ -1,4 +1,5 @@
 #include "utils/IrLookup.h"
+#include "utils/PallasException.h"
 
 #include <stdexcept>
 
@@ -42,7 +43,7 @@ namespace sourcespec2ir
             if (fun.isDeclaration())
             {
                 // This is an external declaration, not a definition
-                throw std::invalid_argument("Recieved a function declaration instead of a function definition");
+                throw utils::PallasException("Recieved a function declaration instead of a function definition");
             }
 
             auto srcVarSet = std::make_unique<std::set<llvm::DILocalVariable *>>();

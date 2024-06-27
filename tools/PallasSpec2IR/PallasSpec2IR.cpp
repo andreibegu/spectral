@@ -2,6 +2,7 @@
 #include "transform/CSpecUnifier.h"
 #include "transform/CCompilerDriver.h"
 #include "utils/OutputConfig.h"
+#include "utils/PallasException.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
@@ -41,14 +42,29 @@ int main(int argc, char **argv)
         llvm::outs() << "From: " << clInFile << " to: " << clOutFile << "\n";
     }
 
-    auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
-        clLibPath);
-    auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
-    sourcespec2ir::SourceSpecTransformer transformer(
-        std::move(compilerDriver),
-        std::move(specUnifier), clInFile, clOutFile,
-        config);
-    transformer.transformModule();
+    try
+    {
+        auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
+            clLibPath);
+        auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
+        sourcespec2ir::SourceSpecTransformer transformer(
+            std::move(compilerDriver),
+            std::move(specUnifier), clInFile, clOutFile,
+            config);
+        transformer.transformModule();
+    } catch (const sourcespec2ir::utils::PallasException &e)
+    {
+        // We catch all exception that are based on Pallas exeption. 
+        // We print the error message and return a non-zero return-value to 
+        // allow for lit-tests that expect the program to fail. 
+        llvm::errs() << "===============================================\n";
+        llvm::errs() << "ERROR: An error was encountered during the" <<
+            " specification transformation: \n";
+        llvm::errs() << e.what() << "\n";
+        llvm::errs() << "===============================================\n";
+        return 1;
+    }
+
 
     return 0;
 }

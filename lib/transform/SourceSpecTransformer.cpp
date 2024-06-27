@@ -15,6 +15,7 @@
 #include "utils/IrSpecConstants.h"
 #include "utils/IrLookup.h"
 #include "utils/MetadataUtils.h"
+#include "utils/PallasException.h"
 #include "utils/SrcLookup.h"
 
 namespace sourcespec2ir
@@ -69,7 +70,7 @@ namespace sourcespec2ir
 
         if (!srcParseTree)
         {
-            throw std::invalid_argument("Unable to parse the provided source file.");
+            throw utils::PallasException("Unable to parse the provided source file.");
         }
     }
 
@@ -235,7 +236,7 @@ namespace sourcespec2ir
         else if (stmnt.type == Ensures)
             mdId = PALLAS_ENSURES;
         else
-            throw std::logic_error("Unsupported statement-type");
+            throw utils::PallasException("Unsupported statement-type");
 
         // Generate LLVM-IR function for the specification expression.
         auto srcVars = utils::getSrcVariablesForFunction(function, true);
@@ -361,7 +362,7 @@ namespace sourcespec2ir
             }
             else
             {
-                throw std::logic_error("Encountered an unsupported type-tag: " + dType->getTag());
+                throw utils::PallasException("Encountered an unsupported type-tag: " + dType->getTag());
             }
         }
 
@@ -369,7 +370,7 @@ namespace sourcespec2ir
         auto typeName = type->getName().str();
         if (typeName.empty())
         {
-            throw std::logic_error("Failed to generate string-representation for type.");
+            throw utils::PallasException("Failed to generate string-representation for type.");
         }
         return typeName;
     }
