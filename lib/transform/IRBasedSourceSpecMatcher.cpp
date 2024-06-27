@@ -1,5 +1,6 @@
 
 #include "transform/IRBasedSourceSpecMatcher.h"
+#include "utils/PallasException.h"
 
 #include <stdexcept>
 #include <string>
@@ -49,7 +50,7 @@ namespace
         if (!mdTuple || mdTuple->getNumOperands() < 3)
         {
             // TODO: Implement fallback-solution by iterating over instructions
-            throw std::logic_error("Failed to get llvm.loop MD-node.");
+            throw sourcespec2ir::utils::PallasException("Failed to get llvm.loop MD-node.");
         }
 
         // Get the line-info from the llvm.loop md-node.
@@ -57,13 +58,13 @@ namespace
         auto &endMd = mdTuple->getOperand(2);
 
         if (startMd == nullptr || endMd == nullptr)
-            throw std::logic_error("Failed to get dbg location for invariant");
+            throw sourcespec2ir::utils::PallasException("Failed to get dbg location for invariant");
 
         auto startLoc = llvm::dyn_cast_or_null<llvm::DILocation>(startMd.get());
         auto endLoc = llvm::dyn_cast_or_null<llvm::DILocation>(endMd.get());
 
         if (startLoc == nullptr || endLoc == nullptr)
-            throw std::logic_error("Failed to get line-info for invariant");
+            throw sourcespec2ir::utils::PallasException("Failed to get line-info for invariant");
 
         auto minLine = startLoc->getLine();
         auto maxLine = endLoc->getLine();
@@ -101,7 +102,8 @@ namespace sourcespec2ir
                 if (lineNumberSet.contains(line))
                 {
                     auto lineStr = std::to_string(line);
-                    throw std::runtime_error("Encountered multiple functions with the same line-information (" + lineStr + ")");
+                    throw utils::PallasException(
+                        "Encountered multiple functions with the same line-information (" + lineStr + ")");
                 }
                 lineNumberSet.insert(line);
 
@@ -120,7 +122,7 @@ namespace sourcespec2ir
                 if (!f.isIntrinsic())
                 {
                     auto fName = f.getName().str();
-                    throw std::runtime_error("Unable to determine line-info for function " + fName);
+                    throw utils::PallasException("Unable to determine line-info for function " + fName);
                 }
             }
         }
@@ -129,7 +131,7 @@ namespace sourcespec2ir
         {
             auto locStr = std::to_string(startLine) + ":" + std::to_string(startCol) + "-" +
                           std::to_string(endLine) + ":" + std::to_string(endCol);
-            throw std::runtime_error("Unable to match contract (" + locStr + ") to function");
+            throw utils::PallasException("Unable to match contract (" + locStr + ") to function");
         }
 
         // Check that no instructions are between the specification and the function declaration.
@@ -147,7 +149,8 @@ namespace sourcespec2ir
                 const auto iLine = dbgLoc.getLine();
                 if (iLine >= endLine && iLine <= fLine)
                 {
-                    throw std::runtime_error("Encountered an instruction between contract and function.");
+                    throw utils::PallasException(
+                        "Encountered an instruction between contract and function.");
                 }
             }
         }
@@ -161,7 +164,8 @@ namespace sourcespec2ir
                 const auto gLine = dbgExpr->getVariable()->getLine();
                 if (gLine >= endLine && gLine <= fLine)
                 {
-                    throw std::runtime_error("Encountered a global variable between contract and function.");
+                    throw utils::PallasException(
+                        "Encountered a global variable between contract and function.");
                 }
             }
         }
@@ -202,7 +206,7 @@ namespace sourcespec2ir
             parentFunction->isDeclaration() ||
             parentFunction->isIntrinsic())
         {
-            throw std::logic_error("Failed to determine parent function \
+            throw utils::PallasException("Failed to determine parent function \
                                     when matching loop-invariant");
         }
 
@@ -228,7 +232,7 @@ namespace sourcespec2ir
         }
 
         if (closestLoop == nullptr)
-            throw std::logic_error("Failed to match the loop-invariant");
+            throw utils::PallasException("Failed to match the loop-invariant");
 
         printInvMatchingInfo(startLine, endLine,
                              closestLoopStart, closestLoopEnd);

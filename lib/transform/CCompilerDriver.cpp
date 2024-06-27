@@ -8,6 +8,7 @@
 #include <llvm/Support/SourceMgr.h>
 
 #include "transform/CCompilerDriver.h"
+#include "utils/PallasException.h"
 
 namespace sourcespec2ir
 {
@@ -36,7 +37,7 @@ namespace sourcespec2ir
         if (!irModule)
         {
             // Reading the ir-file did not work
-            throw std::runtime_error("Failed to compile the provided source-file.");
+            throw utils::PallasException("Failed to compile the provided source-file.");
         }
 
         return irModule;
@@ -68,7 +69,8 @@ namespace sourcespec2ir
         if (!irModule)
         {
             // Reading the ir-file did not work
-            throw std::runtime_error("Failed to read the ir of the compiled specification-expression.");
+            throw utils::PallasException(
+                "Failed to read the ir of the compiled specification-expression.");
         }
 
         return irModule;
