@@ -233,7 +233,7 @@ namespace sourcespec2ir
         if (stmnt.type == Requires)
             mdId = PALLAS_REQUIRES;
         else if (stmnt.type == Ensures)
-            mdId = Ensures;
+            mdId = PALLAS_ENSURES;
         else
             throw std::logic_error("Unsupported statement-type");
 
@@ -311,7 +311,8 @@ namespace sourcespec2ir
         {
             // Print to console if no output-path is given or if debug-info is enabled
             llvm::outs() << "===============================================\n";
-            irModule->dump();
+            // irModule->dump();
+            irModule->print(llvm::outs(), nullptr);
             llvm::outs() << "===============================================\n";
         }
 
