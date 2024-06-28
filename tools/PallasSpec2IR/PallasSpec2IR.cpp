@@ -1,39 +1,56 @@
 #include "transform/SourceSpecTransformer.h"
 #include "transform/CSpecUnifier.h"
 #include "transform/CCompilerDriver.h"
+#include "utils/OutputConfig.h"
 #include "utils/PallasException.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
-#include <iostream>
 
 /*
  * Commandline-options
  */
-static llvm::cl::opt<std::string> clInFile(llvm::cl::Positional, llvm::cl::desc("input-file"), llvm::cl::Required);
+static llvm::cl::opt<std::string> clInFile(
+    llvm::cl::Positional, llvm::cl::desc("input-file"), llvm::cl::Required);
 
-static llvm::cl::opt<std::string> clOutFile("o", llvm::cl::desc("output-file"), llvm::cl::value_desc("filename"));
+static llvm::cl::opt<std::string> clOutFile(
+    "o", llvm::cl::desc("output-file"), llvm::cl::value_desc("filename"));
 
-static llvm::cl::opt<bool> clPrintDebug("d", llvm::cl::desc("Print debug info"), llvm::cl::init(false));
+static llvm::cl::opt<bool> clPrintDebug(
+    "d", llvm::cl::desc("Print debug info"), llvm::cl::init(false));
+
+static llvm::cl::opt<bool> clPrintMatching(
+    "m", llvm::cl::desc("Print info specification matching info"),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<std::string> clLibPath(
+    "lib", llvm::cl::desc("Path to specification-library"),
+    llvm::cl::value_desc("Directory of the specification library"),
+    llvm::cl::init("../../res/spec_libs/c/"));
 
 int main(int argc, char **argv)
 {
+    // Parse commandline-options and wrap them in struct
     llvm::cl::ParseCommandLineOptions(argc, argv);
+    sourcespec2ir::utils::OutputConfig config(
+        clPrintMatching, clPrintDebug);
 
-    std::cout << "From: " << clInFile << " to: " << clOutFile << std::endl;
+    if (config.printDebugInfo)
+    {
+        llvm::outs() << "From: " << clInFile << " to: " << clOutFile << "\n";
+    }
 
     try
     {
-        auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>();
+        auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
+            clLibPath);
         auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
         sourcespec2ir::SourceSpecTransformer transformer(
             std::move(compilerDriver),
-            std::move(specUnifier),
-            clInFile.c_str(),
-            clOutFile.c_str(),
-            clPrintDebug);
+            std::move(specUnifier), clInFile, clOutFile,
+            config);
         transformer.transformModule();
     } catch (const sourcespec2ir::utils::PallasException &e)
     {
@@ -47,6 +64,7 @@ int main(int argc, char **argv)
         llvm::errs() << "===============================================\n";
         return 1;
     }
+
 
     return 0;
 }

@@ -1,0 +1,13 @@
+// Check that expressions with pointers get transformed
+// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+
+// CHECK: @PALLAS_SPEC_0(ptr noundef [[p1:%[0-9]+]], ptr noundef [[p2:%[0-9]+]])
+// CHECK: [[tmp:%[0-9]+]] = load ptr, ptr [[p2]]
+// CHECK: icmp eq ptr [[p1]], [[tmp]]
+
+/*@
+ requires a == *b;
+ @*/
+void bar (int *a, int **b) {
+    int i = 0;
+}

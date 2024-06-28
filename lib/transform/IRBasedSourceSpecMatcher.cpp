@@ -77,8 +77,11 @@ namespace
 namespace sourcespec2ir
 {
 
-    IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule, llvm::FunctionAnalysisManager *fam)
-        : SourceSpecMatcher(specParseTree, irModule), fam(fam)
+    IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(
+        SpecParser::FileContext *specParseTree, llvm::Module *irModule,
+        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo)
+        : SourceSpecMatcher(specParseTree, irModule),
+          printMatchingInfo(printMatchingInfo), fam(fam)
     {
     }
 
@@ -96,7 +99,7 @@ namespace sourcespec2ir
             auto diSubprog = f.getSubprogram();
             if (diSubprog != nullptr)
             {
-                // Check that all function are declared on distinct lines. 
+                // Check that all function are declared on distinct lines.
                 // (Otherwise this approach does not work)
                 auto line = diSubprog->getLine();
                 if (lineNumberSet.contains(line))
@@ -171,7 +174,11 @@ namespace sourcespec2ir
         }
 
         // Print info about matched contract to the console
-        printContractMatchingInfo(startLine, endLine, closestFunction->getName().str());
+        if (printMatchingInfo)
+        {
+            printContractMatchingInfo(startLine, endLine,
+                                      closestFunction->getName().str());
+        }
 
         return closestFunction->getName().str();
     }
@@ -234,8 +241,11 @@ namespace sourcespec2ir
         if (closestLoop == nullptr)
             throw utils::PallasException("Failed to match the loop-invariant");
 
-        printInvMatchingInfo(startLine, endLine,
-                             closestLoopStart, closestLoopEnd);
+        if (printMatchingInfo)
+        {
+            printInvMatchingInfo(startLine, endLine,
+                                 closestLoopStart, closestLoopEnd);
+        }
 
         return std::make_pair(parentFunction, closestLoop);
     }

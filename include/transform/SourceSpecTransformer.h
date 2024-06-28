@@ -21,6 +21,7 @@
 #include "SourceSpecMatcher.h"
 #include "SourceCompilerDriver.h"
 #include "SpecUnifier.h"
+#include "utils/OutputConfig.h"
 #include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 
@@ -32,9 +33,8 @@ namespace sourcespec2ir
     public:
         SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver,
                               std::unique_ptr<SpecUnifier> specUnifier,
-                              const char *srcInputPath,
-                              const char *outputPath,
-                              const bool printDebugInfo);
+                              std::string srcInPath, std::string outPath,
+                              const utils::OutputConfig &outputConfig);
 
         void transformModule();
 
@@ -48,8 +48,8 @@ namespace sourcespec2ir
                                                              llvm::Module *irModule);
 
     private:
-        const char *outputPath;
-        const bool printDebugInfo;
+        std::string outPath;
+        const utils::OutputConfig &outputConfig;
 
         /* Counter for generating names for the specification functions.
          * TODO: Replace with something more elaborate that takes exisiting names into account.
@@ -142,7 +142,7 @@ namespace sourcespec2ir
          * Write the IR-representation of the given module into
          * a file at the given path.
          */
-        void writeToFile(const llvm::Module &module, const char *outPath);
+        void writeToFile(const llvm::Module &module, std::string outPath);
 
         /**
          * Takes a string that contains a source-language expression along with a

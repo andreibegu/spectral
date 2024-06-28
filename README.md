@@ -38,8 +38,28 @@ The structure of the repository is based on
 	- CMake build
 	- Add program arguments to the cmake-debug-config (CMake-Options --> Debug Config, or edit directly in the user settings.json-file):
     ```
-	"cmake.debugConfig": {
-    	"args": ["${workspaceFolder}/examples/spec_seq.c", "-o", "${workspaceFolder}/.tmp/spec2ir_out.ll", "-d"]
-    },
+    "cmake.debugConfig": {
+        "args": [
+            "${workspaceFolder}/examples/spec_while.c", 
+            "-o", "${workspaceFolder}/.tmp/spec2ir_out.ll", 
+            "-d",
+            "-m",
+            "-lib", "${workspaceFolder}/res/spec_libs/c"
+        ]
+    }
     ``` 
+
+## Testing:
+For running regression tests we use the [lit tool](https://llvm.org/docs/CommandGuide/lit.html) of the LLVM project. This requires a python version >= 3.8 to be installed. 
+Lit can be installed as a [python-package](https://pypi.org/project/lit/) using `pip install lit==18.1.8` or as part of an LLVM build. 
+
+To run the tests, run `ninja check` in the build-directory.
+If the terminal in VSCode is used to run the tests in WSL and lit cannot be found 
+right after installing it, it can be nessessary to reboot the system once. 
+
+The lit-setup is based on:
+- https://github.com/llvm/llvm-project/tree/main/mlir/examples/standalone/test
+- [VCLLVM](https://github.com/Drevanoorschot/VCLLVM/tree/main/test)
+
+
 	
