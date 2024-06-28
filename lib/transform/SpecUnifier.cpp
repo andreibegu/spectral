@@ -72,10 +72,11 @@ namespace sourcespec2ir
         while (!srcSpecFunction.user_empty())
         {
             llvm::User *user = *srcSpecFunction.user_begin();
-            llvm::outs() << "===============================================\n";
-            llvm::outs() << "Detected user of " << srcSpecFunction.getName().str() << ":\n";
+            // TODO: Only print if debugging is enabled. 
+            llvm::errs() << "===============================================\n";
+            llvm::errs() << "Detected user of " << srcSpecFunction.getName().str() << ":\n";
             user->dump();
-            llvm::outs() << "===============================================\n";
+            llvm::errs() << "===============================================\n";
 
             auto oldCall = llvm::dyn_cast<llvm::CallInst>(user);
             if (!oldCall)

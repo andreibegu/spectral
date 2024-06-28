@@ -10,14 +10,16 @@ antlr_target(SpecificationParser ${CMAKE_SOURCE_DIR}/grammar/SpecParser.g4 PARSE
              VISITOR)
 
 add_library(sourceSpec2IR STATIC
-    SourceSpecTransformer.cpp
-    DummySpecMatcher.cpp
     CCompilerDriver.cpp
-    SpecUnifier.cpp
-    SourceSpecMatcher.cpp
-    IRBasedSourceSpecMatcher.cpp
-    SpecDeclarationCollector.cpp
+    CSpecTransformer.cpp
     CSpecUnifier.cpp
+    CWrapperGenerator.cpp
+    DummySpecMatcher.cpp
+    IRBasedSourceSpecMatcher.cpp
+    SourceSpecMatcher.cpp
+    SourceSpecTransformer.cpp
+    SpecDeclarationCollector.cpp
+    SpecUnifier.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 
     ${ANTLR_SpecificationParser_CXX_OUTPUTS} 
 )

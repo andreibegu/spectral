@@ -1,7 +1,6 @@
 #include <cassert>
 #include <stdexcept>
 
-#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
@@ -76,6 +75,9 @@ namespace sourcespec2ir
 
     void SourceSpecTransformer::transformModule()
     {
+        // Set up the WrapperGenerator
+        wrapperGenerator = createWrapperGenerator();
+
         // Collect declarations
         SpecDeclarationCollector declCollector(srcParseTree);
         specDeclarations = declCollector.collectDeclarations();
@@ -152,9 +154,9 @@ namespace sourcespec2ir
         loopMDTuple->push_back(invNode);
     }
 
-    void SourceSpecTransformer::encodeLoopInv(std::string specExpr,
-                                              const std::set<llvm::DILocalVariable *> &vars,
-                                              llvm::SmallVector<llvm::Metadata *> &nodes)
+    void SourceSpecTransformer::encodeLoopInv(
+        std::string specExpr, const std::set<llvm::DILocalVariable *> &vars,
+        llvm::SmallVector<llvm::Metadata *> &nodes)
     {
         // Transform to IR
         auto irEnc = transformExpression(specExpr, vars);
@@ -178,9 +180,11 @@ namespace sourcespec2ir
         // Transfer src-variables to sequential container for explicit ordering
         auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars.begin(), srcVars.end());
 
-        // Wrap the expression first, into a source-language function and then into a source-compilation unit
-        auto srcWrapperFun = getWrappingFunction(*argList, expr);
-        auto srcWrapperCU = assembleSrcCompilationUnit(*srcWrapperFun);
+        // Wrap the expression first, into a source-language function 
+        // and then into a source-compilation unit
+        auto srcWrapperFun = wrapperGenerator->getWrappingFunction(*argList, expr);
+        auto srcWrapperCU = wrapperGenerator->assembleSrcCompilationUnit(
+            *srcWrapperFun, *specDeclarations);
 
         // Compile the specifications into IR & run mem2reg optimization
         auto compiledSpecModule = srcCompilerDriver->compileSpecification(srcWrapperCU, *irContext);
@@ -261,51 +265,6 @@ namespace sourcespec2ir
         return llvm::MDNode::get(*irContext, mdElems);
     }
 
-    std::unique_ptr<SrcWrapperFunction> SourceSpecTransformer::getWrappingFunction(
-        llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
-    {
-
-        // Name of wrapping function
-        auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
-
-        // Argument-list
-        std::string argList = "";
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
-        {
-            if (it != srcVars.begin())
-            {
-                argList += ", ";
-            }
-
-            const auto varName = utils::getSrcVarName(**it);
-            const auto varType = getSrcReprOfType((*it)->getType());
-            argList += varType + " " + varName;
-        }
-
-        auto wFun = "bool " + funName + "(" + argList + ") \n" +
-                    "{ \n " +
-                    "return " + expr + "; \n" +
-                    "} \n";
-
-        return std::make_unique<SrcWrapperFunction>(funName, wFun);
-    }
-
-    std::string SourceSpecTransformer::assembleSrcCompilationUnit(
-        const SrcWrapperFunction &wrapperFunction)
-    {
-        // TODO: Use a sstream
-        // TODO: add include-statements from the source-file
-        std::string includes = "#include <c_spec_lib.h> \n ";
-
-        // Add any declarations that were defined in the declaration-block of the specifications.
-        for (auto decl : *specDeclarations)
-        {
-            includes += (decl + "; \n ");
-        }
-
-        return includes + wrapperFunction.stringRepr;
-    }
-
     void SourceSpecTransformer::writeToFile(const llvm::Module &module, std::string outPath)
     {
         if (outPath.empty() || outputConfig.printDebugInfo)
@@ -335,45 +294,6 @@ namespace sourcespec2ir
             }
             outStream.close();
         }
-    }
-
-    /**
-     * TODO: Clean this up, and make it more source-language independent!!!
-     * TODO: Support more Tags
-     */
-    std::string SourceSpecTransformer::getSrcReprOfType(const llvm::DIType *type)
-    {
-        // Check if type is a pointer:
-        if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
-        {
-            auto tag = dType->getTag();
-            auto baseType = dType->getBaseType();
-
-            if (tag == llvm::dwarf::DW_TAG_pointer_type)
-            {
-                // Handle Pointer-type
-                // Recursively unwrap the pointer
-                auto baseRepr = getSrcReprOfType(baseType);
-                return baseRepr + "*";
-            }
-            else if (tag == llvm::dwarf::DW_TAG_const_type)
-            {
-                // Handle const-types
-                return getSrcReprOfType(baseType) + " const ";
-            }
-            else
-            {
-                throw utils::PallasException("Encountered an unsupported type-tag: " + dType->getTag());
-            }
-        }
-
-        // Assume that the DIType is a plain DIType and just get the name
-        auto typeName = type->getName().str();
-        if (typeName.empty())
-        {
-            throw utils::PallasException("Failed to generate string-representation for type.");
-        }
-        return typeName;
     }
 
     /*

@@ -1,4 +1,4 @@
-#include "transform/SourceSpecTransformer.h"
+#include "transform/CSpecTransformer.h"
 #include "transform/CSpecUnifier.h"
 #include "transform/CCompilerDriver.h"
 #include "utils/OutputConfig.h"
@@ -47,7 +47,7 @@ int main(int argc, char **argv)
         auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
             clLibPath);
         auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
-        sourcespec2ir::SourceSpecTransformer transformer(
+        sourcespec2ir::CSpecTransformer transformer(
             std::move(compilerDriver),
             std::move(specUnifier), clInFile, clOutFile,
             config);
