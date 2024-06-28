@@ -1,8 +1,6 @@
 #ifndef PALLAS_SPEC2IRCONFIG_H
 #define PALLAS_SPEC2IRCONFIG_H
 
-#include <string>
-
 namespace sourcespec2ir
 {
     namespace utils

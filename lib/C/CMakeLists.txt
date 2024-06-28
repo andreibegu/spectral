@@ -13,5 +13,4 @@ target_include_directories(spec2ir_C PUBLIC
 target_link_libraries(spec2ir_C
         ${llvm_libs} 
         spec2ir_core
-        pallasUtils
 )
