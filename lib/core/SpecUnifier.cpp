@@ -1,7 +1,7 @@
-#include "core/SpecUnifier.h"
-#include "utils/IrSpecConstants.h"
-#include "utils/MetadataUtils.h"
-#include "utils/PallasException.h"
+#include "SpecUnifier.h"
+#include "IrSpecConstants.h"
+#include "MetadataUtils.h"
+#include "PallasException.h"
 
 #include <iostream>
 #include <stdexcept>

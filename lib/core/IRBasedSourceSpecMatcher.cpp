@@ -1,6 +1,6 @@
 
-#include "core/IRBasedSourceSpecMatcher.h"
-#include "utils/PallasException.h"
+#include "IRBasedSourceSpecMatcher.h"
+#include "PallasException.h"
 
 #include <stdexcept>
 #include <string>

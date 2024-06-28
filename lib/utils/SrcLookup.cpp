@@ -1,5 +1,5 @@
-#include "utils/SrcLookup.h"
-#include "utils/IrLookup.h"
+#include "SrcLookup.h"
+#include "IrLookup.h"
 
 #include <iostream>
 

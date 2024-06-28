@@ -1,6 +1,6 @@
 #include "CWrapperGenerator.h"
-#include "utils/PallasException.h"
-#include "utils/SrcLookup.h"
+#include "PallasException.h"
+#include "SrcLookup.h"
 
 #include <llvm/BinaryFormat/Dwarf.h>
 

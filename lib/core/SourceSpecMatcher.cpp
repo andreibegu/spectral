@@ -1,6 +1,6 @@
-#include "core/SourceSpecMatcher.h"
-#include "utils/PallasException.h"
-#include "utils/SrcLookup.h"
+#include "SourceSpecMatcher.h"
+#include "PallasException.h"
+#include "SrcLookup.h"
 
 #include <cassert>
 #include <stdexcept>

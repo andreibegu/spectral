@@ -1,5 +1,5 @@
 #include "CSpecUnifier.h"
-#include "utils/PallasException.h"
+#include "PallasException.h"
 
 namespace sourcespec2ir
 {

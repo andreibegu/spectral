@@ -8,14 +8,14 @@
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
 
-#include "core/IRBasedSourceSpecMatcher.h"
-#include "core/SourceSpecTransformer.h"
-#include "core/SpecDeclarationCollector.h"
-#include "utils/IrSpecConstants.h"
-#include "utils/IrLookup.h"
-#include "utils/MetadataUtils.h"
-#include "utils/PallasException.h"
-#include "utils/SrcLookup.h"
+#include "IRBasedSourceSpecMatcher.h"
+#include "SourceSpecTransformer.h"
+#include "SpecDeclarationCollector.h"
+#include "IrSpecConstants.h"
+#include "IrLookup.h"
+#include "MetadataUtils.h"
+#include "PallasException.h"
+#include "SrcLookup.h"
 
 namespace sourcespec2ir
 {

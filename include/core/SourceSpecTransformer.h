@@ -22,7 +22,7 @@
 #include "SourceCompilerDriver.h"
 #include "SourceWrapperGenerator.h"
 #include "SpecUnifier.h"
-#include "utils/OutputConfig.h"
+#include "OutputConfig.h"
 #include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 

@@ -8,7 +8,7 @@
 #include <llvm/Support/SourceMgr.h>
 
 #include "CCompilerDriver.h"
-#include "utils/PallasException.h"
+#include "PallasException.h"
 
 namespace sourcespec2ir
 {
