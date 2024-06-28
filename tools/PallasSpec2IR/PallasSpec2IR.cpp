@@ -22,7 +22,11 @@ static llvm::cl::opt<bool> clPrintDebug(
     "d", llvm::cl::desc("Print debug info"), llvm::cl::init(false));
 
 static llvm::cl::opt<bool> clPrintMatching(
-    "m", llvm::cl::desc("Print info specification matching info"),
+    "m", llvm::cl::desc("Print info about matching-stage"),
+    llvm::cl::init(false));
+
+static llvm::cl::opt<bool> clPrintUnification(
+    "u", llvm::cl::desc("Print info about unification-stage"),
     llvm::cl::init(false));
 
 static llvm::cl::opt<std::string> clLibPath(
@@ -35,7 +39,7 @@ int main(int argc, char **argv)
     // Parse commandline-options and wrap them in struct
     llvm::cl::ParseCommandLineOptions(argc, argv);
     sourcespec2ir::utils::OutputConfig config(
-        clPrintMatching, clPrintDebug);
+        clPrintMatching, clPrintUnification, clPrintDebug);
 
     if (config.printDebugInfo)
     {
@@ -46,7 +50,8 @@ int main(int argc, char **argv)
     {
         auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
             clLibPath);
-        auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>();
+        auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>(
+            config.printUnificationInfo);
         sourcespec2ir::CSpecTransformer transformer(
             std::move(compilerDriver),
             std::move(specUnifier), clInFile, clOutFile,

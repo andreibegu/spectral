@@ -14,10 +14,14 @@ namespace sourcespec2ir
         struct OutputConfig
         {
             const bool printMatchingInfo;
+            const bool printUnificationInfo;
             const bool printDebugInfo;
 
-            OutputConfig(const bool printMatchingInfo, const bool printDebugInfo)
+            OutputConfig(const bool printMatchingInfo,
+                         const bool printUnificationInfo,
+                         const bool printDebugInfo)
                 : printMatchingInfo(printMatchingInfo),
+                  printUnificationInfo(printUnificationInfo),
                   printDebugInfo(printDebugInfo)
             {
             }

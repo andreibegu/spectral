@@ -4,6 +4,10 @@
 namespace sourcespec2ir
 {
 
+CSpecUnifier::CSpecUnifier(const bool printDebugInfo)
+    : SpecUnifier(printDebugInfo)
+{}
+
 std::optional<SpecUnifier::SpecLibElement> CSpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
 {
     // TODO: Implement this better (i.e. check for scope or sth like that)

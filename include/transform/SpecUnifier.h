@@ -45,12 +45,17 @@ namespace sourcespec2ir
             SeqAppend  // Append element to sequence
         };
 
+        SpecUnifier(const bool printDebugInfo);
+
         /**
          * Invokes the specification-unification on the given module.
          */
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
 
     protected:
+        
+        bool printDebugInfo;
+
         // Pointers to the loaded llvm-ir module and context
         llvm::Module *irModule;
         llvm::LLVMContext *irContext;

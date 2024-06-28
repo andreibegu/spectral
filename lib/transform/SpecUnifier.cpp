@@ -17,6 +17,11 @@
 namespace sourcespec2ir
 {
 
+    SpecUnifier::SpecUnifier(const bool printDebugInfo)
+        : printDebugInfo(printDebugInfo)
+    {
+    }
+
     void SpecUnifier::unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext)
     {
         // TODO: Move the arguments to the constructor
@@ -72,11 +77,14 @@ namespace sourcespec2ir
         while (!srcSpecFunction.user_empty())
         {
             llvm::User *user = *srcSpecFunction.user_begin();
-            // TODO: Only print if debugging is enabled. 
-            llvm::errs() << "===============================================\n";
-            llvm::errs() << "Detected user of " << srcSpecFunction.getName().str() << ":\n";
-            user->dump();
-            llvm::errs() << "===============================================\n";
+            if (printDebugInfo)
+            {
+                llvm::outs() << "===============================================\n";
+                llvm::outs() << "Detected user of "
+                             << srcSpecFunction.getName().str() << ":\n";
+                user->print(llvm::outs());
+                llvm::outs() << "\n";
+            }
 
             auto oldCall = llvm::dyn_cast<llvm::CallInst>(user);
             if (!oldCall)
@@ -182,9 +190,9 @@ namespace sourcespec2ir
         }
 
         // If no types from the source-speclib are used, skip
-        if (srcFracType == nullptr && seqTypes.empty())
+        if (srcFracType == nullptr && seqTypes.empty() && printDebugInfo)
         {
-            std::cout << "Skipping replacement of spec-types." << std::endl;
+            llvm::outs() << "Skipping replacement of spec-types. \n";
             return;
         }
 
@@ -449,8 +457,7 @@ namespace sourcespec2ir
             auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(cnt);
             llvm::SmallVector<llvm::Type *> argList = {
                 llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::Type::getInt64Ty(*irContext)
-            };
+                llvm::Type::getInt64Ty(*irContext)};
             auto specFun = createSpecLibFunction(name, type, argList);
             specFun->addParamAttr(0, llvm::Attribute::NoUndef);
             specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
