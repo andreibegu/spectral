@@ -1,5 +1,5 @@
 
-#include "transform/DummySpecMatcher.h"
+#include "DummySpecMatcher.h"
 
 namespace sourcespec2ir
 {

@@ -1,8 +1,12 @@
-#include "transform/CSpecUnifier.h"
-#include "utils/PallasException.h"
+#include "CSpecUnifier.h"
+#include "PallasException.h"
 
 namespace sourcespec2ir
 {
+
+CSpecUnifier::CSpecUnifier(const bool printDebugInfo)
+    : SpecUnifier(printDebugInfo)
+{}
 
 std::optional<SpecUnifier::SpecLibElement> CSpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
 {

@@ -1,7 +1,7 @@
-#include "transform/SpecUnifier.h"
-#include "utils/IrSpecConstants.h"
-#include "utils/MetadataUtils.h"
-#include "utils/PallasException.h"
+#include "SpecUnifier.h"
+#include "IrSpecConstants.h"
+#include "MetadataUtils.h"
+#include "PallasException.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -11,10 +11,16 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/InstIterator.h>
+#include <llvm/Support/raw_ostream.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace sourcespec2ir
 {
+
+    SpecUnifier::SpecUnifier(const bool printDebugInfo)
+        : printDebugInfo(printDebugInfo)
+    {
+    }
 
     void SpecUnifier::unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext)
     {
@@ -22,10 +28,10 @@ namespace sourcespec2ir
         this->irModule = irModule;
         this->irContext = irContext;
 
-        // Replace all allocations that use a type from the source-specification-library
+        // Replace all allocations that use a type from the source spec-library
         replaceSpecTypes();
 
-        // Collect all used specification-functions from module
+        // Collect all used specification-functions from the module
         llvm::SmallVector<llvm::Function *, 32> srcSpecFuns;
         for (auto &f : irModule->getFunctionList())
         {
@@ -46,8 +52,7 @@ namespace sourcespec2ir
             if (!srcSpecFun->users().empty())
             {
                 auto srcSpecFunName = srcSpecFun->getName().str();
-                throw utils::PallasException("Failed to remove specification function (" 
-                    + srcSpecFunName + "). Remaining users exist.");
+                throw utils::PallasException("Failed to remove specification function (" + srcSpecFunName + "). Remaining users exist.");
             }
 
             // Remove the function from the module
@@ -64,7 +69,7 @@ namespace sourcespec2ir
         {
             return getContentTypeOfADTTy(*allocInstr->getAllocatedType());
         }
-        throw utils::PallasException("Failed to extract the content-type of the sequence-type.");
+        throw utils::PallasException("Failed to extract the content-type of the the ADT.");
     }
 
     void SpecUnifier::replaceCallsToSpecFunction(llvm::Function &srcSpecFunction)
@@ -72,10 +77,14 @@ namespace sourcespec2ir
         while (!srcSpecFunction.user_empty())
         {
             llvm::User *user = *srcSpecFunction.user_begin();
-            std::cerr << "===============================================" << std::endl;
-            std::cerr << "Detected user of " << srcSpecFunction.getName().str() << ":" << std::endl;
-            user->dump();
-            std::cerr << "===============================================" << std::endl;
+            if (printDebugInfo)
+            {
+                llvm::outs() << "===============================================\n";
+                llvm::outs() << "Detected user of "
+                             << srcSpecFunction.getName().str() << ":\n";
+                user->print(llvm::outs());
+                llvm::outs() << "\n";
+            }
 
             auto oldCall = llvm::dyn_cast<llvm::CallInst>(user);
             if (!oldCall)
@@ -84,7 +93,7 @@ namespace sourcespec2ir
                 throw utils::PallasException(
                     "Encountered a use of a specification-function that is not a call.");
             }
-            
+
             auto newCall = transformSpecCall(*oldCall);
             if (!newCall)
             {
@@ -135,22 +144,22 @@ namespace sourcespec2ir
         case ForallSep:
             return transformForallSep(oldCall);
         case FracOf:
+        {
+            auto newCall = transformFracOf(oldCall);
+            // Check that the type for fractions has been replaced.
+            if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(oldCall.getArgOperand(0)))
             {
-                auto newCall = transformFracOf(oldCall);
-                // Check that the type for fractions has been replaced.
-                if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(oldCall.getArgOperand(0)))
+                if (allocInstr->getAllocatedType() != getUSpecFracType())
                 {
-                    if (allocInstr->getAllocatedType() != getUSpecFracType())
-                    {
-                        throw utils::PallasException("The spec-lib type for fractions has not been replaced properly.");
-                    }
+                    throw utils::PallasException("The spec-lib type for fractions has not been replaced properly.");
                 }
-                else
-                {
-                    throw utils::PallasException("Allocation for fractions is only supported using alloca.");
-                }
-                return newCall;
             }
+            else
+            {
+                throw utils::PallasException("Allocation for fractions is only supported using alloca.");
+            }
+            return newCall;
+        }
         case Perm:
             return transformPerm(oldCall);
         case SeqNew:
@@ -181,9 +190,9 @@ namespace sourcespec2ir
         }
 
         // If no types from the source-speclib are used, skip
-        if (srcFracType == nullptr && seqTypes.empty())
+        if (srcFracType == nullptr && seqTypes.empty() && printDebugInfo)
         {
-            std::cout << "Skipping replacement of spec-types." << std::endl;
+            llvm::outs() << "Skipping replacement of spec-types. \n";
             return;
         }
 
@@ -206,7 +215,6 @@ namespace sourcespec2ir
                     if (oldType == srcFracType)
                     {
                         newType = getUSpecFracType();
-                        // allocInstr->setAllocatedType(getUSpecFracType());
                     }
                     else if (auto *sType = llvm::dyn_cast<llvm::StructType>(oldType))
                     {
@@ -271,9 +279,12 @@ namespace sourcespec2ir
         {
             // Generate and add declaration of imply-function
             // TODO: Check if zeroext, noundef attributes should be added
-            llvm::SmallVector<llvm::Type *> implySpecArgs({llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
-            auto implySpecFT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*irContext), implySpecArgs, false);
-            specImply = llvm::Function::Create(implySpecFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_IMPLY, irModule);
+            llvm::SmallVector<llvm::Type *> implySpecArgs(
+                {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            auto implySpecFT = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(*irContext), implySpecArgs, false);
+            specImply = llvm::Function::Create(
+                implySpecFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_IMPLY, irModule);
 
             // Add metadata-marker to mark as specification-library-function
             markAsSpecLibFunction(specImply, PALLAS_SPEC_IMPLY);
@@ -290,7 +301,8 @@ namespace sourcespec2ir
             auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
             llvm::SmallVector<llvm::Type *> specArgs({type});
             auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            auto specFun = llvm::Function::Create(
+                specFType, llvm::Function::ExternalLinkage, specName, irModule);
             specOld[type] = specFun;
             // Add metadata-marker to mark as specification-library-function
             markAsSpecLibFunction(specFun, PALLAS_SPEC_OLD_BASE);
@@ -308,7 +320,8 @@ namespace sourcespec2ir
             auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
             llvm::SmallVector<llvm::Type *> specArgs;
             auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            auto specFun = llvm::Function::Create(
+                specFType, llvm::Function::ExternalLinkage, specName, irModule);
             specResult[type] = specFun;
             // Add metadata-marker to mark as specification-library-function
             markAsSpecLibFunction(specFun, PALLAS_SPEC_RESULT_BASE);
@@ -326,7 +339,8 @@ namespace sourcespec2ir
             auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
             llvm::SmallVector<llvm::Type *> specArgs({llvm::PointerType::get(*irContext, 0)});
             auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(specFType, llvm::Function::ExternalLinkage, specName, irModule);
+            auto specFun = llvm::Function::Create(
+                specFType, llvm::Function::ExternalLinkage, specName, irModule);
             specBoundVar[type] = specFun;
             // Add metadata-marker to mark as specification-library-function
             markAsSpecLibFunction(specFun, PALLAS_SPEC_BOUND_VAR);
@@ -372,7 +386,7 @@ namespace sourcespec2ir
 
             llvm::SmallVector<llvm::Type *> argList = {
                 llvm::PointerType::get(getUSpecFracType(), 0), // Opaque, or non-opaque pointer?
-                llvm::Type::getInt32Ty(*irContext),            // TODO: Change to systems default integer
+                llvm::Type::getInt32Ty(*irContext),
                 llvm::Type::getInt32Ty(*irContext)};
             auto specFun = createSpecLibFunction(PALLAS_SPEC_FRAC_OF,
                                                  llvm::Type::getVoidTy(*irContext), argList);
@@ -443,8 +457,7 @@ namespace sourcespec2ir
             auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(cnt);
             llvm::SmallVector<llvm::Type *> argList = {
                 llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::Type::getInt64Ty(*irContext) // TODO: Remove the hardcoded 64-bit-type
-            };
+                llvm::Type::getInt64Ty(*irContext)};
             auto specFun = createSpecLibFunction(name, type, argList);
             specFun->addParamAttr(0, llvm::Attribute::NoUndef);
             specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));

@@ -20,8 +20,9 @@
 
 #include "SourceSpecMatcher.h"
 #include "SourceCompilerDriver.h"
+#include "SourceWrapperGenerator.h"
 #include "SpecUnifier.h"
-#include "utils/OutputConfig.h"
+#include "OutputConfig.h"
 #include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 
@@ -31,30 +32,34 @@ namespace sourcespec2ir
     class SourceSpecTransformer
     {
     public:
-        SourceSpecTransformer(std::unique_ptr<SourceCompilerDriver> compilerDriver,
-                              std::unique_ptr<SpecUnifier> specUnifier,
-                              std::string srcInPath, std::string outPath,
-                              const utils::OutputConfig &outputConfig);
+        SourceSpecTransformer(
+            std::unique_ptr<SourceCompilerDriver> compilerDriver,
+            std::unique_ptr<SpecUnifier> specUnifier,
+            std::string srcInPath, std::string outPath,
+            const utils::OutputConfig &outputConfig);
 
         void transformModule();
 
     protected:
         /*
-         *  Factory methods
+         * Factory methods. 
+         * These can/ have to be overwritten by subclasses to create a 
+         * SourceSpecTransformer that can handle a specific language. 
          */
+        virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() = 0;
 
-        // TODO: Make virtual, add path to source-file as argument if required.
-        std::unique_ptr<SourceSpecMatcher> createSpecMatcher(SpecParser::FileContext *specParseTree,
-                                                             llvm::Module *irModule);
+        /**
+         * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default. 
+         * Can be overwritten by subclasses to use a different matching strategy. 
+         */
+        std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
+            SpecParser::FileContext *specParseTree, llvm::Module *irModule);
 
     private:
         std::string outPath;
         const utils::OutputConfig &outputConfig;
 
-        /* Counter for generating names for the specification functions.
-         * TODO: Replace with something more elaborate that takes exisiting names into account.
-         */
-        int specFunCnt = 0;
+        std::unique_ptr<SourceWrapperGenerator> wrapperGenerator;
 
         std::unique_ptr<SourceCompilerDriver> srcCompilerDriver;
 
@@ -67,7 +72,8 @@ namespace sourcespec2ir
         std::unique_ptr<llvm::Module> irModule;
 
         /**
-         * Pointers to stuff that is required to keep the parse-tree of the source-file in scope.
+         * Pointers to stuff that is required to keep the parse-tree of the 
+         * source-file in scope.
          */
         std::unique_ptr<std::ifstream> srcFileStream;
         std::unique_ptr<antlr4::ANTLRInputStream> srcInStream;
@@ -77,15 +83,16 @@ namespace sourcespec2ir
         SpecParser::FileContext *srcParseTree;
 
         /**
-         * Analysis managers and pass builder that are used to run optimization-passes on the loaded IR
+         * Analysis managers and pass builder that are used to run 
+         * optimization- and analysis passes on the loaded IR
          */
         llvm::LoopAnalysisManager lam;
         llvm::FunctionAnalysisManager fam;
         llvm::CGSCCAnalysisManager cgam;
         llvm::ModuleAnalysisManager mam;
 
-        // While we do not use the PassBuilder directly, it is required by the ModuleAnalysisManager
-        // Causes SegmentationFault otherwise.
+        // While we do not use the PassBuilder directly, it is required by the 
+        // ModuleAnalysisManager. Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
         /**
@@ -144,37 +151,7 @@ namespace sourcespec2ir
          */
         void writeToFile(const llvm::Module &module, std::string outPath);
 
-        /**
-         * Takes a string that contains a source-language expression along with a
-         * sequence of DILocalVariable that describe the source-variables that
-         * are accessible in the expression.
-         * The generated wrapping-function MUST use the same ordering of it's
-         * arguments as is defined by parameter srcVars.
-         *
-         * TODO: Move somewhere else or make virtual as this is source-language specific
-         */
-        std::unique_ptr<SrcWrapperFunction> getWrappingFunction(
-            llvm::ArrayRef<llvm::DILocalVariable *> srcVars,
-            const std::string &expr);
-
-        /**
-         * Takes a string-representation of a source-labguage function and turns 
-         * it into a full compilation unit in the source language.
-         * E.g. adds imports for the specification library, ...
-         *
-         * TODO: Move somewhere else or make virtual as this is source-language specific
-         */
-        std::string assembleSrcCompilationUnit(const SrcWrapperFunction &wrapperFunction);
-
-        /**
-         * Returns a string representation of the given DIType that matches the 
-         * types representation on the source-level.
-         * If the stirng-representation cannot be generated, an error is raised.
-         *
-         * TODO: Move somewhere else or make virtual as this is source-language specific
-         *      Or even better: Extract the source-language specific aspects.
-         */
-        std::string getSrcReprOfType(const llvm::DIType *type);
+        
     };
 
 }

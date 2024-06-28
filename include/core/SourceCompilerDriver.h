@@ -11,8 +11,8 @@ namespace sourcespec2ir
 {
 
     /**
-     * Abstract class is used to invoke the compiler of the source-language in order to 
-     * compile the expressions of the source-lnaguage into LLVM-IR.
+     * Abstract class is used to invoke the compiler of the source-language to 
+     * compile expressions of the source-language into LLVM-IR.
      */
     class SourceCompilerDriver
     {

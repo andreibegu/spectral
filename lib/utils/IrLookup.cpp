@@ -1,5 +1,5 @@
-#include "utils/IrLookup.h"
-#include "utils/PallasException.h"
+#include "IrLookup.h"
+#include "PallasException.h"
 
 #include <stdexcept>
 

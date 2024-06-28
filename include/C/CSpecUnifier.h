@@ -41,6 +41,8 @@ namespace sourcespec2ir
         const std::string C_SPEC_FRAC_TYPE = "struct.frac";
         const std::string C_SPEC_SEQ_TYPE_BASE = "PALLAS_SEQ___";
 
+        CSpecUnifier(const bool printDebugInfo);
+
     protected:
 
         std::optional<SpecLibElement> isSrcSpecificationFunction(const llvm::Function &f) override;

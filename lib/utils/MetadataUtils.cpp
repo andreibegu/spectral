@@ -1,5 +1,5 @@
-#include "utils/MetadataUtils.h"
-#include "utils/IrSpecConstants.h"
+#include "MetadataUtils.h"
+#include "IrSpecConstants.h"
 
 namespace sourcespec2ir
 {

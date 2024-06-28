@@ -1,6 +1,6 @@
 
-#include "transform/IRBasedSourceSpecMatcher.h"
-#include "utils/PallasException.h"
+#include "IRBasedSourceSpecMatcher.h"
+#include "PallasException.h"
 
 #include <stdexcept>
 #include <string>
@@ -191,7 +191,6 @@ namespace sourcespec2ir
         unsigned int parentStartLine = 0;
         for (auto &f : *irModule)
         {
-            // TODO: Fail if location cannot be determined?
             if (auto subprog = f.getSubprogram())
             {
                 // TODO: Determine the end of the scope by iterating over all

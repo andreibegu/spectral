@@ -1,7 +1,4 @@
-#include "utils/SrcLookup.h"
-#include "utils/IrLookup.h"
-
-#include <iostream>
+#include "SrcLookup.h"
 
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/IntrinsicInst.h>
@@ -39,44 +36,6 @@ namespace sourcespec2ir
         std::string getSrcVarName(const llvm::DILocalVariable &var) 
         {
             return var.getName().str();
-        }
-
-        std::string getSrcVarType(const llvm::DILocalVariable &var)
-        {
-            return var.getType()->getName().str();
-        }
-
-        void printAllSrcVars(const llvm::Module &module)
-        {
-
-            for (const auto &f : module.getFunctionList())
-            {
-                if (f.isIntrinsic())
-                {
-                    // Skip llvm-intrinsics
-                    continue;
-                }
-
-                // Look at the debug-metadata to find the source-name of the function.
-                auto pDISubprog = f.getSubprogram();
-                if (pDISubprog != nullptr)
-                {
-                    auto fName = pDISubprog->getName().str();
-                    std::cout << "Detected function with name: " << fName << std::endl;
-                    auto vars = utils::getSrcVariablesForFunction(f, true);
-                    for (auto v : *vars)
-                    {
-                        auto srcName = utils::getSrcVarName(*v);
-                        auto srcType = utils::getSrcVarType(*v);
-                        std::cout << "Variable " << srcName << " : " << srcType << std::endl;
-                    }
-                }
-                else
-                {
-                    // Should no happen for now. In the future we need to consider the specification-functions.
-                    std::cout << "No DISubprogram found for function. Skipping. " << std::endl;
-                }
-            }
         }
 
     }

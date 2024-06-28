@@ -36,16 +36,14 @@ namespace sourcespec2ir
         // Returns the number of matched function-contract-blocks
         size_t getNumMatchedFuncContracts();
 
-        // Return matched function contracts
+        // Return matched function contract by index
         MatchedFunctionContract *getMatchedFuncContract(size_t idx);
 
         // Returns the number of matched loop-invariant-blocks
         size_t getNumMatchedLoopInv();
 
-        // Return matched contract with given index
+        // Return matched invariant-block by index
         MatchedLoopInvariantBlock *getMatchedLoopInv(size_t idx);
-
-        // const llvm::ArrayRef<MatchedFunctionContract> &getMatchedLoopInvariants() const;
 
     protected:
         SpecParser::FileContext *specParseTree;
@@ -58,7 +56,8 @@ namespace sourcespec2ir
          * TODO: Check if it makes more sense to return a pointer to the
          *       function instead of the name.
          */
-        virtual std::string getContractBlockContext(size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+        virtual std::string getContractBlockContext(
+            size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
 
         /**
          * Given the location of a specification-block of loop-invariants,

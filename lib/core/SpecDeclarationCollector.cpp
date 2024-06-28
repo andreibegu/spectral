@@ -1,4 +1,4 @@
-#include "transform/SpecDeclarationCollector.h"
+#include "SpecDeclarationCollector.h"
 #include "antlr4-runtime.h"
 
 namespace sourcespec2ir

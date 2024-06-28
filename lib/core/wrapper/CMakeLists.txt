@@ -1,4 +1,4 @@
-target_sources(sourceSpec2IR PUBLIC
+target_sources(spec2ir_core PUBLIC
     IRWrapperFunction.cpp
     SrcWrapperFunction.cpp
 )

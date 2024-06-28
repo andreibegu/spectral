@@ -1,9 +1,6 @@
 #ifndef PALLAS_MDUTILS_H
 #define PALLAS_MDUTILS_H
 
-#include <string>
-#include <memory>
-
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 

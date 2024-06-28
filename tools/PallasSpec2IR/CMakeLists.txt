@@ -9,5 +9,6 @@ target_include_directories(pallasSpec2ir
 )
 
 target_link_libraries(pallasSpec2ir 
-        sourceSpec2IR
+        spec2ir_core
+        spec2ir_C
 )
