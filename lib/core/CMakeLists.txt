@@ -25,7 +25,7 @@ add_subdirectory(wrapper)
          
 target_include_directories(spec2ir_core PUBLIC
     # TODO: Be more specific
-    "${CMAKE_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}/include/core"
     "${ANTLR_SpecificationParser_OUTPUT_DIR}"
     "${ANTLR_SpecificationLexer_OUTPUT_DIR}"
 )

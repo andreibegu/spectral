@@ -1,7 +1,7 @@
 #ifndef PALLAS_SOURCEWRAPPERGENERATOR_H
 #define PALLAS_SOURCEWRAPPERGENERATOR_H
 
-#include "transform/wrapper/SrcWrapperFunction.h"
+#include "core/wrapper/SrcWrapperFunction.h"
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/DebugInfoMetadata.h>

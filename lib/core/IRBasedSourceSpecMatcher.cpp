@@ -1,5 +1,5 @@
 
-#include "transform/IRBasedSourceSpecMatcher.h"
+#include "core/IRBasedSourceSpecMatcher.h"
 #include "utils/PallasException.h"
 
 #include <stdexcept>

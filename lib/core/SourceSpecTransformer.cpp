@@ -8,9 +8,9 @@
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
 
-#include "transform/IRBasedSourceSpecMatcher.h"
-#include "transform/SourceSpecTransformer.h"
-#include "transform/SpecDeclarationCollector.h"
+#include "core/IRBasedSourceSpecMatcher.h"
+#include "core/SourceSpecTransformer.h"
+#include "core/SpecDeclarationCollector.h"
 #include "utils/IrSpecConstants.h"
 #include "utils/IrLookup.h"
 #include "utils/MetadataUtils.h"

@@ -1,4 +1,4 @@
-#include "transform/wrapper/SrcWrapperFunction.h"
+#include "core/wrapper/SrcWrapperFunction.h"
 
 namespace sourcespec2ir
 {

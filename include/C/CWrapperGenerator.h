@@ -1,7 +1,7 @@
 #ifndef PALLAS_CWRAPPERGENERATOR_H
 #define PALLAS_CWRAPPERGENERATOR_H
 
-#include "transform/SourceWrapperGenerator.h"
+#include "core/SourceWrapperGenerator.h"
 
 namespace sourcespec2ir
 {

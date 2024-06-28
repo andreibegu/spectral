@@ -1,4 +1,4 @@
-#include "transform/SpecUnifier.h"
+#include "core/SpecUnifier.h"
 #include "utils/IrSpecConstants.h"
 #include "utils/MetadataUtils.h"
 #include "utils/PallasException.h"
