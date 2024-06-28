@@ -7,7 +7,7 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/Support/SourceMgr.h>
 
-#include "transform/CCompilerDriver.h"
+#include "CCompilerDriver.h"
 #include "utils/PallasException.h"
 
 namespace sourcespec2ir

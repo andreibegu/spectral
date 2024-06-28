@@ -1,7 +1,7 @@
 #ifndef PALLAS_CSPECTRANSFORMER_H
 #define PALLAS_CSPECTRANSFORMER_H
 
-#include "SourceSpecTransformer.h"
+#include "transform/SourceSpecTransformer.h"
 
 namespace sourcespec2ir
 {

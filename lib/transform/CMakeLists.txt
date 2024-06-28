@@ -1,3 +1,4 @@
+# Library that contains the source-language independent aspects of the transformation. 
 
 # Generation of lexer & parser for the specification-grammar
 antlr_target(SpecificationLexer ${CMAKE_SOURCE_DIR}/grammar/SpecLexer.g4 LEXER
@@ -9,11 +10,7 @@ antlr_target(SpecificationParser ${CMAKE_SOURCE_DIR}/grammar/SpecParser.g4 PARSE
              COMPILE_FLAGS -lib ${ANTLR_SpecificationLexer_OUTPUT_DIR} -Xexact-output-dir
              VISITOR)
 
-add_library(sourceSpec2IR STATIC
-    CCompilerDriver.cpp
-    CSpecTransformer.cpp
-    CSpecUnifier.cpp
-    CWrapperGenerator.cpp
+add_library(spec2ir_core STATIC
     DummySpecMatcher.cpp
     IRBasedSourceSpecMatcher.cpp
     SourceSpecMatcher.cpp
@@ -26,13 +23,14 @@ add_library(sourceSpec2IR STATIC
 
 add_subdirectory(wrapper)
          
-target_include_directories(sourceSpec2IR PUBLIC
+target_include_directories(spec2ir_core PUBLIC
+    # TODO: Be more specific
     "${CMAKE_SOURCE_DIR}/include"
     "${ANTLR_SpecificationParser_OUTPUT_DIR}"
     "${ANTLR_SpecificationLexer_OUTPUT_DIR}"
 )
 
-target_link_libraries(sourceSpec2IR
+target_link_libraries(spec2ir_core
         ${llvm_libs} 
         antlr4_static 
         pallasUtils

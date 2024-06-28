@@ -1,7 +1,7 @@
 #ifndef PALLAS_CSPECUNIFIER_H
 #define PALLAS_CSPECUNIFIER_H
 
-#include "SpecUnifier.h"
+#include "transform/SpecUnifier.h"
 
 #include <llvm/ADT/StringMap.h>
 

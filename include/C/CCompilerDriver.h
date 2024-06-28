@@ -1,7 +1,7 @@
 #ifndef PALLAS_CCOMPILERDRIVER_H
 #define PALLAS_CCOMPILERDRIVER_H
 
-#include "SourceCompilerDriver.h"
+#include "transform/SourceCompilerDriver.h"
 
 
 namespace sourcespec2ir

@@ -1,6 +1,6 @@
-#include "transform/CSpecTransformer.h"
-#include "transform/CSpecUnifier.h"
-#include "transform/CCompilerDriver.h"
+#include "CSpecTransformer.h"
+#include "CSpecUnifier.h"
+#include "CCompilerDriver.h"
 #include "utils/OutputConfig.h"
 #include "utils/PallasException.h"
 

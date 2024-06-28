@@ -1,4 +1,4 @@
-#include "transform/CWrapperGenerator.h"
+#include "CWrapperGenerator.h"
 #include "utils/PallasException.h"
 #include "utils/SrcLookup.h"
 

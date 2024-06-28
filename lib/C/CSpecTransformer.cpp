@@ -1,5 +1,5 @@
-#include "transform/CSpecTransformer.h"
-#include "transform/CWrapperGenerator.h"
+#include "CSpecTransformer.h"
+#include "CWrapperGenerator.h"
 
 namespace sourcespec2ir
 {

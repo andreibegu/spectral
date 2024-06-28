@@ -1,4 +1,4 @@
-#include "transform/CSpecUnifier.h"
+#include "CSpecUnifier.h"
 #include "utils/PallasException.h"
 
 namespace sourcespec2ir
