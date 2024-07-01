@@ -1,8 +1,8 @@
 # Library that contains the C++-specific aspects of the specification translation
 add_library(spec2ir_Cpp STATIC
-    #CppCompilerDriver.cpp
-    #CppSpecTransformer.cpp
-    #CppSpecUnifier.cpp
+    CppCompilerDriver.cpp
+    CppSpecTransformer.cpp
+    CppSpecUnifier.cpp
     CppWrapperGenerator.cpp
 )
          
