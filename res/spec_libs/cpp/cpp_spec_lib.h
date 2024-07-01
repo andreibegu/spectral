@@ -67,21 +67,17 @@ namespace pallasSpec
     /***************************************************
      *              Sequence-operations                *
      ***************************************************/
-    // New
     template<typename T>
     seq<T> seqNew();
 
-    // Size
     template<typename T>
-    std::size_t seqSize(seq<T> s);
+    std::size_t seqSize(const seq<T> &s);
 
-    // Get 
     template<typename T>
-    T seqGet(seq<T> s, std::size_t idx);
+    T seqGet(const seq<T> &s, std::size_t idx);
 
-    // Append
     template<typename T>
-    seq<T> seqAppend(seq<T> s, T e);
+    seq<T> seqAppend(const seq<T> &s, T e);
 
 }
 
