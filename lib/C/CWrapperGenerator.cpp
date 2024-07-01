@@ -1,8 +1,5 @@
 #include "CWrapperGenerator.h"
-#include "PallasException.h"
 #include "SrcLookup.h"
-
-#include <llvm/BinaryFormat/Dwarf.h>
 
 namespace sourcespec2ir
 {
@@ -52,45 +49,13 @@ namespace sourcespec2ir
         return includes + wrapperFunction.stringRepr;
     }
 
-    /**
-     * TODO: Move source-language independent aspects into superclass.
-     * TODO: Support more Tags
-     */
-    std::string CWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
+    std::string CWrapperGenerator::addConst(const std::string &baseType)
     {
-        // Check if type is a pointer:
-        if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
-        {
-            auto tag = dType->getTag();
-            auto baseType = dType->getBaseType();
-
-            if (tag == llvm::dwarf::DW_TAG_pointer_type)
-            {
-                // Handle Pointer-type
-                // Recursively unwrap the pointer
-                auto baseRepr = getSrcReprOfType(baseType);
-                return baseRepr + "*";
-            }
-            else if (tag == llvm::dwarf::DW_TAG_const_type)
-            {
-                // Handle const-types
-                return getSrcReprOfType(baseType) + " const ";
-            }
-            else
-            {
-                throw utils::PallasException(
-                    "Encountered an unsupported type-tag: " + dType->getTag());
-            }
-        }
-
-        // Assume that the DIType is a plain DIType and just get the name
-        auto typeName = type->getName().str();
-        if (typeName.empty())
-        {
-            throw utils::PallasException(
-                "Failed to generate string-representation for type.");
-        }
-        return typeName;
+        return baseType + " const ";
     }
 
+    std::string CWrapperGenerator::addPointer(const std::string &baseType)
+    {
+        return baseType + "*";
+    }
 }
