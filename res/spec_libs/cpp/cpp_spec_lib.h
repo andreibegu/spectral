@@ -23,7 +23,7 @@ namespace pallasSpec
     template<typename T>
     struct seq
     {
-        T contentType,
+        T contentType;
         int64_t dummy1, dummy2, dummy3;
     };
 
@@ -62,7 +62,7 @@ namespace pallasSpec
      *                   Permissions                   *
      ***************************************************/
     template<typename T>
-    bool Perm(T *loc, const frac &p);
+    bool Perm(T *loc, frac p);
 
     /***************************************************
      *              Sequence-operations                *
@@ -71,13 +71,13 @@ namespace pallasSpec
     seq<T> seqNew();
 
     template<typename T>
-    std::size_t seqSize(const seq<T> &s);
+    std::size_t seqSize(seq<T> s);
 
     template<typename T>
-    T seqGet(const seq<T> &s, std::size_t idx);
+    T seqGet(seq<T> s, std::size_t idx);
 
     template<typename T>
-    seq<T> seqAppend(const seq<T> &s, T e);
+    seq<T> seqAppend(seq<T> s, T e);
 
 }
 
