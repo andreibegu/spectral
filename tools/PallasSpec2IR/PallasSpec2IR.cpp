@@ -1,17 +1,31 @@
 #include "CSpecTransformer.h"
 #include "CSpecUnifier.h"
 #include "CCompilerDriver.h"
+#include "CppSpecTransformer.h"
 #include "utils/OutputConfig.h"
 #include "utils/PallasException.h"
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
+#include <map>
 #include <memory>
 #include <string>
 
 /*
  * Commandline-options
  */
+
+// Enum for selecting the source-language from the commandline
+enum ClSourceLang
+{
+    C,
+    Cpp,
+    Infer
+};
+
+std::map<ClSourceLang, std::string> langNames = {
+    {C, "C"}, {Cpp, "C++"}, {Infer, "Auto"}};
+
 static llvm::cl::opt<std::string> clInFile(
     llvm::cl::Positional, llvm::cl::desc("input-file"), llvm::cl::Required);
 
@@ -34,42 +48,77 @@ static llvm::cl::opt<std::string> clLibPath(
     llvm::cl::value_desc("Directory of the specification library"),
     llvm::cl::init("../../res/spec_libs/c/"));
 
+static llvm::cl::opt<ClSourceLang> clLang(
+    "lang", llvm::cl::desc("Source-language of the input-file"),
+    llvm::cl::init(Infer),
+    llvm::cl::values(
+        clEnumVal(C, "C"),
+        clEnumVal(Cpp, "C++"),
+        clEnumVal(Infer, "Infer source-language from file-extension")));
+
 int main(int argc, char **argv)
 {
     // Parse commandline-options and wrap them in struct
     llvm::cl::ParseCommandLineOptions(argc, argv);
+
+    // Bundle debout-optins in config-struct
     sourcespec2ir::utils::OutputConfig config(
         clPrintMatching, clPrintUnification, clPrintDebug);
 
+    // Get the source-language. If it is not specified with the -lang option,
+    // try to infer it using the file-extension of the input-file.
+    ClSourceLang lang = clLang;
+    if (lang == Infer)
+    {
+        auto inFileExt = clInFile.substr(clInFile.find_last_of("."));
+        if (inFileExt == ".c")
+            lang = C;
+        else if (inFileExt == ".cpp")
+            lang = Cpp;
+        else
+        {
+            throw sourcespec2ir::utils::PallasException(
+                "Unable to infer the language from the file-extension. \
+                 Please specify the language manually using the -lang option.");
+        }
+        if (config.printDebugInfo)
+            llvm::outs() << "Infered source-language as: " << langNames[lang] << "\n";
+    }
+
     if (config.printDebugInfo)
     {
+        llvm::outs() << "Source-language set to " << langNames[lang] << " \n";
         llvm::outs() << "From: " << clInFile << " to: " << clOutFile << "\n";
     }
 
     try
     {
-        auto compilerDriver = std::make_unique<sourcespec2ir::CCompilerDriver>(
-            clLibPath);
-        auto specUnifier = std::make_unique<sourcespec2ir::CSpecUnifier>(
-            config.printUnificationInfo);
-        sourcespec2ir::CSpecTransformer transformer(
-            std::move(compilerDriver),
-            std::move(specUnifier), clInFile, clOutFile,
-            config);
-        transformer.transformModule();
-    } catch (const sourcespec2ir::utils::PallasException &e)
+        if (lang == C)
+        {
+            sourcespec2ir::CSpecTransformer transformer(
+                std::make_unique<sourcespec2ir::CCompilerDriver>(clLibPath),
+                std::make_unique<sourcespec2ir::CSpecUnifier>(config.printUnificationInfo),
+                clInFile, clOutFile, config);
+            transformer.transformModule();
+        }
+        else if (lang == Cpp)
+        {
+            sourcespec2ir::CppSpecTransformer transformer(
+                clLibPath, clInFile, clOutFile, config);
+            transformer.transformModule();
+        }
+    }
+    catch (const sourcespec2ir::utils::PallasException &e)
     {
-        // We catch all exception that are based on Pallas exeption. 
-        // We print the error message and return a non-zero return-value to 
-        // allow for lit-tests that expect the program to fail. 
+        // We catch all exception that are based on Pallas exeption.
+        // We print the error message and return a non-zero return-value to
+        // allow for lit-tests that expect the program to fail.
         llvm::errs() << "===============================================\n";
-        llvm::errs() << "ERROR: An error was encountered during the" <<
-            " specification transformation: \n";
+        llvm::errs() << "ERROR: An error was encountered during the" << " specification transformation: \n";
         llvm::errs() << e.what() << "\n";
         llvm::errs() << "===============================================\n";
         return 1;
     }
-
 
     return 0;
 }

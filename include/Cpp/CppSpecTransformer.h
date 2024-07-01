@@ -13,8 +13,7 @@ namespace sourcespec2ir
     {
     public:
         CppSpecTransformer(
-            std::unique_ptr<SourceCompilerDriver> compilerDriver,
-            std::unique_ptr<SpecUnifier> specUnifier,
+            std::string specLibPath,
             std::string srcInPath, std::string outPath,
             const utils::OutputConfig &outputConfig);
     protected:
