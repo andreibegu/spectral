@@ -24,3 +24,7 @@ config.substitutions.append(('%Spec2IR',
 # Substitution to get path of C specification library
 config.substitutions.append(('%CSpecLib', 
                              os.path.join(config.spec2ir_src_root, 'res/spec_libs/c')))
+
+# Substitution to get path of C++ specification library
+config.substitutions.append(('%CppSpecLib', 
+                             os.path.join(config.spec2ir_src_root, 'res/spec_libs/cpp')))

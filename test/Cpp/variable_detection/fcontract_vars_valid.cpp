@@ -1,5 +1,5 @@
 // Expected to pass, only valid variables are referenced.
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang Cpp
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp
 
 /*@
 requires x >= 0 && y > 0;

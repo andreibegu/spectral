@@ -5,7 +5,7 @@
 //--- vars_invalid_in.cpp
 // Execution is expected to fail because a variable from within the 
 // loop is accessed. 
-// RUN: not-15 %Spec2IR vars_invalid_in.cpp -lib %CSpecLib -m -lang Cpp
+// RUN: not-15 %Spec2IR vars_invalid_in.cpp -lib %CppSpecLib -m -lang Cpp
 
 int bar (int x) {
     int cnt = 0;
@@ -23,7 +23,7 @@ int bar (int x) {
 //--- vars_invalid_after.cpp
 // Execution is expected to fail because a variable that is declared after the 
 // loop is used. 
-// RUN: not-15 %Spec2IR vars_invalid_after.cpp -lib %CSpecLib -m -lang Cpp
+// RUN: not-15 %Spec2IR vars_invalid_after.cpp -lib %CppSpecLib -m -lang Cpp
 
 int bar (int x) {
     int cnt = 0;
@@ -39,7 +39,7 @@ int bar (int x) {
 
 //--- vars_invalid_nonex.cpp
 // Execution is expected to fail because a non-existent variable is used.
-// RUN: not-15 %Spec2IR vars_invalid_nonex.cpp -lib %CSpecLib -m -lang Cpp
+// RUN: not-15 %Spec2IR vars_invalid_nonex.cpp -lib %CppSpecLib -m -lang Cpp
 
 int bar (int x) {
     int cnt = 0;
@@ -57,7 +57,7 @@ int bar (int x) {
 //--- vars_invalid_nested.cpp
 // Execution is expected to fail because a variable is used that 
 // is not in scope.
-// RUN: not-15 %Spec2IR vars_invalid_nonex.cpp -lib %CSpecLib -m -lang Cpp
+// RUN: not-15 %Spec2IR vars_invalid_nonex.cpp -lib %CppSpecLib -m -lang Cpp
 int bar (int a) {
     int cnt = 0;
     while (cnt < 10) {

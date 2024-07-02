@@ -52,10 +52,13 @@ namespace sourcespec2ir
         promoteMemToReg(*irModule);
 
         /*
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        llvm::outs() << "PRE-Transformation\n";
-        writeToFile(*irModule, "");
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        if (outputConfig.printDebugInfo)
+        {
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "PRE-Transformation\n";
+            writeToFile(*irModule, "");
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        } 
         */
 
         // Parse the source-file to extract the specifications
@@ -107,10 +110,13 @@ namespace sourcespec2ir
         assert(!llvm::verifyModule(*irModule, &llvm::errs()));
 
         /*
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        llvm::outs() << "PRE-Unification\n";
-        writeToFile(*irModule, "");
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        if (outputConfig.printDebugInfo)
+        {
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "PRE-Unification\n";
+            writeToFile(*irModule, "");
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        }
         */
 
         // Transform the compiled specifications into common format (calls to specification-functions)

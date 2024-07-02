@@ -1,5 +1,5 @@
 // Test that loop invariants are correctly matched to (nested) loops.
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
 int foo (int x, int y, int z) {
     int cnt = 0;

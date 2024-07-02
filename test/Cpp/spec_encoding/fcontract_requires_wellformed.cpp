@@ -1,8 +1,8 @@
 // Test that requires-clause is correctly encoded as an MD-Node
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
 // COM: Contract is attached to function
-// CHECK: i32 @fun(
+// CHECK: i32 {{@[^(]+}}(
 // CHECK-SAME: [[arg1:%[0-9]+]]
 // CHECK-SAME: [[arg2:%[0-9]+]]
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
@@ -16,7 +16,7 @@
 // CHECK-SAME: metadata [[arg2MD:![0-9]+]]
 
 // COM: Generated encoding-function is labeled
-// CHECK: define {{.*}} [[wrapperFunc:@PALLAS_SPEC_[0-9]+]]
+// CHECK: define {{.*}} [[wrapperFunc:@[^(]+]]
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the requires-Clause is wellformed

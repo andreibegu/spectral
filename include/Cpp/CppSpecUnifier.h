@@ -14,39 +14,39 @@ namespace sourcespec2ir
 {
 
     /**
-     * Specialization of the SpecUnifier for C as a source-language. 
+     * Specialization of the SpecUnifier for C as a source-language.
      */
     class CppSpecUnifier : public SpecUnifier
     {
     public:
-        /*
-        // Map names of functions of the specification-library to the corresponding enum-representation.
+        // Map names of functions of the specification-library to the 
+        // corresponding enum-representation.
+        // TODO: Change out the names!!!!
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"imply", Imply},
-            {"exists", Exists},
-            {"forall", Forall},
-            {"forallP", ForallSep},
-            {"fracOf", FracOf},
-            {"Perm", Perm},
+            {"pallasSpec::imply(bool, bool)", Imply},
+            //{"exists", Exists},
+            //{"forall", Forall},
+            //{"forallP", ForallSep},
+            //{"fracOf", FracOf},
+            //{"Perm", Perm},
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
-            {"PALLAS_OLD___", Old},
-            {"PALLAS_RESULT___", Result},
-            {"PALLAS_BOUND_VAR___", BoundVar},
-            {"PALLAS_SEQ_NEW___", SeqNew},
-            {"PALLAS_SEQ_SIZE___", SeqSize},
-            {"PALLAS_SEQ_AT___", SeqGet},
-            {"PALLAS_SEQ_APPEND___", SeqAppend},
+            //{"PALLAS_OLD___", Old},
+            //{"PALLAS_RESULT___", Result},
+            //{"PALLAS_BOUND_VAR___", BoundVar},
+            //{"PALLAS_SEQ_NEW___", SeqNew},
+            //{"PALLAS_SEQ_SIZE___", SeqSize},
+            //{"PALLAS_SEQ_AT___", SeqGet},
+            //{"PALLAS_SEQ_APPEND___", SeqAppend},
         };
 
-        const std::string C_SPEC_FRAC_TYPE = "struct.frac";
-        const std::string C_SPEC_SEQ_TYPE_BASE = "PALLAS_SEQ___";
-        */
+        const std::string CPP_SPEC_FRAC_TYPE = "\"struct.pallasSpec::frac\"";
+
+        const std::string CPP_SPEC_SEQ_TYPE_BASE = "\"struct.pallasSpec::seq";
 
         CppSpecUnifier(const bool printDebugInfo);
 
     protected:
-
         std::optional<SpecLibElement> isSrcSpecificationFunction(
             const llvm::Function &f) override;
 

@@ -1,6 +1,6 @@
 // Tests that check that the correct variables are available within a 
 // Expected to pass, only valid variables are referenced.
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang Cpp
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp
 
 int foo (int x) {
     int cnt = 0;

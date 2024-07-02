@@ -1,5 +1,5 @@
 // Test that a function-contact is correctly detected and matched.
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
 void foo(int i) {
     i++;
@@ -21,8 +21,12 @@ int bar (int a, int b) {
 float foobar(int x, float y) {
     return x + y;
 }
-// CHECK: Matched contract at 8-11 to bar
-// COM: CHECK-NOT: Matched contract
 
-// CHECK: i32 @bar(
-// CHECK-SAME: !pallas.fcontract 
+
+// COM: Check that contract has been matched correctly
+// CHECK: Matched contract at 8-11 to bar
+// CHECK-NOT: Matched contract
+
+// COM: Check that contract is attached to the correct function
+// CHECK-DAG: [[barMD:![0-9]+]] = distinct !DISubprogram(name: "bar"
+// CHECK-DAG: !dbg [[barMD]] !pallas.fcontract
