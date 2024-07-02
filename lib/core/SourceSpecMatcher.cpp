@@ -24,8 +24,7 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
     {
         // Safety-check that the state of the object is valid
-        if (contract)
-            assert("Unexpected state while matching contract");
+        assert(contract == nullptr);
 
         // Match contract to function
         auto startLine = ctx->start->getLine();
@@ -35,6 +34,8 @@ namespace sourcespec2ir
         const auto specFun = getContractBlockContext(startLine, startCol,
                                                      endLine, endCol);
         auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
+        assert(irFunction != nullptr); 
+
         // Create new matched contract
         contract = std::make_unique<MatchedFunctionContract>(irFunction);
 

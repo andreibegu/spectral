@@ -33,6 +33,7 @@ namespace sourcespec2ir
         call << " clang++-15 ";
         call << " -emit-llvm -S " ;
         call << " -g -O0 ";
+        call << " -Wall -Werror "; // Treat warnings as errors. Is this too strict?
         call << " -Xclang -disable-O0-optnone ";
         call << srcFilePath;
         call << " -o " + irFilePath;
