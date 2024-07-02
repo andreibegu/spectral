@@ -15,7 +15,7 @@ namespace sourcespec2ir
         auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
 
         std::stringstream stream;
-        stream << "bool" << funName << "(";
+        stream << " bool " << funName << "(";
 
         // Construct arg-list
         for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
@@ -43,7 +43,7 @@ namespace sourcespec2ir
         // TODO: add include-statements from the source-file
 
         std::stringstream stream;
-        stream << "#include <cpp_spec_lib.h> \n ";
+        stream << "#include \"cpp_spec_lib.h\" \n ";
         // Add any declarations from the declaration-block of the specifications.
         for (auto decl : declarations)
             stream << decl << "; \n ";

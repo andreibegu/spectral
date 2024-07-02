@@ -30,12 +30,12 @@ namespace sourcespec2ir
         const std::string irFilePath = "tmp_ir_source.ll";
 
         std::stringstream call;
-        call << "clang++-15 ";
-        call << "-emit-llvm -S " ;
-        call << "-g -O0 ";
-        call << "-Xclang -disable-O0-optnone ";
+        call << " clang++-15 ";
+        call << " -emit-llvm -S " ;
+        call << " -g -O0 ";
+        call << " -Xclang -disable-O0-optnone ";
         call << srcFilePath;
-        call << "-o " + irFilePath;
+        call << " -o " + irFilePath;
         std::system(call.str().c_str());
 
         // Parse the resulting file as an LLVM-IR module
@@ -56,7 +56,7 @@ namespace sourcespec2ir
         const std::string &cu, llvm::LLVMContext &context)
     {
         const std::string tmpFileBase = "tmp_driver";
-        const std::string tmpSrcFile = tmpFileBase + ".c";
+        const std::string tmpSrcFile = tmpFileBase + ".cpp";
         const std::string tmpIrFile = tmpFileBase + ".ll";
 
         // Put c-code into file

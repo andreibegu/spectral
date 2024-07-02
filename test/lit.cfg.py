@@ -8,7 +8,7 @@ config.name = 'Pallas Spec2IR test suite'
 config.test_format = lit.formats.ShTest(True)
 
 # File-extensions to treat as tests
-config.suffixes = ['.c']
+config.suffixes = ['.c', '.cpp']
 
 # Path to the test-files (i.e. this directory)
 config.test_source_root = os.path.dirname(__file__)

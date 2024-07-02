@@ -212,8 +212,8 @@ namespace sourcespec2ir
             parentFunction->isDeclaration() ||
             parentFunction->isIntrinsic())
         {
-            throw utils::PallasException("Failed to determine parent function \
-                                    when matching loop-invariant");
+            throw utils::PallasException(
+                "Failed to determine parent function when matching loop-invariant");
         }
 
         // Find closest loop in the function that is below the spec-block.
