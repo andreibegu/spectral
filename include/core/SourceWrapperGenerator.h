@@ -50,7 +50,18 @@ namespace sourcespec2ir
          * types representation on the source-level.
          * If the string-representation cannot be generated, an error is raised.
          */
-        virtual std::string getSrcReprOfType(const llvm::DIType *type) = 0;
+        std::string getSrcReprOfType(const llvm::DIType *type);
+
+        /**
+         * Adds a const-qualifier to the given base-type.
+         */
+        virtual std::string addConst(const std::string &baseType) = 0;
+
+        /**
+         * Adds a pointer-qualifier to the given base-type.
+         */
+        virtual std::string addPointer(const std::string &baseType) = 0;
+
     };
 
 }

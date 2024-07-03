@@ -12,15 +12,16 @@ namespace sourcespec2ir
     class CWrapperGenerator : public SourceWrapperGenerator
     {
     public:
-
         std::unique_ptr<SrcWrapperFunction> getWrappingFunction(
             llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr) override;
 
         std::string assembleSrcCompilationUnit(
-            const SrcWrapperFunction &wrapperFunction, 
+            const SrcWrapperFunction &wrapperFunction,
             const llvm::ArrayRef<std::string> &declarations) override;
 
-        std::string getSrcReprOfType(const llvm::DIType *type) override;
+        std::string addConst(const std::string &baseType) override;
+
+        std::string addPointer(const std::string &baseType) override;
 
     private:
         /* Counter for generating names for the specification functions.

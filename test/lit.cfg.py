@@ -8,7 +8,7 @@ config.name = 'Pallas Spec2IR test suite'
 config.test_format = lit.formats.ShTest(True)
 
 # File-extensions to treat as tests
-config.suffixes = ['.c']
+config.suffixes = ['.c', '.cpp']
 
 # Path to the test-files (i.e. this directory)
 config.test_source_root = os.path.dirname(__file__)
@@ -24,3 +24,7 @@ config.substitutions.append(('%Spec2IR',
 # Substitution to get path of C specification library
 config.substitutions.append(('%CSpecLib', 
                              os.path.join(config.spec2ir_src_root, 'res/spec_libs/c')))
+
+# Substitution to get path of C++ specification library
+config.substitutions.append(('%CppSpecLib', 
+                             os.path.join(config.spec2ir_src_root, 'res/spec_libs/cpp')))

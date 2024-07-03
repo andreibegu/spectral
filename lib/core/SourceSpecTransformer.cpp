@@ -52,10 +52,13 @@ namespace sourcespec2ir
         promoteMemToReg(*irModule);
 
         /*
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        llvm::outs() << "PRE-Transformation\n";
-        writeToFile(*irModule, "");
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        if (outputConfig.printDebugInfo)
+        {
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "PRE-Transformation\n";
+            writeToFile(*irModule, "");
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        } 
         */
 
         // Parse the source-file to extract the specifications
@@ -104,20 +107,30 @@ namespace sourcespec2ir
         }
 
         // Check wellformedness of module
-        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+            throw utils::PallasException(
+                "Ill-formed llvm-module after transformation.");
+        }
 
         /*
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        llvm::outs() << "PRE-Unification\n";
-        writeToFile(*irModule, "");
-        llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        if (outputConfig.printDebugInfo)
+        {
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "PRE-Unification\n";
+            writeToFile(*irModule, "");
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        }
         */
+        
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
 
         // Check wellformedness of module
-        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+            throw utils::PallasException(
+                "Ill-formed llvm-module  after unification.");
+        }
 
         // Dump the generated IR
         writeToFile(*irModule, outPath);

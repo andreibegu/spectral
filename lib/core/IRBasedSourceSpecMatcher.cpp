@@ -1,6 +1,7 @@
 
 #include "IRBasedSourceSpecMatcher.h"
 #include "PallasException.h"
+#include "SrcLookup.h"
 
 #include <stdexcept>
 #include <string>
@@ -177,10 +178,10 @@ namespace sourcespec2ir
         if (printMatchingInfo)
         {
             printContractMatchingInfo(startLine, endLine,
-                                      closestFunction->getName().str());
+                                      utils::getSrcNameOfFunction(*closestFunction));
         }
 
-        return closestFunction->getName().str();
+        return utils::getSrcNameOfFunction(*closestFunction);
     }
 
     std::pair<llvm::Function *, llvm::Loop *> IRBasedSourceSpecMatcher::matchLoopInvBlock(
@@ -212,8 +213,8 @@ namespace sourcespec2ir
             parentFunction->isDeclaration() ||
             parentFunction->isIntrinsic())
         {
-            throw utils::PallasException("Failed to determine parent function \
-                                    when matching loop-invariant");
+            throw utils::PallasException(
+                "Failed to determine parent function when matching loop-invariant");
         }
 
         // Find closest loop in the function that is below the spec-block.
