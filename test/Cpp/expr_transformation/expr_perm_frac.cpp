@@ -2,6 +2,9 @@
 // is encoded correctly
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
+// COM: Old fraction-type is not present
+// CHECK-NOT: struct.pallasSpec::frac
+
 // COM: Fraction-type is present
 // CHECK-DAG: %pallas.fracT = type { i64, i64, i64, i64 }
 

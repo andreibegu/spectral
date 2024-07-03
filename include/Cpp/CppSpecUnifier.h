@@ -38,10 +38,10 @@ namespace sourcespec2ir
             {"old<", Old},
             {"result<", Result},
             {"bVar<", BoundVar},
-            //{"PALLAS_SEQ_NEW___", SeqNew},
-            //{"PALLAS_SEQ_SIZE___", SeqSize},
-            //{"PALLAS_SEQ_AT___", SeqGet},
-            //{"PALLAS_SEQ_APPEND___", SeqAppend},
+            {"seqNew<", SeqNew},
+            {"seqSize<", SeqSize},
+            {"seqGet<", SeqGet},
+            {"seqAppend<", SeqAppend}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";

@@ -20,6 +20,15 @@ namespace sourcespec2ir
         auto nameDemangle = llvm::demangle(fName);
         // llvm::outs() << "Demangle " << fName << " --> " << nameDemangle << "\n";
 
+        // Drop the return-type to avoid problems when the return-type contains 
+        // the namespace by finding index of last space before '(' 
+        // and dropping everything in front.
+        auto openIdx = nameDemangle.find_first_of('(');
+        auto nameWithoutArgs = llvm::StringRef(nameDemangle).substr(0, openIdx);
+        auto lastSpaceIdx = nameWithoutArgs.find_last_of(' ');
+        if (lastSpaceIdx != llvm::StringRef::npos)
+            nameDemangle = nameDemangle.substr(lastSpaceIdx);
+
         // Check if the name contains the spec-namespace:
         auto namespacePos = llvm::StringRef(nameDemangle).find(CPP_SPEC_NAMESPACE + "::");
         if (namespacePos == llvm::StringRef::npos)
@@ -50,12 +59,16 @@ namespace sourcespec2ir
 
     llvm::Type *CppSpecUnifier::getContentTypeOfADTTy(const llvm::Type &t)
     {
-        throw std::runtime_error("Not implemented");
+        if (auto *adtType = llvm::dyn_cast<llvm::StructType>(&t))
+        {
+            return adtType->getElementType(0);
+        }
+        throw utils::PallasException("Failed to extract the content-type of the ADT.");
     }
 
     bool CppSpecUnifier::isSrcSeqType(const llvm::StructType &t)
     {
-        return t.getName().startswith("struct." + CPP_SPEC_SEQ_TYPE_BASE);
+        return t.getName().startswith(CPP_SPEC_SEQ_TYPE_BASE);
     }
 
     llvm::Type *CppSpecUnifier::getSrcLibFracType()
@@ -129,28 +142,58 @@ namespace sourcespec2ir
         newCall->addParamAttr(0, llvm::Attribute::NoUndef);
         newCall->addParamAttr(1, llvm::Attribute::NoUndef);
         newCall->addParamAttr(1, llvm::Attribute::getWithByValType(
-            *irContext, getUSpecFracType()));
+                                     *irContext, getUSpecFracType()));
         return newCall;
     }
 
     llvm::CallInst *CppSpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
     {
-        throw std::runtime_error("Not implemented");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqNew(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(cType)));
+        return newCall;
     }
 
     llvm::CallInst *CppSpecUnifier::transformSeqSize(llvm::CallInst &oldCall)
     {
-        throw std::runtime_error("Not implemented");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqSize(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
+        return newCall;
     }
 
     llvm::CallInst *CppSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
     {
-        throw std::runtime_error("Not implemented");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        return newCall;
     }
 
     llvm::CallInst *CppSpecUnifier::transformSeqAppend(llvm::CallInst &oldCall)
     {
-        throw std::runtime_error("Not implemented");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqAppend(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, seqType));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        return newCall;
     }
 
 } // namespace sourcespec2ir
