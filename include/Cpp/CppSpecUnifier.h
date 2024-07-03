@@ -15,34 +15,37 @@ namespace sourcespec2ir
 
     /**
      * Specialization of the SpecUnifier for C as a source-language.
+     * 
+     * TODO: Try to de-duplicate the 1:1-transformations that are identical to 
+     *       those in the CSpecUnifier. 
      */
     class CppSpecUnifier : public SpecUnifier
     {
     public:
+
+        const std::string CPP_SPEC_NAMESPACE = "pallasSpec";
         // Map names of functions of the specification-library to the 
         // corresponding enum-representation.
-        // TODO: Change out the names!!!!
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"pallasSpec::imply(bool, bool)", Imply},
-            //{"exists", Exists},
-            //{"forall", Forall},
-            //{"forallP", ForallSep},
-            //{"fracOf", FracOf},
-            //{"Perm", Perm},
+            {"imply(bool, bool)", Imply},
+            {"exists(bool, bool)", Exists},
+            {"forall(bool, bool)", Forall},
+            {"forallSep(bool, bool)", ForallSep},
+            {"fracOf(int, int)", FracOf},
+            {"Perm(void*, pallasSpec::frac)", Perm},
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
-            //{"PALLAS_OLD___", Old},
-            //{"PALLAS_RESULT___", Result},
-            //{"PALLAS_BOUND_VAR___", BoundVar},
+            {"old<", Old},
+            {"result<", Result},
+            {"bVar<", BoundVar},
             //{"PALLAS_SEQ_NEW___", SeqNew},
             //{"PALLAS_SEQ_SIZE___", SeqSize},
             //{"PALLAS_SEQ_AT___", SeqGet},
             //{"PALLAS_SEQ_APPEND___", SeqAppend},
         };
 
-        const std::string CPP_SPEC_FRAC_TYPE = "\"struct.pallasSpec::frac\"";
-
-        const std::string CPP_SPEC_SEQ_TYPE_BASE = "\"struct.pallasSpec::seq";
+        const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";
+        const std::string CPP_SPEC_SEQ_TYPE_BASE = "struct.pallasSpec::seq";
 
         CppSpecUnifier(const bool printDebugInfo);
 

@@ -107,7 +107,10 @@ namespace sourcespec2ir
         }
 
         // Check wellformedness of module
-        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+            throw utils::PallasException(
+                "Ill-formed llvm-module after transformation.");
+        }
 
         /*
         if (outputConfig.printDebugInfo)
@@ -118,12 +121,16 @@ namespace sourcespec2ir
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
         */
+        
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
 
         // Check wellformedness of module
-        assert(!llvm::verifyModule(*irModule, &llvm::errs()));
+        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+            throw utils::PallasException(
+                "Ill-formed llvm-module  after unification.");
+        }
 
         // Dump the generated IR
         writeToFile(*irModule, outPath);

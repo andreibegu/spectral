@@ -38,7 +38,7 @@ namespace pallasSpec
      *                Special expressions              *
      ***************************************************/
     template<typename T> 
-    T old(const T &v);
+    T old(T v);
 
     template<typename T>
     T result();
@@ -47,7 +47,7 @@ namespace pallasSpec
      *                    Quantifiers                  *
      ***************************************************/
     template<typename T>
-    T boundVar(const char* id);
+    T bVar(const char* id);
 
     bool exists(bool range, bool expr);
     bool forall(bool range, bool expr);
@@ -61,8 +61,8 @@ namespace pallasSpec
     /***************************************************
      *                   Permissions                   *
      ***************************************************/
-    template<typename T>
-    bool Perm(T *loc, frac p);
+    // template<typename T>
+    bool Perm(void *loc, frac p);
 
     /***************************************************
      *              Sequence-operations                *
