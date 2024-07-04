@@ -256,7 +256,7 @@ namespace sourcespec2ir
             throw utils::PallasException("Unsupported statement-type");
 
         // Generate LLVM-IR function for the specification expression.
-        auto srcVars = utils::getSrcVariablesForFunction(function, true);
+        auto srcVars = utils::getSrcVariablesForFunction(function);
         auto specFunctionWrapper = transformExpression(stmnt.expr, *srcVars.get());
 
         // Generate the metadata that encodes the requires clause:

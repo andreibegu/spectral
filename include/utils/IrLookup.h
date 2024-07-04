@@ -15,19 +15,24 @@ namespace sourcespec2ir
         /**
          * Helper functions that look-up or collect information from the LLVM-IR.
          *
-         * Utilizes the debug-information of the LLVM-IR to retrieve the source-level variables.
+         * Utilizes the debug-information of the LLVM-IR to retrieve 
+         * the source-level variables.
          *
-         * TODO: Since the dubug-intrinsics will be deprecated with LLVM-19 (https://llvm.org/docs/RemoveDIsDebugInfo.html) this will have to
+         * TODO: Since the dubug-intrinsics will be deprecated with LLVM-19 
+         * (https://llvm.org/docs/RemoveDIsDebugInfo.html) this will have to
          * be migrated once we switch to LLVM-19.
          */
 
         /**
-         * Collects the DILocalVariable-nodes that are references from the given function 'fun'.
-         * Parameter 'argsOnly' determines if only function arguments are considered.
-         * The detection of function-arguments assumes that the mem2reg pass has been run on the IR of the representation.
-         * Currently, global variables are not returned when argsOnly is set to true.
+         * Collects the DILocalVariable-nodes that are references to variables
+         * that are accessible from the contract of the given function. 
+         * Global variables are currently not considered. 
+         * The detection of function-arguments assumes that the mem2reg pass has 
+         * been run on the IR of the representation.
+         * // TODO: It should now work without mem2reg. Remove this note?
          */
-        std::unique_ptr<std::set<llvm::DILocalVariable*>> getSrcVariablesForFunction(const llvm::Function &fun, const bool argsOnly);
+        std::unique_ptr<std::set<llvm::DILocalVariable*>> getSrcVariablesForFunction(
+            const llvm::Function &fun);
 
         /**
          * Collects the DILocalVariable-nodes that represent variables that can 
