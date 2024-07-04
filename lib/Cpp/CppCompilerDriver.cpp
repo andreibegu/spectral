@@ -61,6 +61,8 @@ namespace sourcespec2ir
 
         // Put c-code into file
         std::ofstream out(tmpSrcFile);
+        if (!out.is_open()) 
+            throw utils::PallasException("Failed to write spec-wrapper to file.");
         out << cu;
         out.close();
 
