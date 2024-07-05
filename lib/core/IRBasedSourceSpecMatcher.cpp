@@ -13,6 +13,7 @@
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/InstIterator.h>
+#include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -151,10 +152,15 @@ namespace sourcespec2ir
                 if (!dbgLoc)
                     continue;
                 const auto iLine = dbgLoc.getLine();
-                if (iLine >= endLine && iLine <= fLine)
+                auto isDebugIntrinsic = llvm::isa<llvm::DbgVariableIntrinsic>(&*it);
+                if (iLine >= endLine && iLine < fLine)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction between contract and function.");
+                } else if (iLine >= endLine && iLine == fLine && !isDebugIntrinsic) 
+                {
+                    throw utils::PallasException(
+                        "Encountered an instruction on the same line as the function.");
                 }
             }
         }
