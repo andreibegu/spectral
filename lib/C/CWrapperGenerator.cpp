@@ -1,5 +1,6 @@
 #include "CWrapperGenerator.h"
 #include "SrcLookup.h"
+#include "PallasException.h"
 
 namespace sourcespec2ir
 {
@@ -57,5 +58,12 @@ namespace sourcespec2ir
     std::string CWrapperGenerator::addPointer(const std::string &baseType)
     {
         return baseType + "*";
+    }
+
+    std::string CWrapperGenerator::addNamespace(const std::string &parentNamespace, 
+        const std::string & childNamespace)
+    {
+        // C does not have namespaces --> this should never happen
+        throw utils::PallasException("Namespaces in C are not supported");
     }
 }

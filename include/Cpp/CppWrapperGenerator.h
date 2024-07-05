@@ -20,8 +20,11 @@ namespace sourcespec2ir
             const SrcWrapperFunction &wrapperFunction, 
             const llvm::ArrayRef<std::string> &declarations) override;
 
+    protected:
         std::string addConst(const std::string &baseType) override;
         std::string addPointer(const std::string &baseType) override;
+        std::string addNamespace(const std::string &parentNamespace,
+            const std::string & childNamespace) override;
 
     private:
         /* Counter for generating names for the specification functions.

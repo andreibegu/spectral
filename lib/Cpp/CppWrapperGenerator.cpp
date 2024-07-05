@@ -46,8 +46,11 @@ namespace sourcespec2ir
         stream << "#include \"cpp_spec_lib.h\" \n ";
         // Add any declarations from the declaration-block of the specifications.
         for (auto decl : declarations)
+        {
+            // TODO: Do not add a ; if the string starts with whitespace 
+            //       followed by a #
             stream << decl << "; \n ";
-
+        }
         // Add the generated wrapper-function
         stream << wrapperFunction.stringRepr;
 
@@ -62,6 +65,12 @@ namespace sourcespec2ir
     std::string CppWrapperGenerator::addPointer(const std::string &baseType)
     {
         return baseType + "*";
+    }
+
+    std::string CppWrapperGenerator::addNamespace(const std::string &parentNamespace, 
+        const std::string & childNamespace)
+    {
+        return parentNamespace + childNamespace + "::";
     }
 
 }
