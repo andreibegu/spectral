@@ -8,7 +8,7 @@ namespace sourcespec2ir
 
     std::string SourceWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
     {
-        // Check if type is a pointer:
+        // Check if type is a derived type
         if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
         {
             auto tag = dType->getTag();
@@ -43,6 +43,20 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Failed to generate string-representation for type.");
         }
-        return typeName;
+
+        // Recursively construct the namespace
+        auto nSpaceStr = getSrcNamespace(type->getScope());
+
+        return nSpaceStr + typeName;
+    }
+
+    std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)
+    {
+        auto nSpace = llvm::dyn_cast_or_null<llvm::DINamespace>(scope);
+        if (nSpace == nullptr)
+            return "";
+        auto currentNSpace = nSpace->getName().str();
+        auto parentNSpace = getSrcNamespace(nSpace->getScope());
+        return addNamespace(parentNSpace, currentNSpace);
     }
 }

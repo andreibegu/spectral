@@ -52,6 +52,7 @@ namespace sourcespec2ir
          */
         std::string getSrcReprOfType(const llvm::DIType *type);
 
+    protected:
         /**
          * Adds a const-qualifier to the given base-type.
          */
@@ -61,6 +62,19 @@ namespace sourcespec2ir
          * Adds a pointer-qualifier to the given base-type.
          */
         virtual std::string addPointer(const std::string &baseType) = 0;
+
+        /**
+         * Adds a namespace-qualifier to the string represnetation of the given 
+         * parent-namespace.
+         */
+        virtual std::string addNamespace(const std::string &parentNamespace, 
+            const std::string & childNamespace) = 0;
+
+    private:
+        /**
+         * Used internally to recursively build the namespace for a given type
+         */
+        std::string getSrcNamespace(llvm::DIScope *scope);
 
     };
 
