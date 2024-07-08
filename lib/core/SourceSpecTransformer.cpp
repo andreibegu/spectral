@@ -58,7 +58,7 @@ namespace sourcespec2ir
             llvm::outs() << "PRE-Transformation\n";
             writeToFile(*irModule, "");
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        } 
+        }
         */
 
         // Parse the source-file to extract the specifications
@@ -87,27 +87,36 @@ namespace sourcespec2ir
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
-        specMatcher->matchSpecs();
+        auto matchedSpecs = specMatcher->matchSpecs();
+
+        // Create wrappers for function-contracts
+        for (const auto &contract : matchedSpecs->matchedFContracts) 
+            wrapFunctionContractBlock(*contract);
+
+        // Create wrappers for loop-invariants
+        // TODO: Do smart things
+
+        // Insert wrappers into source
+        // TODO: Implement
+
+        // Compile source
+        // TODO: Do things
+
+        // Link wrappers into module
+
+        // Generate metadata for specifications
 
         // Transform the function-contract specifications into IR
-        const auto numFContracts = specMatcher->getNumMatchedFuncContracts();
-        for (size_t i = 0; i < numFContracts; ++i)
-        {
-            auto contract = specMatcher->getMatchedFuncContract(i);
+        for (const auto &contract : matchedSpecs->matchedFContracts) 
             encodeFunctionContractBlock(*contract);
-        }
 
         // Transform loop-invariants into IR
-        // TODO: Consider dropping the representation of the invariant-statement
-        const auto numLoopInvBlocks = specMatcher->getNumMatchedLoopInv();
-        for (size_t i = 0; i < numLoopInvBlocks; ++i)
-        {
-            auto invBlock = specMatcher->getMatchedLoopInv(i);
+        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
-        }
 
         // Check wellformedness of module
-        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+        if (llvm::verifyModule(*irModule, &llvm::errs()))
+        {
             throw utils::PallasException(
                 "Ill-formed llvm-module after transformation.");
         }
@@ -121,13 +130,13 @@ namespace sourcespec2ir
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
         */
-        
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
 
         // Check wellformedness of module
-        if (llvm::verifyModule(*irModule, &llvm::errs())) {
+        if (llvm::verifyModule(*irModule, &llvm::errs()))
+        {
             throw utils::PallasException(
                 "Ill-formed llvm-module  after unification.");
         }
@@ -135,6 +144,32 @@ namespace sourcespec2ir
         // Dump the generated IR
         writeToFile(*irModule, outPath);
     }
+
+    void SourceSpecTransformer::wrapFunctionContractBlock(
+        const MatchedFunctionContract &contract)
+    {
+        const auto parentFunction = contract.function;
+        auto srcVars = utils::getSrcVariablesForFunction(*parentFunction);
+
+        // Wrap specification statements
+        const auto numStatements = contract.statements.size();
+        for (size_t i = 0; i < numStatements; ++i)
+        {
+            auto statement = contract.statements[i].get();
+            wrapFunctionContractStatement(*statement, *srcVars);
+        }
+    }
+
+    void SourceSpecTransformer::wrapFunctionContractStatement(
+        const MatchedFContractStatement &stmnt,
+        const std::set<llvm::DILocalVariable *> &srcVars)
+    {
+        // Turn arg-list into sequential for explicit ordering
+        // auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(
+        //    srcVars.begin(), srcVars.end());
+        // auto wrappingFunction = wrapperGenerator->getWrappingFunction(argList, stmnt.expr);
+    }
+
 
     void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
     {
@@ -193,7 +228,7 @@ namespace sourcespec2ir
         // Transfer src-variables to sequential container for explicit ordering
         auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars.begin(), srcVars.end());
 
-        // Wrap the expression first, into a source-language function 
+        // Wrap the expression first, into a source-language function
         // and then into a source-compilation unit
         auto srcWrapperFun = wrapperGenerator->getWrappingFunction(*argList, expr);
         auto srcWrapperCU = wrapperGenerator->assembleSrcCompilationUnit(

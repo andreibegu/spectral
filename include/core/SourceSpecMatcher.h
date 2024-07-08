@@ -31,19 +31,7 @@ namespace sourcespec2ir
         SourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule);
 
         // Starts the matching-process 
-        void matchSpecs();
-
-        // Returns the number of matched function-contract-blocks
-        size_t getNumMatchedFuncContracts();
-
-        // Return matched function contract by index
-        MatchedFunctionContract *getMatchedFuncContract(size_t idx);
-
-        // Returns the number of matched loop-invariant-blocks
-        size_t getNumMatchedLoopInv();
-
-        // Return matched invariant-block by index
-        MatchedLoopInvariantBlock *getMatchedLoopInv(size_t idx);
+        std::unique_ptr<MatchedSpecifications> matchSpecs();
 
     protected:
         SpecParser::FileContext *specParseTree;
@@ -72,10 +60,8 @@ namespace sourcespec2ir
             size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
 
     private:
-        // Collections in which the matched specifications are collected
-        llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>> matchedFuncContracts;
-
-        llvm::SmallVector<std::unique_ptr<MatchedLoopInvariantBlock>> matchedLoopInvariants;
+        // Struct in which the matched specifications are collected. 
+        std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;
 
         // Temporarily stores the pointer to the current function-contract
         // while the contained contract-statements are collected

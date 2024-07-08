@@ -75,7 +75,6 @@ namespace sourcespec2ir
     /**
      * Struct that represents a block of loop-invariants that have been matched
      * to a loop in the IR.
-     *
      */
     struct MatchedLoopInvariantBlock
     {
@@ -87,7 +86,7 @@ namespace sourcespec2ir
 
         MatchedLoopInvariantBlock(llvm::Function *parentFunction,
                                   llvm::MDTuple *loopID, llvm::BasicBlock *loopHeader)
-            : parentFunction(parentFunction), loopID(loopID), 
+            : parentFunction(parentFunction), loopID(loopID),
               loopHeader(loopHeader), invariants()
         {
         }
@@ -95,6 +94,26 @@ namespace sourcespec2ir
         void addInvariant(std::unique_ptr<MatchedLoopInvariant> inv)
         {
             invariants.push_back(std::move(inv));
+        }
+    };
+
+    /**
+     * Struct that bundles the matched specifications.
+     * Contains matched function-contracts and loop-invariants.
+     *
+     * Takes ownership of the matched specifications.
+     */
+    struct MatchedSpecifications
+    {
+        llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>>
+            matchedFContracts;
+        llvm::SmallVector<std::unique_ptr<MatchedLoopInvariantBlock>>
+            matchedLoopInvariants;
+
+        MatchedSpecifications()
+            : matchedFContracts(),
+              matchedLoopInvariants()
+        {
         }
     };
 

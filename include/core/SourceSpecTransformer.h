@@ -42,15 +42,15 @@ namespace sourcespec2ir
 
     protected:
         /*
-         * Factory methods. 
-         * These can/ have to be overwritten by subclasses to create a 
-         * SourceSpecTransformer that can handle a specific language. 
+         * Factory methods.
+         * These can/ have to be overwritten by subclasses to create a
+         * SourceSpecTransformer that can handle a specific language.
          */
         virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() = 0;
 
         /**
-         * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default. 
-         * Can be overwritten by subclasses to use a different matching strategy. 
+         * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
+         * Can be overwritten by subclasses to use a different matching strategy.
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
             SpecParser::FileContext *specParseTree, llvm::Module *irModule);
@@ -72,7 +72,7 @@ namespace sourcespec2ir
         std::unique_ptr<llvm::Module> irModule;
 
         /**
-         * Pointers to stuff that is required to keep the parse-tree of the 
+         * Pointers to stuff that is required to keep the parse-tree of the
          * source-file in scope.
          */
         std::unique_ptr<std::ifstream> srcFileStream;
@@ -83,7 +83,7 @@ namespace sourcespec2ir
         SpecParser::FileContext *srcParseTree;
 
         /**
-         * Analysis managers and pass builder that are used to run 
+         * Analysis managers and pass builder that are used to run
          * optimization- and analysis passes on the loaded IR
          */
         llvm::LoopAnalysisManager lam;
@@ -91,7 +91,7 @@ namespace sourcespec2ir
         llvm::CGSCCAnalysisManager cgam;
         llvm::ModuleAnalysisManager mam;
 
-        // While we do not use the PassBuilder directly, it is required by the 
+        // While we do not use the PassBuilder directly, it is required by the
         // ModuleAnalysisManager. Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
@@ -117,7 +117,7 @@ namespace sourcespec2ir
         void promoteMemToReg(llvm::Module &module);
 
         /**
-         * Encodes a block of function-contract statements and adds the 
+         * Encodes a block of function-contract statements and adds the
          * generated MD-nodes to the module.
          */
         void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
@@ -145,13 +145,26 @@ namespace sourcespec2ir
                            const std::set<llvm::DILocalVariable *> &vars,
                            llvm::SmallVector<llvm::Metadata *> &nodes);
 
+        /** 
+         * Uses the wrapper generator to create wrapping-functions for all 
+         * statements in the given contract-block. 
+         */
+        void wrapFunctionContractBlock(
+            const MatchedFunctionContract &contract);
+
+        /** 
+         * Uses the wrapper-generator to create a wrapping-function 
+         * for the given function-contract statement.
+         */
+        void wrapFunctionContractStatement(
+            const MatchedFContractStatement &stmnt, 
+            const std::set<llvm::DILocalVariable *> &srcVars);
+
         /**
          * Write the IR-representation of the given module into
          * a file at the given path.
          */
         void writeToFile(const llvm::Module &module, std::string outPath);
-
-        
     };
 
 }
