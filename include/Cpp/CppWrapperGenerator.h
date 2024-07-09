@@ -14,7 +14,8 @@ namespace sourcespec2ir
     public:
 
         std::unique_ptr<SrcWrapperFunction> getWrappingFunction(
-            llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr) override;
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars, 
+            const std::string &expr) override;
 
         std::string assembleSrcCompilationUnit(
             const SrcWrapperFunction &wrapperFunction, 

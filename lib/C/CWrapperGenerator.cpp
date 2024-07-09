@@ -5,7 +5,8 @@
 namespace sourcespec2ir
 {
     std::unique_ptr<SrcWrapperFunction> CWrapperGenerator::getWrappingFunction(
-        llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars, 
+        const std::string &expr)
     {
 
         // Name of wrapping function
@@ -30,7 +31,7 @@ namespace sourcespec2ir
                     "return " + expr + "; \n" +
                     "} \n";
 
-        return std::make_unique<SrcWrapperFunction>(funName, wFun);
+        return std::make_unique<SrcWrapperFunction>(funName, wFun, srcVars);
     }
 
     std::string CWrapperGenerator::assembleSrcCompilationUnit(

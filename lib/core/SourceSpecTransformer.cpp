@@ -87,14 +87,15 @@ namespace sourcespec2ir
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
-        auto matchedSpecs = specMatcher->matchSpecs();
+        matchedSpecs = specMatcher->matchSpecs();
 
         // Create wrappers for function-contracts
-        for (const auto &contract : matchedSpecs->matchedFContracts) 
+        for (const auto &contract : matchedSpecs->matchedFContracts)
             wrapFunctionContractBlock(*contract);
 
         // Create wrappers for loop-invariants
-        // TODO: Do smart things
+        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
+            wrapLoopInvariantBlock(*invBlock);
 
         // Insert wrappers into source
         // TODO: Implement
@@ -107,7 +108,7 @@ namespace sourcespec2ir
         // Generate metadata for specifications
 
         // Transform the function-contract specifications into IR
-        for (const auto &contract : matchedSpecs->matchedFContracts) 
+        for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
 
         // Transform loop-invariants into IR
@@ -150,26 +151,35 @@ namespace sourcespec2ir
     {
         const auto parentFunction = contract.function;
         auto srcVars = utils::getSrcVariablesForFunction(*parentFunction);
+        // Turn arg-list into sequential container for explicit ordering
+        llvm::SmallVector<llvm::DILocalVariable *> argList(
+            srcVars->begin(), srcVars->end());
 
         // Wrap specification statements
-        const auto numStatements = contract.statements.size();
-        for (size_t i = 0; i < numStatements; ++i)
+        for (auto &stmnt : contract.statements)
         {
-            auto statement = contract.statements[i].get();
-            wrapFunctionContractStatement(*statement, *srcVars);
+            fContractWrappers[stmnt.get()] = wrapperGenerator->getWrappingFunction(
+                argList, stmnt->expr);
         }
     }
 
-    void SourceSpecTransformer::wrapFunctionContractStatement(
-        const MatchedFContractStatement &stmnt,
-        const std::set<llvm::DILocalVariable *> &srcVars)
+    void SourceSpecTransformer::wrapLoopInvariantBlock(
+        const MatchedLoopInvariantBlock &invBlock)
     {
-        // Turn arg-list into sequential for explicit ordering
-        // auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(
-        //    srcVars.begin(), srcVars.end());
-        // auto wrappingFunction = wrapperGenerator->getWrappingFunction(argList, stmnt.expr);
-    }
+        // Determine the variables that can be referenced in the invariant
+        auto availableVars = utils::getVarsForLoopInv(
+            invBlock.parentFunction, invBlock.loopHeader);
+        // Turn arg-list into sequential collection for consisten ordering
+        llvm::SmallVector<llvm::DILocalVariable *> argList(
+            availableVars->begin(), availableVars->end());
 
+        // Generate wrappers for the individual invariants
+        for (auto &inv : invBlock.invariants)
+        {
+            loopInvWrappers[inv.get()] = wrapperGenerator->getWrappingFunction(
+                argList, inv->expr);
+        }
+    }
 
     void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
     {

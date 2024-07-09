@@ -8,7 +8,8 @@
 namespace sourcespec2ir
 {
     std::unique_ptr<SrcWrapperFunction> CppWrapperGenerator::getWrappingFunction(
-        llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr)
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const std::string &expr)
     {
 
         // Name of wrapping function
@@ -33,7 +34,7 @@ namespace sourcespec2ir
         stream << "return " << expr << "; \n";
         stream << "} \n";
 
-        return std::make_unique<SrcWrapperFunction>(funName, stream.str());
+        return std::make_unique<SrcWrapperFunction>(funName, stream.str(), srcVars);
     }
 
     std::string CppWrapperGenerator::assembleSrcCompilationUnit(
@@ -47,7 +48,7 @@ namespace sourcespec2ir
         // Add any declarations from the declaration-block of the specifications.
         for (auto decl : declarations)
         {
-            // TODO: Do not add a ; if the string starts with whitespace 
+            // TODO: Do not add a ; if the string starts with whitespace
             //       followed by a #
             stream << decl << "; \n ";
         }
@@ -67,8 +68,8 @@ namespace sourcespec2ir
         return baseType + "*";
     }
 
-    std::string CppWrapperGenerator::addNamespace(const std::string &parentNamespace, 
-        const std::string & childNamespace)
+    std::string CppWrapperGenerator::addNamespace(const std::string &parentNamespace,
+                                                  const std::string &childNamespace)
     {
         return parentNamespace + childNamespace + "::";
     }

@@ -9,7 +9,6 @@
 #include <memory>
 #include <string>
 
-
 namespace sourcespec2ir
 {
 
@@ -28,21 +27,22 @@ namespace sourcespec2ir
          * arguments as is defined by parameter srcVars.
          */
         virtual std::unique_ptr<SrcWrapperFunction> getWrappingFunction(
-            llvm::ArrayRef<llvm::DILocalVariable *> srcVars, const std::string &expr) = 0;
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const std::string &expr) = 0;
 
         /**
          * Takes a string-representation of a source-language function and turns
          * it into a full compilation unit in the source language.
-         * 
-         * Also receives a set of declarations that have to be included in the 
-         * generated compilation unit (e.g. types from the spec-library, ...). 
-         * These are the declarations from the optional peclaration block 
+         *
+         * Also receives a set of declarations that have to be included in the
+         * generated compilation unit (e.g. types from the spec-library, ...).
+         * These are the declarations from the optional peclaration block
          * in the specifications.
-         * 
+         *
          * E.g. adds imports for the specification library, ...
          */
         virtual std::string assembleSrcCompilationUnit(
-            const SrcWrapperFunction &wrapperFunction, 
+            const SrcWrapperFunction &wrapperFunction,
             const llvm::ArrayRef<std::string> &declarations) = 0;
 
         /**
@@ -64,18 +64,17 @@ namespace sourcespec2ir
         virtual std::string addPointer(const std::string &baseType) = 0;
 
         /**
-         * Adds a namespace-qualifier to the string represnetation of the given 
+         * Adds a namespace-qualifier to the string represnetation of the given
          * parent-namespace.
          */
-        virtual std::string addNamespace(const std::string &parentNamespace, 
-            const std::string & childNamespace) = 0;
+        virtual std::string addNamespace(const std::string &parentNamespace,
+                                         const std::string &childNamespace) = 0;
 
     private:
         /**
          * Used internally to recursively build the namespace for a given type
          */
         std::string getSrcNamespace(llvm::DIScope *scope);
-
     };
 
 }

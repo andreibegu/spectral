@@ -3,6 +3,7 @@
 
 #include <string>
 #include <fstream>
+#include <map>
 #include <memory>
 
 #include <llvm/ADT/ArrayRef.h>
@@ -101,6 +102,22 @@ namespace sourcespec2ir
         std::unique_ptr<llvm::SmallVector<std::string>> specDeclarations;
 
         /**
+         * Matching information about the specifications
+         */
+        std::unique_ptr<sourcespec2ir::MatchedSpecifications> matchedSpecs = nullptr;
+
+        /**
+         * Maps that relate the matched specifications to the corresponding
+         * wrapper-functions.
+         * TODO: Check if these need to be members, or if we can move them 
+         *       into the function. 
+         */
+        std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
+            fContractWrappers;
+        std::map<const MatchedLoopInvariant *, std::unique_ptr<SrcWrapperFunction>>
+            loopInvWrappers;
+
+        /**
          * Transforms an expression in the source language into LLVM-IR by wrapping
          * it into a function. The generated function is added to the module of the
          * SourceSpecTransformer.
@@ -145,20 +162,19 @@ namespace sourcespec2ir
                            const std::set<llvm::DILocalVariable *> &vars,
                            llvm::SmallVector<llvm::Metadata *> &nodes);
 
-        /** 
-         * Uses the wrapper generator to create wrapping-functions for all 
-         * statements in the given contract-block. 
+        /**
+         * Uses the wrapper generator to create wrapping-functions for all
+         * statements in the given contract-block.
          */
         void wrapFunctionContractBlock(
             const MatchedFunctionContract &contract);
-
-        /** 
-         * Uses the wrapper-generator to create a wrapping-function 
-         * for the given function-contract statement.
+            
+        /**
+         * Uses the wrapper-generator to create wrapping-functions for all
+         * loop-invariant-blocks.
          */
-        void wrapFunctionContractStatement(
-            const MatchedFContractStatement &stmnt, 
-            const std::set<llvm::DILocalVariable *> &srcVars);
+        void wrapLoopInvariantBlock(
+            const MatchedLoopInvariantBlock &invBlock);
 
         /**
          * Write the IR-representation of the given module into
