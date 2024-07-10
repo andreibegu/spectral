@@ -7,16 +7,13 @@
 
 namespace sourcespec2ir
 {
-    std::unique_ptr<SrcWrapperFunction> CppWrapperGenerator::getWrappingFunction(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const std::string &expr)
+    std::string CppWrapperGenerator::getWrapperFunctionString(
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const std::string &expr,
+            const std::string &functionName)
     {
-
-        // Name of wrapping function
-        auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
-
         std::stringstream stream;
-        stream << " bool " << funName << "(";
+        stream << " bool " << functionName << "(";
 
         // Construct arg-list
         for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
@@ -34,7 +31,7 @@ namespace sourcespec2ir
         stream << "return " << expr << "; \n";
         stream << "} \n";
 
-        return std::make_unique<SrcWrapperFunction>(funName, stream.str(), srcVars);
+        return stream.str();
     }
 
     std::string CppWrapperGenerator::assembleSrcCompilationUnit(

@@ -2,7 +2,7 @@
 #define PALLAS_SRCWRAPPERFUNCTION_H
 
 #include <string>
-#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 
 namespace sourcespec2ir
@@ -11,14 +11,18 @@ namespace sourcespec2ir
     /**
      * A struct that bundles the name and the string representation of a
      * wrapper-function along with the variables that make up the argument-list.
+     * Further contains line-information on where the wrapper should be inserted
+     * in the source-file. 
      */
     struct SrcWrapperFunction
     {
         std::string name;
         std::string stringRepr;
-        llvm::ArrayRef<llvm::DILocalVariable *> argList;
+        llvm::SmallVector<llvm::DILocalVariable *> argList;
+        size_t insertLoc;
         SrcWrapperFunction(std::string name, std::string stringRepr,
-                           const llvm::ArrayRef<llvm::DILocalVariable *> &argList);
+                           llvm::ArrayRef<llvm::DILocalVariable *> argList, 
+                           size_t insertLoc);
     };
 }
 

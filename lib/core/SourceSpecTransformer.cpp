@@ -24,7 +24,8 @@ namespace sourcespec2ir
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig)
-        : outPath(outPath),
+        : srcInPath(srcInPath),
+          outPath(outPath),
           outputConfig(outputConfig),
           srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
@@ -97,8 +98,19 @@ namespace sourcespec2ir
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             wrapLoopInvariantBlock(*invBlock);
 
+        // Collect pointers to wrapper-functions
+        llvm::SmallVector<SrcWrapperFunction *> wrappers;
+        for (auto& [contr, wrapper] : fContractWrappers) 
+            wrappers.push_back(wrapper.get());
+        for (auto& [inv, wrapper] : loopInvWrappers)
+            wrappers.push_back(wrapper.get()); 
+
         // Insert wrappers into source
-        // TODO: Implement
+        // TODO: Remove hardcoded path, use the LLVM file-utilities to 
+        //       generate a temporary file
+        const auto srcFileExt = srcInPath.substr(srcInPath.find_last_of(".") + 1);
+        const std::string tmpSrcPath = "source_wrappers." + srcFileExt;
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, tmpSrcPath, wrappers);
 
         // Compile source
         // TODO: Do things
@@ -106,6 +118,8 @@ namespace sourcespec2ir
         // Link wrappers into module
 
         // Generate metadata for specifications
+
+        // OLD STUFF
 
         // Transform the function-contract specifications into IR
         for (const auto &contract : matchedSpecs->matchedFContracts)
@@ -146,6 +160,10 @@ namespace sourcespec2ir
         writeToFile(*irModule, outPath);
     }
 
+    // TODO: Move this into the wrapper-generator
+    // i.e. The wrapper generator should construct the wrapping functions and 
+    // return them back to the SourceSpecTransfromer for matching after the 
+    // compilation. 
     void SourceSpecTransformer::wrapFunctionContractBlock(
         const MatchedFunctionContract &contract)
     {
@@ -154,15 +172,21 @@ namespace sourcespec2ir
         // Turn arg-list into sequential container for explicit ordering
         llvm::SmallVector<llvm::DILocalVariable *> argList(
             srcVars->begin(), srcVars->end());
+        // Get insert-position for wrapper-functions
+        auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
 
         // Wrap specification statements
         for (auto &stmnt : contract.statements)
         {
-            fContractWrappers[stmnt.get()] = wrapperGenerator->getWrappingFunction(
-                argList, stmnt->expr);
+            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
+            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
+                argList, stmnt->expr, wrapperName);
+            fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
+                wrapperName, wrapperStr, argList, insertPos);
         }
     }
 
+    // TODO: Move this into the wrapper-generator
     void SourceSpecTransformer::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock)
     {
@@ -172,12 +196,17 @@ namespace sourcespec2ir
         // Turn arg-list into sequential collection for consisten ordering
         llvm::SmallVector<llvm::DILocalVariable *> argList(
             availableVars->begin(), availableVars->end());
+        // Get insert-pos for wrapper-function
+        auto insertPos = wrapperGenerator->getWrapperInsertLoc(invBlock);
 
         // Generate wrappers for the individual invariants
         for (auto &inv : invBlock.invariants)
         {
-            loopInvWrappers[inv.get()] = wrapperGenerator->getWrappingFunction(
-                argList, inv->expr);
+            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
+            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
+                argList, inv->expr, wrapperName);
+            loopInvWrappers[inv.get()] = std::make_unique<SrcWrapperFunction>(
+                wrapperName, wrapperStr, argList, insertPos);
         }
     }
 
@@ -236,11 +265,17 @@ namespace sourcespec2ir
         std::string expr, const std::set<llvm::DILocalVariable *> &srcVars)
     {
         // Transfer src-variables to sequential container for explicit ordering
-        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars.begin(), srcVars.end());
+        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(
+            srcVars.begin(), srcVars.end());
 
+        // TODO: Remove the wrapping from here
         // Wrap the expression first, into a source-language function
         // and then into a source-compilation unit
-        auto srcWrapperFun = wrapperGenerator->getWrappingFunction(*argList, expr);
+        auto wName = wrapperGenerator->getNameForWrapperFunction();
+        auto wString = wrapperGenerator->getWrapperFunctionString(
+            *argList, expr, wName);
+        // TODO: Invalid insert-location
+        auto srcWrapperFun = std::make_unique<SrcWrapperFunction>(wName, wString, *argList, 42);
         auto srcWrapperCU = wrapperGenerator->assembleSrcCompilationUnit(
             *srcWrapperFun, *specDeclarations);
 

@@ -8,7 +8,6 @@
 #include <memory>
 #include <utility>
 
-#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Module.h>

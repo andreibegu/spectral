@@ -4,14 +4,11 @@
 
 namespace sourcespec2ir
 {
-    std::unique_ptr<SrcWrapperFunction> CWrapperGenerator::getWrappingFunction(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars, 
-        const std::string &expr)
+    std::string CWrapperGenerator::getWrapperFunctionString(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const std::string &expr,
+        const std::string &functionName)
     {
-
-        // Name of wrapping function
-        auto funName = "PALLAS_SPEC_" + std::to_string(specFunCnt++);
-
         // Argument-list
         std::string argList = "";
         for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
@@ -26,12 +23,11 @@ namespace sourcespec2ir
             argList += varType + " " + varName;
         }
 
-        auto wFun = "bool " + funName + "(" + argList + ") \n" +
+        auto wFun = "bool " + functionName + "(" + argList + ") \n" +
                     "{ \n " +
                     "return " + expr + "; \n" +
                     "} \n";
-
-        return std::make_unique<SrcWrapperFunction>(funName, wFun, srcVars);
+        return wFun;
     }
 
     std::string CWrapperGenerator::assembleSrcCompilationUnit(
@@ -61,8 +57,8 @@ namespace sourcespec2ir
         return baseType + "*";
     }
 
-    std::string CWrapperGenerator::addNamespace(const std::string &parentNamespace, 
-        const std::string & childNamespace)
+    std::string CWrapperGenerator::addNamespace(const std::string &parentNamespace,
+                                                const std::string &childNamespace)
     {
         // C does not have namespaces --> this should never happen
         throw utils::PallasException("Namespaces in C are not supported");

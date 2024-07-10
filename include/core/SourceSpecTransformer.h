@@ -6,7 +6,6 @@
 #include <map>
 #include <memory>
 
-#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
@@ -57,6 +56,7 @@ namespace sourcespec2ir
             SpecParser::FileContext *specParseTree, llvm::Module *irModule);
 
     private:
+        std::string srcInPath;
         std::string outPath;
         const utils::OutputConfig &outputConfig;
 
