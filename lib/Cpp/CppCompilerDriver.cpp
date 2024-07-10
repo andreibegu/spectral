@@ -36,6 +36,7 @@ namespace sourcespec2ir
         call << " -Xclang -disable-O0-optnone ";
         call << srcFilePath;
         call << " -o " + irFilePath;
+        call << " -I " << specLibPath << "/";
         std::system(call.str().c_str());
 
         // Parse the resulting file as an LLVM-IR module
