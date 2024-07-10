@@ -19,13 +19,14 @@ namespace sourcespec2ir
 
         std::string assembleSrcCompilationUnit(
             const SrcWrapperFunction &wrapperFunction,
-            const llvm::ArrayRef<std::string> &declarations) override;
+            const llvm::ArrayRef<SpecDeclaration> &declarations) override;
 
     protected:
         std::string addConst(const std::string &baseType) override;
         std::string addPointer(const std::string &baseType) override;
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
+        void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
     };
 
 }

@@ -100,24 +100,30 @@ namespace sourcespec2ir
 
         // Collect pointers to wrapper-functions
         llvm::SmallVector<SrcWrapperFunction *> wrappers;
-        for (auto& [contr, wrapper] : fContractWrappers) 
+        for (auto &[contr, wrapper] : fContractWrappers)
             wrappers.push_back(wrapper.get());
-        for (auto& [inv, wrapper] : loopInvWrappers)
-            wrappers.push_back(wrapper.get()); 
+        for (auto &[inv, wrapper] : loopInvWrappers)
+            wrappers.push_back(wrapper.get());
 
         // Insert wrappers into source
-        // TODO: Remove hardcoded path, use the LLVM file-utilities to 
+        // TODO: Remove hardcoded path, use the LLVM file-utilities to
         //       generate a temporary file
         const auto srcFileExt = srcInPath.substr(srcInPath.find_last_of(".") + 1);
         const std::string tmpSrcPath = "source_wrappers." + srcFileExt;
-        wrapperGenerator->buildSrcWithWrappers(srcInPath, tmpSrcPath, wrappers);
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, tmpSrcPath, wrappers,
+                                               *specDeclarations);
 
         // Compile source
-        // TODO: Do things
+        auto moduleWithWrappers = srcCompilerDriver->compileSource(
+            tmpSrcPath, *irContext);
 
         // Link wrappers into module
+        // Add the generated specifications to the original IR (merge IR files)
+        //auto linker = llvm::Linker(*irModule);
+        //linker.linkInModule(std::move(compiledSpecModule));
 
         // Generate metadata for specifications
+
 
         // OLD STUFF
 
@@ -161,9 +167,9 @@ namespace sourcespec2ir
     }
 
     // TODO: Move this into the wrapper-generator
-    // i.e. The wrapper generator should construct the wrapping functions and 
-    // return them back to the SourceSpecTransfromer for matching after the 
-    // compilation. 
+    // i.e. The wrapper generator should construct the wrapping functions and
+    // return them back to the SourceSpecTransfromer for matching after the
+    // compilation.
     void SourceSpecTransformer::wrapFunctionContractBlock(
         const MatchedFunctionContract &contract)
     {

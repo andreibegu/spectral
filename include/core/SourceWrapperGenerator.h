@@ -3,6 +3,7 @@
 
 #include "MatchedSourceSpec.h"
 #include "wrapper/SrcWrapperFunction.h"
+#include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -73,7 +74,8 @@ namespace sourcespec2ir
          */
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
-            const llvm::ArrayRef<SrcWrapperFunction *> &wrapperFunctions);
+            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
+            llvm::ArrayRef<SpecDeclaration> specDeclarations);
 
         /**
          * Takes a string-representation of a source-language function and turns
@@ -88,7 +90,7 @@ namespace sourcespec2ir
          */
         virtual std::string assembleSrcCompilationUnit(
             const SrcWrapperFunction &wrapperFunction,
-            const llvm::ArrayRef<std::string> &declarations) = 0;
+            const llvm::ArrayRef<SpecDeclaration> &declarations) = 0;
 
         /**
          * Returns a string representation of the given DIType that matches the
@@ -98,6 +100,22 @@ namespace sourcespec2ir
         std::string getSrcReprOfType(const llvm::DIType *type);
 
     protected:
+        /**
+         * Struct that represents a line of the source-file.
+         * Keeps track of the textual represenation along with the line-number
+         * in the unmodified source-file.
+         */
+        struct SrcLine
+        {
+            std::string content;
+            size_t origLine;
+
+            SrcLine(std::string content, size_t origLine)
+                : content(content), origLine(origLine)
+            {
+            }
+        };
+
         /**
          * Adds a const-qualifier to the given base-type.
          */
@@ -116,20 +134,23 @@ namespace sourcespec2ir
                                          const std::string &childNamespace) = 0;
 
         /**
-         * Struct that represents a line of the source-file.
-         * Keeps track of the textual represenation along with the line-number
-         * in the unmodified source-file.
+         * Function is called after the wrapper-functions and declarations
+         * have been added to the source. 
+         * The default-implementation does nothing. 
+         * Can be overridden by subclasses to apply constomizations.
          */
-        struct SrcLine
-        {
-            std::string content;
-            size_t origLine;
+        virtual void modifySrcWithWrappers(std::vector<SrcLine> &srcLines);
 
-            SrcLine(std::string content, size_t origLine)
-                : content(content), origLine(origLine)
-            {
-            }
-        };
+        /**
+         * Given a line-number in the original source-file and a vector of lines
+         * that represents the modified source-file, this function determines
+         * the position where a piece of code (e.g. a wrapper-function) should
+         * be inserted.
+         * The default-implementation selects the first empty line above the
+         * given line number of the source-file.
+         */
+        std::vector<SrcLine>::iterator findInsertPos(
+            const size_t srcLineNumber, std::vector<SrcLine> &srcLines);
 
     private:
         /* Counter for generating names for the specification functions.
@@ -155,12 +176,12 @@ namespace sourcespec2ir
                           const std::vector<SrcLine> &lines);
 
         /**
-         * Inserts the given string into the vector of lines at the given index. 
-         * The new lines are inserted before the given index, and a blank-line 
-         * is added before the content. 
+         * Inserts the given string into the vector of lines at the given index.
+         * The new lines are inserted before the given index, and a blank-line
+         * is added before the content.
          */
         void insertLines(
-            std::vector<SrcLine> &lines, const std::string &content, 
+            std::vector<SrcLine> &lines, const std::string &content,
             std::vector<SrcLine>::iterator currentLine);
     };
 

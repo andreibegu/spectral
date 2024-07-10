@@ -32,7 +32,7 @@ namespace sourcespec2ir
 
     std::string CWrapperGenerator::assembleSrcCompilationUnit(
         const SrcWrapperFunction &wrapperFunction,
-        const llvm::ArrayRef<std::string> &declarations)
+        const llvm::ArrayRef<SpecDeclaration> &declarations)
     {
         // TODO: Use a sstream
         // TODO: add include-statements from the source-file
@@ -41,7 +41,7 @@ namespace sourcespec2ir
         // Add any declarations that were defined in the declaration-block of the specifications.
         for (auto decl : declarations)
         {
-            includes += (decl + "; \n ");
+            includes += (decl.content + "; \n ");
         }
 
         return includes + wrapperFunction.stringRepr;
@@ -62,5 +62,13 @@ namespace sourcespec2ir
     {
         // C does not have namespaces --> this should never happen
         throw utils::PallasException("Namespaces in C are not supported");
+    }
+
+    void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    {
+        // Add include for the specification-library to the top of the 
+        // generated file. 
+        srcLines.insert(srcLines.begin(),
+                        SrcLine("#include <c_spec_lib.h>", 0));
     }
 }

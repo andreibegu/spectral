@@ -8,9 +8,9 @@
 namespace sourcespec2ir
 {
     std::string CppWrapperGenerator::getWrapperFunctionString(
-            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-            const std::string &expr,
-            const std::string &functionName)
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const std::string &expr,
+        const std::string &functionName)
     {
         std::stringstream stream;
         stream << " bool " << functionName << "(";
@@ -36,7 +36,7 @@ namespace sourcespec2ir
 
     std::string CppWrapperGenerator::assembleSrcCompilationUnit(
         const SrcWrapperFunction &wrapperFunction,
-        const llvm::ArrayRef<std::string> &declarations)
+        const llvm::ArrayRef<SpecDeclaration> &declarations)
     {
         // TODO: add include-statements from the source-file
 
@@ -47,7 +47,7 @@ namespace sourcespec2ir
         {
             // TODO: Do not add a ; if the string starts with whitespace
             //       followed by a #
-            stream << decl << "; \n ";
+            stream << decl.content << "; \n ";
         }
         // Add the generated wrapper-function
         stream << wrapperFunction.stringRepr;
@@ -69,6 +69,14 @@ namespace sourcespec2ir
                                                   const std::string &childNamespace)
     {
         return parentNamespace + childNamespace + "::";
+    }
+
+    void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    {
+        // Add include for the specification-library to the top of the 
+        // generated file. 
+        srcLines.insert(srcLines.begin(),
+                        SrcLine("#include \"cpp_spec_lib.h\"", 0));
     }
 
 }

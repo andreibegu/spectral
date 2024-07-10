@@ -98,8 +98,11 @@ namespace sourcespec2ir
 
         /**
          * Contents of the declaration-block of the specifications.
+         * 
+         * TODO: This probably does not need to be a member-variable in the 
+         *       long term.
          */
-        std::unique_ptr<llvm::SmallVector<std::string>> specDeclarations;
+        std::unique_ptr<llvm::SmallVector<SpecDeclaration>> specDeclarations;
 
         /**
          * Matching information about the specifications
