@@ -4,9 +4,6 @@
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp
 
 #include <vector>
-/*@
-declare #include <vector> //;
-@*/
 
 /*@
 requires v.size() > 0;

@@ -5,10 +5,6 @@
 #include <vector>
 
 /*@
-declare #include <vector> //;
-@*/
-
-/*@
 ensures pallasSpec::result<int>() >= 0;
 @*/
 int bar(std::vector<int> v)
@@ -21,4 +17,4 @@ int bar(std::vector<int> v)
 }
 
 // COM: Check that contract has been matched correctly
-// CHECK: Matched contract at 11-13 to bar
+// CHECK: Matched contract at 7-9 to bar
