@@ -112,8 +112,6 @@ namespace sourcespec2ir
         /**
          * Maps that relate the matched specifications to the corresponding
          * wrapper-functions.
-         * TODO: Check if these need to be members, or if we can move them 
-         *       into the function. 
          */
         std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
             fContractWrappers;
@@ -137,8 +135,13 @@ namespace sourcespec2ir
         void promoteMemToReg(llvm::Module &module);
 
         /**
-         * Encodes a block of function-contract statements and adds the
-         * generated MD-nodes to the module.
+         * Runs the verify-pass in the given module and throws an exception
+         * if the module is not wellformed. 
+         */
+        void verifyModule(llvm::Module &module, const std::string msg);
+
+        /**
+         * Encodes a block of function-contract statements into metadata
          */
         void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
 
@@ -152,8 +155,7 @@ namespace sourcespec2ir
             const MatchedFContractStatement &stmnt);
 
         /**
-         * Encodes a block of loop-invariants and adds the generated MD-nodes
-         * to the module.
+         * Encodes a block of loop-invariants into metadata.
          */
         void encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock);
 
@@ -161,8 +163,7 @@ namespace sourcespec2ir
          * Encodes a single loop-invariant into a metadata-node.
          * The new Metadata node is added to the back of the given vector.
          */
-        void encodeLoopInv(std::string specExpr,
-                           const std::set<llvm::DILocalVariable *> &vars,
+        void encodeLoopInv(const MatchedLoopInvariant &inv,
                            llvm::SmallVector<llvm::Metadata *> &nodes);
 
         /**
