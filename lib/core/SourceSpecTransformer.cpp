@@ -1,10 +1,13 @@
 #include <cassert>
 #include <stdexcept>
+#include <vector>
 
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
 
@@ -117,13 +120,25 @@ namespace sourcespec2ir
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
             tmpSrcPath, *irContext);
 
-        // Link wrappers into module
-        // Add the generated specifications to the original IR (merge IR files)
-        //auto linker = llvm::Linker(*irModule);
-        //linker.linkInModule(std::move(compiledSpecModule));
+        // Turn all duplicate global values into declarations to avoid conflicts
+        // while linking.
+        // Potential alternative: Add the specification-metadata directly
+        // after the wrapping stage and add reference to wrapper-function later.
+        removeDuplicateDefinitions(*irModule, *moduleWithWrappers);
+
+        auto linker = llvm::Linker(*irModule);
+        linker.linkInModule(std::move(moduleWithWrappers));
+
+        if (outputConfig.printDebugInfo)
+        {
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "PRE-Unification\n";
+            writeToFile(*irModule, "");
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+        }
 
         // Generate metadata for specifications
-
+        // TODO
 
         // OLD STUFF
 
@@ -141,16 +156,6 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Ill-formed llvm-module after transformation.");
         }
-
-        /*
-        if (outputConfig.printDebugInfo)
-        {
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-            llvm::outs() << "PRE-Unification\n";
-            writeToFile(*irModule, "");
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        }
-        */
 
         // Transform the compiled specifications into common format (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
@@ -371,7 +376,7 @@ namespace sourcespec2ir
             // Print to console if no output-path is given or if debug-info is enabled
             llvm::outs() << "===============================================\n";
             // irModule->dump();
-            irModule->print(llvm::outs(), nullptr);
+            module.print(llvm::outs(), nullptr);
             llvm::outs() << "===============================================\n";
         }
 
@@ -392,6 +397,29 @@ namespace sourcespec2ir
                                          std::string(outPath) + ". Error code: " + eCode.message());
             }
             outStream.close();
+        }
+    }
+
+    void removeDuplicateDefinitions(const llvm::Module &origModule,
+                                    llvm::Module &moduleWithWrappers)
+    {
+        // Collect the GUIDs of the globals in the original module
+        // Stores the GUIDs in a sorted vector
+        std::vector<llvm::GlobalValue::GUID> origGlobals;
+        for (auto &g : origModule.global_values())
+            origGlobals.push_back(g.getGUID());
+        std::sort(origGlobals.begin(), origGlobals.end());
+
+        // Turn all global definitions from the modified module into declarations
+        for (auto &g : moduleWithWrappers.global_values())
+        {
+            auto id = g.getGUID();
+            if (g.isDeclaration() ||
+                !std::binary_search(origGlobals.begin(), origGlobals.end(), id))
+                continue;
+            // Alternative: Set linkage to external
+            llvm::convertToDeclaration(g);
+            llvm::outs() << "Turned " << g.getName().str() << " into declaration.\n";
         }
     }
 

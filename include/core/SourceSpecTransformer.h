@@ -184,6 +184,16 @@ namespace sourcespec2ir
          * a file at the given path.
          */
         void writeToFile(const llvm::Module &module, std::string outPath);
+
+        /**
+         * Removes duplicate definitions of globals from the second module by 
+         * turning all global definitions in 'moduleWithWrappers' that also 
+         * occur in 'origModule' into declarations.  
+         * As a result, 'moduleWithWrappers' can be linked 
+         * into 'origModule' without conflicts.
+         */
+        void removeDuplicateDefinitions(const llvm::Module &origModule, 
+            llvm::Module &moduleWithWrappers);
     };
 
 }
