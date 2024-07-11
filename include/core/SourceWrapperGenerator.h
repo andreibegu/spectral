@@ -78,21 +78,6 @@ namespace sourcespec2ir
             llvm::ArrayRef<SpecDeclaration> specDeclarations);
 
         /**
-         * Takes a string-representation of a source-language function and turns
-         * it into a full compilation unit in the source language.
-         *
-         * Also receives a set of declarations that have to be included in the
-         * generated compilation unit (e.g. types from the spec-library, ...).
-         * These are the declarations from the optional peclaration block
-         * in the specifications.
-         *
-         * E.g. adds imports for the specification library, ...
-         */
-        virtual std::string assembleSrcCompilationUnit(
-            const SrcWrapperFunction &wrapperFunction,
-            const llvm::ArrayRef<SpecDeclaration> &declarations) = 0;
-
-        /**
          * Returns a string representation of the given DIType that matches the
          * types representation on the source-level.
          * If the string-representation cannot be generated, an error is raised.

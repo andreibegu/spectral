@@ -2,7 +2,6 @@
 #include "PallasException.h"
 #include "SrcLookup.h"
 
-#include <llvm/BinaryFormat/Dwarf.h>
 #include <sstream>
 
 namespace sourcespec2ir
@@ -34,27 +33,6 @@ namespace sourcespec2ir
         return stream.str();
     }
 
-    std::string CppWrapperGenerator::assembleSrcCompilationUnit(
-        const SrcWrapperFunction &wrapperFunction,
-        const llvm::ArrayRef<SpecDeclaration> &declarations)
-    {
-        // TODO: add include-statements from the source-file
-
-        std::stringstream stream;
-        stream << "#include \"cpp_spec_lib.h\" \n ";
-        // Add any declarations from the declaration-block of the specifications.
-        for (auto decl : declarations)
-        {
-            // TODO: Do not add a ; if the string starts with whitespace
-            //       followed by a #
-            stream << decl.content << "; \n ";
-        }
-        // Add the generated wrapper-function
-        stream << wrapperFunction.stringRepr;
-
-        return stream.str();
-    }
-
     std::string CppWrapperGenerator::addConst(const std::string &baseType)
     {
         return baseType + " const ";
@@ -65,8 +43,8 @@ namespace sourcespec2ir
         return baseType + "*";
     }
 
-    std::string CppWrapperGenerator::addNamespace(const std::string &parentNamespace,
-                                                  const std::string &childNamespace)
+    std::string CppWrapperGenerator::addNamespace(
+        const std::string &parentNamespace, const std::string &childNamespace)
     {
         return parentNamespace + childNamespace + "::";
     }

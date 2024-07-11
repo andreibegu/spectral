@@ -266,42 +266,6 @@ namespace sourcespec2ir
         nodes.push_back(invAsMd);
     }
 
-    std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(
-        std::string expr, const std::set<llvm::DILocalVariable *> &srcVars)
-    {
-        // Transfer src-variables to sequential container for explicit ordering
-        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(
-            srcVars.begin(), srcVars.end());
-
-        // TODO: Remove the wrapping from here
-        // Wrap the expression first, into a source-language function
-        // and then into a source-compilation unit
-        auto wName = wrapperGenerator->getNameForWrapperFunction();
-        auto wString = wrapperGenerator->getWrapperFunctionString(
-            *argList, expr, wName);
-        // TODO: Invalid insert-location
-        auto srcWrapperFun = std::make_unique<SrcWrapperFunction>(wName, wString, *argList, 42);
-        auto srcWrapperCU = wrapperGenerator->assembleSrcCompilationUnit(
-            *srcWrapperFun, *specDeclarations);
-
-        // Compile the specifications into IR & run mem2reg optimization
-        auto compiledSpecModule = srcCompilerDriver->compileSpecification(srcWrapperCU, *irContext);
-        promoteMemToReg(*compiledSpecModule);
-
-        // Add the generated specifications to the original IR (merge IR files)
-        auto linker = llvm::Linker(*irModule);
-        linker.linkInModule(std::move(compiledSpecModule));
-
-        // Extract the IR-function that represents the compiled expression
-        auto irSpecFunction = utils::getFunctionBySrcName(*irModule, srcWrapperFun->name);
-
-        // Add a metadata-marker to mark it as a generated specification-function
-        utils::markGeneratedSpecFunction(*irSpecFunction, *irContext);
-
-        // Wrap & return function-ptr and arg-list
-        return std::make_unique<IRWrapperFunction>(irSpecFunction, std::move(argList));
-    }
-
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
     {
         llvm::ModulePassManager mpm;

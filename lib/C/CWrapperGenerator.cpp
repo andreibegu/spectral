@@ -30,23 +30,6 @@ namespace sourcespec2ir
         return wFun;
     }
 
-    std::string CWrapperGenerator::assembleSrcCompilationUnit(
-        const SrcWrapperFunction &wrapperFunction,
-        const llvm::ArrayRef<SpecDeclaration> &declarations)
-    {
-        // TODO: Use a sstream
-        // TODO: add include-statements from the source-file
-        std::string includes = "#include <c_spec_lib.h> \n ";
-
-        // Add any declarations that were defined in the declaration-block of the specifications.
-        for (auto decl : declarations)
-        {
-            includes += (decl.content + "; \n ");
-        }
-
-        return includes + wrapperFunction.stringRepr;
-    }
-
     std::string CWrapperGenerator::addConst(const std::string &baseType)
     {
         return baseType + " const ";

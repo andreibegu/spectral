@@ -17,10 +17,6 @@ namespace sourcespec2ir
             const std::string &expr,
             const std::string &functionName) override;
 
-        std::string assembleSrcCompilationUnit(
-            const SrcWrapperFunction &wrapperFunction,
-            const llvm::ArrayRef<SpecDeclaration> &declarations) override;
-
     protected:
         std::string addConst(const std::string &baseType) override;
         std::string addPointer(const std::string &baseType) override;

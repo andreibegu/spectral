@@ -26,20 +26,6 @@ namespace sourcespec2ir
         virtual std::unique_ptr<llvm::Module> compileSource(
             const std::string &srcFilePath, llvm::LLVMContext &context) = 0;
 
-
-        /**
-         * Takes a string that contains a compilation unit of the source-language 
-         * and returns a LLVM-Module that contains the compiled LLVM-representation 
-         * of this function.
-         * Takes a string-representation of the source-language compilation unit 
-         * as a parameter. 
-         * 
-         * The compilation is expected to generate debug information which is 
-         * needed for further processing.  
-         */
-        virtual std::unique_ptr<llvm::Module> compileSpecification(
-            const std::string &cu, llvm::LLVMContext &context) = 0;
-
     };
 
 }

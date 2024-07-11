@@ -23,7 +23,6 @@
 #include "SourceWrapperGenerator.h"
 #include "SpecUnifier.h"
 #include "OutputConfig.h"
-#include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 
 namespace sourcespec2ir
@@ -117,17 +116,6 @@ namespace sourcespec2ir
             fContractWrappers;
         std::map<const MatchedLoopInvariant *, std::unique_ptr<SrcWrapperFunction>>
             loopInvWrappers;
-
-        /**
-         * Transforms an expression in the source language into LLVM-IR by wrapping
-         * it into a function. The generated function is added to the module of the
-         * SourceSpecTransformer.
-         * Returns an IRWrapper function that bundles a pointer to the newly
-         * generated function along with a list of the metadata-nodes that
-         * describe the functions parameter-list.
-         */
-        std::unique_ptr<IRWrapperFunction> transformExpression(
-            std::string expr, const std::set<llvm::DILocalVariable *> &srcVars);
 
         /**
          * Runs the mem2reg-pass on the given module.
