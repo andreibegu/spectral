@@ -1,7 +1,4 @@
-#include <stdlib.h>
 #include <fstream>
-#include <iostream>
-#include <stdio.h>
 #include <sstream>
 
 #include <llvm/IRReader/IRReader.h>
