@@ -32,7 +32,7 @@ namespace sourcespec2ir
         std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + srcFilePath +
                                 " -o " + irFilePath +
                                 " -Xclang -disable-O0-optnone" + 
-                                " -I " + specLibPath +"/";;
+                                " -I " + specLibPath +"/" ;
         std::system(clangCall.c_str());
 
         // Parse the resulting file as an LLVM-IR module
