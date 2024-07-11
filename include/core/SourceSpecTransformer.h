@@ -96,19 +96,6 @@ namespace sourcespec2ir
         llvm::PassBuilder passBuilder;
 
         /**
-         * Contents of the declaration-block of the specifications.
-         * 
-         * TODO: This probably does not need to be a member-variable in the 
-         *       long term.
-         */
-        std::unique_ptr<llvm::SmallVector<SpecDeclaration>> specDeclarations;
-
-        /**
-         * Matching information about the specifications
-         */
-        std::unique_ptr<sourcespec2ir::MatchedSpecifications> matchedSpecs = nullptr;
-
-        /**
          * Maps that relate the matched specifications to the corresponding
          * wrapper-functions.
          */
@@ -124,7 +111,7 @@ namespace sourcespec2ir
 
         /**
          * Runs the verify-pass in the given module and throws an exception
-         * if the module is not wellformed. 
+         * if the module is not wellformed.
          */
         void verifyModule(llvm::Module &module, const std::string msg);
 
@@ -160,7 +147,7 @@ namespace sourcespec2ir
          */
         void wrapFunctionContractBlock(
             const MatchedFunctionContract &contract);
-            
+
         /**
          * Uses the wrapper-generator to create wrapping-functions for all
          * loop-invariant-blocks.
@@ -175,14 +162,14 @@ namespace sourcespec2ir
         void writeToFile(const llvm::Module &module, std::string outPath);
 
         /**
-         * Removes duplicate definitions of globals from the second module by 
-         * turning all global definitions in 'moduleWithWrappers' that also 
-         * occur in 'origModule' into declarations.  
-         * As a result, 'moduleWithWrappers' can be linked 
+         * Removes duplicate definitions of globals from the second module by
+         * turning all global definitions in 'moduleWithWrappers' that also
+         * occur in 'origModule' into declarations.
+         * As a result, 'moduleWithWrappers' can be linked
          * into 'origModule' without conflicts.
          */
-        void removeDuplicateDefinitions(const llvm::Module &origModule, 
-            llvm::Module &moduleWithWrappers);
+        void removeDuplicateDefinitions(const llvm::Module &origModule,
+                                        llvm::Module &moduleWithWrappers);
     };
 
 }

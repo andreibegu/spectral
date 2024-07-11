@@ -86,11 +86,11 @@ namespace sourcespec2ir
 
         // Collect declarations
         SpecDeclarationCollector declCollector(srcParseTree);
-        specDeclarations = declCollector.collectDeclarations();
+        auto specDeclarations = declCollector.collectDeclarations();
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
-        matchedSpecs = specMatcher->matchSpecs();
+        auto matchedSpecs = specMatcher->matchSpecs();
 
         // TODO: This should be bundled in the Wrapper generator, and not here
         // Create wrappers for function-contracts
