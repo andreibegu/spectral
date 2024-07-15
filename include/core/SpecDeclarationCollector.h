@@ -3,6 +3,7 @@
 
 #include "SpecParser.h"
 #include "SpecParserBaseVisitor.h"
+#include "SpecDeclaration.h"
 
 #include <memory>
 
@@ -19,12 +20,12 @@ namespace sourcespec2ir
     public:
         SpecDeclarationCollector(SpecParser::FileContext *specParseTree);
 
-        std::unique_ptr<llvm::SmallVector<std::string>> collectDeclarations();
+        std::unique_ptr<llvm::SmallVector<SpecDeclaration>> collectDeclarations();
 
     private:
 
         SpecParser::FileContext *specParseTree;
-        std::unique_ptr<llvm::SmallVector<std::string>> declarations;
+        std::unique_ptr<llvm::SmallVector<SpecDeclaration>> declarations;
 
         // Overwritten visitor-methods
         std::any visitDeclarationClause(SpecParser::DeclarationClauseContext *ctx) override;

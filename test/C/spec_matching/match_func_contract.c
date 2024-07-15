@@ -24,13 +24,11 @@ float foobar(int x, float y) {
 // CHECK: Matched contract at 8-11 to bar
 // COM: CHECK-NOT: Matched contract
 
-// CHECK: i32 @bar(
+// CHECK-DAG: i32 @bar(
 // CHECK-SAME: !pallas.fcontract 
 
-// CHECK-DAG: i1 @PALLAS_SPEC_0(i32 noundef %0, i32 noundef %1)
-// CHECK-SAME: !pallas.exprWrapper
-// CHECK-DAG: i1 @PALLAS_SPEC_1(i32 noundef %0, i32 noundef %1)
-// CHECK-SAME: !pallas.exprWrapper
+// CHECK-DAG: i1 @PALLAS_SPEC_0(i32 noundef %0, i32 noundef %1) #0 !dbg !{{[0-9]+}} !pallas.exprWrapper
+// CHECK-DAG: i1 @PALLAS_SPEC_1(i32 noundef %0, i32 noundef %1) #0 !dbg !{{[0-9]+}} !pallas.exprWrapper
 
 // CHECK-DAG: !"pallas.requires"
 // CHECK-SAME: ptr @PALLAS_SPEC_0

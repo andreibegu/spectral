@@ -9,16 +9,18 @@ namespace sourcespec2ir
 {
     SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule)
         : specParseTree(specParseTree),
-          irModule(irModule),
-          matchedFuncContracts(),
-          matchedLoopInvariants()
+          irModule(irModule)
     {
     }
 
-    void SourceSpecMatcher::matchSpecs()
+    std::unique_ptr<MatchedSpecifications> SourceSpecMatcher::matchSpecs()
     {
+        matchedSpecs = std::make_unique<MatchedSpecifications>();
+
         // Traverse the parse-tree and match all specifications
         visit(specParseTree);
+
+        return std::move(matchedSpecs);
     }
 
     std::any SourceSpecMatcher::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
@@ -41,12 +43,10 @@ namespace sourcespec2ir
 
         // Add all statements to the contract by traversing the children
         for (auto c : ctx->children)
-        {
             visit(c);
-        }
 
         // Add the new contract to the collection of contracts.
-        matchedFuncContracts.push_back(std::move(contract));
+        matchedSpecs->matchedFContracts.push_back(std::move(contract));
         return 0;
     }
 
@@ -107,28 +107,8 @@ namespace sourcespec2ir
                 std::make_unique<MatchedLoopInvariant>(stringRepr));
         }
 
-        matchedLoopInvariants.push_back(std::move(invBlock));
+        matchedSpecs->matchedLoopInvariants.push_back(std::move(invBlock));
         return 0;
-    }
-
-    size_t SourceSpecMatcher::getNumMatchedFuncContracts()
-    {
-        return matchedFuncContracts.size();
-    }
-
-    MatchedFunctionContract *SourceSpecMatcher::getMatchedFuncContract(size_t idx)
-    {
-        return matchedFuncContracts[idx].get();
-    }
-
-    size_t SourceSpecMatcher::getNumMatchedLoopInv()
-    {
-        return matchedLoopInvariants.size();
-    }
-
-    MatchedLoopInvariantBlock *SourceSpecMatcher::getMatchedLoopInv(size_t idx)
-    {
-        return matchedLoopInvariants[idx].get();
     }
 
     std::string SourceSpecMatcher::getExprAsStr(const SpecParser::SpecExpressionContext &eCtx)

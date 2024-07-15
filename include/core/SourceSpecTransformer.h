@@ -3,9 +3,9 @@
 
 #include <string>
 #include <fstream>
+#include <map>
 #include <memory>
 
-#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
@@ -23,7 +23,6 @@
 #include "SourceWrapperGenerator.h"
 #include "SpecUnifier.h"
 #include "OutputConfig.h"
-#include "wrapper/IRWrapperFunction.h"
 #include "wrapper/SrcWrapperFunction.h"
 
 namespace sourcespec2ir
@@ -42,20 +41,21 @@ namespace sourcespec2ir
 
     protected:
         /*
-         * Factory methods. 
-         * These can/ have to be overwritten by subclasses to create a 
-         * SourceSpecTransformer that can handle a specific language. 
+         * Factory methods.
+         * These can/ have to be overwritten by subclasses to create a
+         * SourceSpecTransformer that can handle a specific language.
          */
         virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() = 0;
 
         /**
-         * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default. 
-         * Can be overwritten by subclasses to use a different matching strategy. 
+         * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
+         * Can be overwritten by subclasses to use a different matching strategy.
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
             SpecParser::FileContext *specParseTree, llvm::Module *irModule);
 
     private:
+        std::string srcInPath;
         std::string outPath;
         const utils::OutputConfig &outputConfig;
 
@@ -72,7 +72,7 @@ namespace sourcespec2ir
         std::unique_ptr<llvm::Module> irModule;
 
         /**
-         * Pointers to stuff that is required to keep the parse-tree of the 
+         * Pointers to stuff that is required to keep the parse-tree of the
          * source-file in scope.
          */
         std::unique_ptr<std::ifstream> srcFileStream;
@@ -83,7 +83,7 @@ namespace sourcespec2ir
         SpecParser::FileContext *srcParseTree;
 
         /**
-         * Analysis managers and pass builder that are used to run 
+         * Analysis managers and pass builder that are used to run
          * optimization- and analysis passes on the loaded IR
          */
         llvm::LoopAnalysisManager lam;
@@ -91,25 +91,18 @@ namespace sourcespec2ir
         llvm::CGSCCAnalysisManager cgam;
         llvm::ModuleAnalysisManager mam;
 
-        // While we do not use the PassBuilder directly, it is required by the 
+        // While we do not use the PassBuilder directly, it is required by the
         // ModuleAnalysisManager. Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
 
         /**
-         * Contents of the declaration-block of the specifications.
+         * Maps that relate the matched specifications to the corresponding
+         * wrapper-functions.
          */
-        std::unique_ptr<llvm::SmallVector<std::string>> specDeclarations;
-
-        /**
-         * Transforms an expression in the source language into LLVM-IR by wrapping
-         * it into a function. The generated function is added to the module of the
-         * SourceSpecTransformer.
-         * Returns an IRWrapper function that bundles a pointer to the newly
-         * generated function along with a list of the metadata-nodes that
-         * describe the functions parameter-list.
-         */
-        std::unique_ptr<IRWrapperFunction> transformExpression(
-            std::string expr, const std::set<llvm::DILocalVariable *> &srcVars);
+        std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
+            fContractWrappers;
+        std::map<const MatchedLoopInvariant *, std::unique_ptr<SrcWrapperFunction>>
+            loopInvWrappers;
 
         /**
          * Runs the mem2reg-pass on the given module.
@@ -117,8 +110,13 @@ namespace sourcespec2ir
         void promoteMemToReg(llvm::Module &module);
 
         /**
-         * Encodes a block of function-contract statements and adds the 
-         * generated MD-nodes to the module.
+         * Runs the verify-pass in the given module and throws an exception
+         * if the module is not wellformed.
+         */
+        void verifyModule(llvm::Module &module, const std::string msg);
+
+        /**
+         * Encodes a block of function-contract statements into metadata
          */
         void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
 
@@ -132,8 +130,7 @@ namespace sourcespec2ir
             const MatchedFContractStatement &stmnt);
 
         /**
-         * Encodes a block of loop-invariants and adds the generated MD-nodes
-         * to the module.
+         * Encodes a block of loop-invariants into metadata.
          */
         void encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock);
 
@@ -141,9 +138,22 @@ namespace sourcespec2ir
          * Encodes a single loop-invariant into a metadata-node.
          * The new Metadata node is added to the back of the given vector.
          */
-        void encodeLoopInv(std::string specExpr,
-                           const std::set<llvm::DILocalVariable *> &vars,
+        void encodeLoopInv(const MatchedLoopInvariant &inv,
                            llvm::SmallVector<llvm::Metadata *> &nodes);
+
+        /**
+         * Uses the wrapper generator to create wrapping-functions for all
+         * statements in the given contract-block.
+         */
+        void wrapFunctionContractBlock(
+            const MatchedFunctionContract &contract);
+
+        /**
+         * Uses the wrapper-generator to create wrapping-functions for all
+         * loop-invariant-blocks.
+         */
+        void wrapLoopInvariantBlock(
+            const MatchedLoopInvariantBlock &invBlock);
 
         /**
          * Write the IR-representation of the given module into
@@ -151,7 +161,15 @@ namespace sourcespec2ir
          */
         void writeToFile(const llvm::Module &module, std::string outPath);
 
-        
+        /**
+         * Removes duplicate definitions of globals from the second module by
+         * turning all global definitions in 'moduleWithWrappers' that also
+         * occur in 'origModule' into declarations.
+         * As a result, 'moduleWithWrappers' can be linked
+         * into 'origModule' without conflicts.
+         */
+        void removeDuplicateDefinitions(const llvm::Module &origModule,
+                                        llvm::Module &moduleWithWrappers);
     };
 
 }

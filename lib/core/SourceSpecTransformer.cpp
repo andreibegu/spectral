@@ -1,10 +1,12 @@
-#include <cassert>
 #include <stdexcept>
+#include <vector>
 
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
 
@@ -24,7 +26,8 @@ namespace sourcespec2ir
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig)
-        : outPath(outPath),
+        : srcInPath(srcInPath),
+          outPath(outPath),
           outputConfig(outputConfig),
           srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
@@ -58,7 +61,7 @@ namespace sourcespec2ir
             llvm::outs() << "PRE-Transformation\n";
             writeToFile(*irModule, "");
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
-        } 
+        }
         */
 
         // Parse the source-file to extract the specifications
@@ -83,36 +86,52 @@ namespace sourcespec2ir
 
         // Collect declarations
         SpecDeclarationCollector declCollector(srcParseTree);
-        specDeclarations = declCollector.collectDeclarations();
+        auto specDeclarations = declCollector.collectDeclarations();
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
-        specMatcher->matchSpecs();
+        auto matchedSpecs = specMatcher->matchSpecs();
 
-        // Transform the function-contract specifications into IR
-        const auto numFContracts = specMatcher->getNumMatchedFuncContracts();
-        for (size_t i = 0; i < numFContracts; ++i)
-        {
-            auto contract = specMatcher->getMatchedFuncContract(i);
-            encodeFunctionContractBlock(*contract);
-        }
+        // TODO: This should be bundled in the Wrapper generator, and not here
+        // Create wrappers for function-contracts
+        for (const auto &contract : matchedSpecs->matchedFContracts)
+            wrapFunctionContractBlock(*contract);
 
-        // Transform loop-invariants into IR
-        // TODO: Consider dropping the representation of the invariant-statement
-        const auto numLoopInvBlocks = specMatcher->getNumMatchedLoopInv();
-        for (size_t i = 0; i < numLoopInvBlocks; ++i)
-        {
-            auto invBlock = specMatcher->getMatchedLoopInv(i);
-            encodeLoopInvBlock(*invBlock);
-        }
+        // Create wrappers for loop-invariants
+        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
+            wrapLoopInvariantBlock(*invBlock);
 
-        // Check wellformedness of module
-        if (llvm::verifyModule(*irModule, &llvm::errs())) {
-            throw utils::PallasException(
-                "Ill-formed llvm-module after transformation.");
-        }
+        // Collect pointers to wrapper-functions
+        llvm::SmallVector<SrcWrapperFunction *> wrappers;
+        for (auto &[contr, wrapper] : fContractWrappers)
+            wrappers.push_back(wrapper.get());
+        for (auto &[inv, wrapper] : loopInvWrappers)
+            wrappers.push_back(wrapper.get());
 
-        /*
+        // Insert wrappers into source
+        // TODO: Remove hardcoded path, use the LLVM file-utilities to
+        //       generate a temporary file
+        const auto srcFileExt = srcInPath.substr(srcInPath.find_last_of(".") + 1);
+        const std::string tmpSrcPath = "source_wrappers." + srcFileExt;
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, tmpSrcPath, wrappers,
+                                               *specDeclarations);
+
+        // Compile source
+        auto moduleWithWrappers = srcCompilerDriver->compileSource(
+            tmpSrcPath, *irContext);
+
+        // Apply mem2reg to new module
+        promoteMemToReg(*moduleWithWrappers);
+
+        // Turn all duplicate global values into declarations to avoid conflicts
+        // while linking.
+        // Potential alternative: Add the specification-metadata directly
+        // after the wrapping stage and add reference to wrapper-function later.
+        removeDuplicateDefinitions(*irModule, *moduleWithWrappers);
+
+        auto linker = llvm::Linker(*irModule);
+        linker.linkInModule(std::move(moduleWithWrappers));
+
         if (outputConfig.printDebugInfo)
         {
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -120,20 +139,77 @@ namespace sourcespec2ir
             writeToFile(*irModule, "");
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
-        */
-        
 
-        // Transform the compiled specifications into common format (calls to specification-functions)
+        // Generate metadata for specifications
+        for (const auto &contract : matchedSpecs->matchedFContracts)
+            encodeFunctionContractBlock(*contract);
+
+        // Transform loop-invariants into IR
+        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
+            encodeLoopInvBlock(*invBlock);
+
+        // Check wellformedness of module
+        verifyModule(*irModule, "After transformation");
+
+        // Transform the compiled specifications into common format
+        // (calls to specification-functions)
         specUnifier->unifySpecifications(irModule.get(), irContext.get());
 
         // Check wellformedness of module
-        if (llvm::verifyModule(*irModule, &llvm::errs())) {
-            throw utils::PallasException(
-                "Ill-formed llvm-module  after unification.");
-        }
+        verifyModule(*irModule, "After unification");
 
         // Dump the generated IR
         writeToFile(*irModule, outPath);
+    }
+
+    // TODO: Move this into the wrapper-generator
+    // i.e. The wrapper generator should construct the wrapping functions and
+    // return them back to the SourceSpecTransfromer for matching after the
+    // compilation.
+    void SourceSpecTransformer::wrapFunctionContractBlock(
+        const MatchedFunctionContract &contract)
+    {
+        const auto parentFunction = contract.function;
+        auto srcVars = utils::getSrcVariablesForFunction(*parentFunction);
+        // Turn arg-list into sequential container for explicit ordering
+        llvm::SmallVector<llvm::DILocalVariable *> argList(
+            srcVars->begin(), srcVars->end());
+        // Get insert-position for wrapper-functions
+        auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
+
+        // Wrap specification statements
+        for (auto &stmnt : contract.statements)
+        {
+            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
+            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
+                argList, stmnt->expr, wrapperName);
+            fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
+                wrapperName, wrapperStr, argList, insertPos);
+        }
+    }
+
+    // TODO: Move this into the wrapper-generator
+    void SourceSpecTransformer::wrapLoopInvariantBlock(
+        const MatchedLoopInvariantBlock &invBlock)
+    {
+        // Determine the variables that can be referenced in the invariant
+        auto availableVars = utils::getVarsForLoopInv(
+            invBlock.parentFunction, invBlock.loopHeader);
+        // Turn arg-list into sequential collection for consisten ordering
+        llvm::SmallVector<llvm::DILocalVariable *> argList(
+            availableVars->begin(), availableVars->end());
+        // Get insert-pos for wrapper-function
+        auto insertPos = wrapperGenerator->getWrapperInsertLoc(invBlock);
+
+        // Generate wrappers for the individual invariants
+        for (auto &inv : invBlock.invariants)
+        {
+            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
+            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
+                argList, inv->expr, wrapperName);
+            loopInvWrappers[inv.get()] = std::make_unique<SrcWrapperFunction>(
+                wrapperName, wrapperStr, argList, insertPos);
+        }
     }
 
     void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
@@ -143,8 +219,8 @@ namespace sourcespec2ir
             return;
 
         // Determine the variables that can be referenced in the invariant
-        auto availableVars = utils::getVarsForLoopInv(
-            invBlock.parentFunction, invBlock.loopHeader);
+        // auto availableVars = utils::getVarsForLoopInv(
+        //    invBlock.parentFunction, invBlock.loopHeader);
 
         // Vector of MD-nodes that makes up the tuple with the invariants
         llvm::SmallVector<llvm::Metadata *> invNodes;
@@ -155,11 +231,8 @@ namespace sourcespec2ir
         invNodes.push_back(invIDNode);
 
         // Transform the individual invariants and add them to invNodes
-        for (size_t j = 0; j < numInvs; ++j)
-        {
-            auto *inv = invBlock.invariants[j].get();
-            encodeLoopInv(inv->expr, *availableVars.get(), invNodes);
-        }
+        for (auto &inv : invBlock.invariants)
+            encodeLoopInv(*inv, invNodes);
 
         // Construct MD-tuple and add it to the loop's llvm.loop MD-node
         auto loopMDTuple = invBlock.loopID;
@@ -168,53 +241,29 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::encodeLoopInv(
-        std::string specExpr, const std::set<llvm::DILocalVariable *> &vars,
+        const MatchedLoopInvariant &inv,
         llvm::SmallVector<llvm::Metadata *> &nodes)
     {
-        // Transform to IR
-        auto irEnc = transformExpression(specExpr, vars);
+        // Get the ir-version of the wrapper-function
+        auto srcWrapperFun = loopInvWrappers.at(&inv).get();
+        auto irWrapperFunction = utils::getFunctionBySrcName(
+            *irModule, srcWrapperFun->name);
+
+        // Add a metadata-marker to the generated function
+        utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
 
         // Assemble MD-node to represent invariant-statement
-        // The encoding contains a ref to the function that encodes the
-        // inv-expression followed by a list of refs to the variables that
-        // make up the arguments of that function.
         llvm::SmallVector<llvm::Metadata *, 2> mdElems;
-        mdElems.push_back(llvm::ValueAsMetadata::get(irEnc->function));
-        for (auto arg : *irEnc->argListDescr)
+        // Add ref to wrapper-function
+        mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
+        // Add references to the metadata-nodes that describe how the arguments
+        // of the specification-function relate to the original variables.
+        for (auto arg : srcWrapperFun->argList)
             mdElems.push_back(arg);
+
         // Build new node and add it to the vector of the inv-block.
         auto invAsMd = llvm::MDNode::get(*irContext, mdElems);
         nodes.push_back(invAsMd);
-    }
-
-    std::unique_ptr<IRWrapperFunction> SourceSpecTransformer::transformExpression(
-        std::string expr, const std::set<llvm::DILocalVariable *> &srcVars)
-    {
-        // Transfer src-variables to sequential container for explicit ordering
-        auto argList = std::make_unique<llvm::SmallVector<llvm::DILocalVariable *>>(srcVars.begin(), srcVars.end());
-
-        // Wrap the expression first, into a source-language function 
-        // and then into a source-compilation unit
-        auto srcWrapperFun = wrapperGenerator->getWrappingFunction(*argList, expr);
-        auto srcWrapperCU = wrapperGenerator->assembleSrcCompilationUnit(
-            *srcWrapperFun, *specDeclarations);
-
-        // Compile the specifications into IR & run mem2reg optimization
-        auto compiledSpecModule = srcCompilerDriver->compileSpecification(srcWrapperCU, *irContext);
-        promoteMemToReg(*compiledSpecModule);
-
-        // Add the generated specifications to the original IR (merge IR files)
-        auto linker = llvm::Linker(*irModule);
-        linker.linkInModule(std::move(compiledSpecModule));
-
-        // Extract the IR-function that represents the compiled expression
-        auto irSpecFunction = utils::getFunctionBySrcName(*irModule, srcWrapperFun->name);
-
-        // Add a metadata-marker to mark it as a generated specification-function
-        utils::markGeneratedSpecFunction(*irSpecFunction, *irContext);
-
-        // Wrap & return function-ptr and arg-list
-        return std::make_unique<IRWrapperFunction>(irSpecFunction, std::move(argList));
     }
 
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
@@ -222,6 +271,16 @@ namespace sourcespec2ir
         llvm::ModulePassManager mpm;
         mpm.addPass(llvm::createModuleToFunctionPassAdaptor(llvm::PromotePass()));
         mpm.run(module, mam);
+    }
+
+    void SourceSpecTransformer::verifyModule(
+        llvm::Module &module, const std::string msg)
+    {
+        if (llvm::verifyModule(module, &llvm::errs()))
+        {
+            std::string eMessage = "Ill-formed LLVM-module (" + msg + ")";
+            throw utils::PallasException(eMessage);
+        }
     }
 
     void SourceSpecTransformer::encodeFunctionContractBlock(
@@ -238,7 +297,6 @@ namespace sourcespec2ir
                 *parentFunction, *contract.statements[i].get());
             specStatementNodes.push_back(mdNode);
         }
-
         auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
         parentFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
     }
@@ -247,6 +305,18 @@ namespace sourcespec2ir
         const llvm::Function &function,
         const MatchedFContractStatement &stmnt)
     {
+        // Get the ir-version of the wrapper-function
+        auto srcWrapperFun = fContractWrappers.at(&stmnt).get();
+        auto irWrapperFunction = utils::getFunctionBySrcName(
+            *irModule, srcWrapperFun->name);
+
+        // Add a metadata-marker to generated specification-function
+        utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
+
+        // Generate the metadata that encodes the contract statement:
+        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+
+        // Add statement identifier
         std::string mdId;
         if (stmnt.type == Requires)
             mdId = PALLAS_REQUIRES;
@@ -254,26 +324,17 @@ namespace sourcespec2ir
             mdId = PALLAS_ENSURES;
         else
             throw utils::PallasException("Unsupported statement-type");
-
-        // Generate LLVM-IR function for the specification expression.
-        auto srcVars = utils::getSrcVariablesForFunction(function);
-        auto specFunctionWrapper = transformExpression(stmnt.expr, *srcVars.get());
-
-        // Generate the metadata that encodes the requires clause:
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
-
         auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
         mdElems.push_back(mdIdentifier);
 
-        auto specFuncAsMd = llvm::ValueAsMetadata::get(specFunctionWrapper->function);
+        // Add reference to function
+        auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
         mdElems.push_back(specFuncAsMd);
 
-        // Add references to the metadata-nodes that describe how the arguments of the
-        // specification-function relate to the original variables.
-        for (auto arg : *specFunctionWrapper->argListDescr)
-        {
+        // Add references to the metadata-nodes that describe how the arguments
+        // of the specification-function relate to the original variables.
+        for (auto arg : srcWrapperFun->argList)
             mdElems.push_back(arg);
-        }
 
         return llvm::MDNode::get(*irContext, mdElems);
     }
@@ -285,7 +346,7 @@ namespace sourcespec2ir
             // Print to console if no output-path is given or if debug-info is enabled
             llvm::outs() << "===============================================\n";
             // irModule->dump();
-            irModule->print(llvm::outs(), nullptr);
+            module.print(llvm::outs(), nullptr);
             llvm::outs() << "===============================================\n";
         }
 
@@ -306,6 +367,29 @@ namespace sourcespec2ir
                                          std::string(outPath) + ". Error code: " + eCode.message());
             }
             outStream.close();
+        }
+    }
+
+    void SourceSpecTransformer::removeDuplicateDefinitions(
+        const llvm::Module &origModule, llvm::Module &moduleWithWrappers)
+    {
+        // Collect the GUIDs of the globals in the original module
+        // Stores the GUIDs in a sorted vector
+        std::vector<llvm::GlobalValue::GUID> origGlobals;
+        for (auto &g : origModule.global_values())
+            origGlobals.push_back(g.getGUID());
+        std::sort(origGlobals.begin(), origGlobals.end());
+
+        // Turn all global definitions from the modified module into declarations
+        for (auto &g : moduleWithWrappers.global_values())
+        {
+            auto id = g.getGUID();
+            if (g.isDeclaration() ||
+                !std::binary_search(origGlobals.begin(), origGlobals.end(), id))
+                continue;
+            // Alternative: Set linkage to external
+            llvm::convertToDeclaration(g);
+            // llvm::outs() << "Turned " << g.getName().str() << " into declaration.\n";
         }
     }
 

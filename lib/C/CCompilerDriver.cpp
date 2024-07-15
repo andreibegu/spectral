@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <fstream>
-#include <iostream>
 #include <stdio.h>
 
 #include <llvm/IRReader/IRReader.h>
@@ -23,16 +22,17 @@ namespace sourcespec2ir
      * TODO: Cleanup file handling (or better: avoid using files altogether)
      */
 
-    std::unique_ptr<llvm::Module> CCompilerDriver::compileSource(const std::string &srcFilePath, llvm::LLVMContext &context)
+    std::unique_ptr<llvm::Module> CCompilerDriver::compileSource(
+        const std::string &srcFilePath, llvm::LLVMContext &context)
     {
         // Run compiler to generate the IR
         // srcFilePath.substr(0, srcFilePath.find_last_of(".")) + "_tmp.ll"; //
         const std::string irFilePath = "tmp_ir_source.ll";
 
-        // TODO: Handle include-headers, ...
         std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + srcFilePath +
                                 " -o " + irFilePath +
-                                " -Xclang -disable-O0-optnone";
+                                " -Xclang -disable-O0-optnone" + 
+                                " -I " + specLibPath +"/" ;
         std::system(clangCall.c_str());
 
         // Parse the resulting file as an LLVM-IR module
@@ -47,38 +47,4 @@ namespace sourcespec2ir
 
         return irModule;
     }
-
-    std::unique_ptr<llvm::Module> CCompilerDriver::compileSpecification(const std::string &cu, llvm::LLVMContext &context)
-    {
-        const std::string tmpFileBase = "tmp_driver";
-        const std::string tmpSrcFile = tmpFileBase + ".c";
-        const std::string tmpIrFile = tmpFileBase + ".ll";
-
-        // Put c-code into file
-        std::ofstream out(tmpSrcFile);
-        out << cu;
-        out.close();
-
-        // Run compiler to generate IR
-        // std::cout << "Invoking clang " << std::endl;
-        std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + tmpSrcFile +
-                                " -o " + tmpIrFile +
-                                " -Xclang -disable-O0-optnone" +
-                                " -I " + specLibPath +"/";
-        std::system(clangCall.c_str());
-
-        // Parse the resulting file as an LLVM-IR module
-        llvm::SMDiagnostic irSMDiag;
-        auto irModule = llvm::parseIRFile(tmpIrFile, irSMDiag, context);
-
-        if (!irModule)
-        {
-            // Reading the ir-file did not work
-            throw utils::PallasException(
-                "Failed to read the ir of the compiled specification-expression.");
-        }
-
-        return irModule;
-    }
-
 }
