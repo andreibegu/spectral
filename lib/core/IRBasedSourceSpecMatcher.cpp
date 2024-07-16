@@ -8,13 +8,17 @@
 #include <utility>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Metadata.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace
@@ -74,6 +78,23 @@ namespace
         return std::make_pair(minLine, maxLine);
     }
 
+    /**
+     * Uses llvm::sys::fs::make_absolute to turn the given path into an absolute
+     * path.
+     *
+     * TODO: Move into the utils ?!
+     */
+    std::string makeAbsPath(std::string path)
+    {
+        if (llvm::sys::path::is_absolute(path))
+            return path;
+
+        llvm::SmallString<256> pathVec = llvm::StringRef(path);
+        llvm::sys::fs::make_absolute(pathVec);
+        auto absPath = llvm::sys::path::remove_leading_dotslash(pathVec);
+        return absPath.str();
+    }
+
 }
 
 namespace sourcespec2ir
@@ -87,7 +108,8 @@ namespace sourcespec2ir
     {
     }
 
-    std::string IRBasedSourceSpecMatcher::getContractBlockContext(size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    std::string IRBasedSourceSpecMatcher::getContractBlockContext(
+        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
     {
         const llvm::Function *closestFunction = nullptr;
 
@@ -101,6 +123,9 @@ namespace sourcespec2ir
             auto diSubprog = f.getSubprogram();
             if (diSubprog != nullptr)
             {
+                if (!isFromMainFile(*diSubprog))
+                    continue;
+
                 // Check that all function are declared on distinct lines.
                 // (Otherwise this approach does not work)
                 auto line = diSubprog->getLine();
@@ -157,7 +182,8 @@ namespace sourcespec2ir
                 {
                     throw utils::PallasException(
                         "Encountered an instruction between contract and function.");
-                } else if (iLine >= endLine && iLine == fLine && !isDebugIntrinsic) 
+                }
+                else if (iLine >= endLine && iLine == fLine && !isDebugIntrinsic)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction on the same line as the function.");
@@ -200,6 +226,9 @@ namespace sourcespec2ir
         {
             if (auto subprog = f.getSubprogram())
             {
+                // Skip functions that are not in the main-file.
+                if (!isFromMainFile(*subprog))
+                    continue;
                 // TODO: Determine the end of the scope by iterating over all
                 // instruction in the subscopes and comparing the line-numbers.
                 auto fLine = subprog->getLine();
@@ -254,5 +283,28 @@ namespace sourcespec2ir
         }
 
         return std::make_pair(parentFunction, closestLoop);
+    }
+
+    bool IRBasedSourceSpecMatcher::isFromMainFile(
+        const llvm::DISubprogram &sProg)
+    {
+        // Check that the file that is referenced from the DISubprogram
+        // of the given function matched the source-file from the loaded module.
+        const auto modulePath = makeAbsPath(irModule->getSourceFileName());
+
+        // Build a path for the scope of the function by joining directory and 
+        // filename. Sometimes, a leading ./ occurs, which we remove.
+        const auto funcFile = llvm::sys::path::remove_leading_dotslash(
+            sProg.getFilename());
+        const auto funcDir = llvm::sys::path::remove_leading_dotslash(
+            sProg.getDirectory());
+        const auto funcFullPath = (funcDir + llvm::sys::path::get_separator() + funcFile).str();
+
+        // llvm::errs() << "=================================\n";
+        // llvm::errs() << "Function: " << sProg.getName().str() << "\n";
+        // llvm::errs() << "Module-file:   " << modulePath << "\n";
+        // llvm::errs() << "Function-file: " << funcFullPath << "\n";
+
+        return funcFullPath == modulePath;
     }
 }
