@@ -126,6 +126,14 @@ namespace sourcespec2ir
         virtual std::string addReference(const std::string &baseType);
 
         /**
+         * Adds a typedef qualifier to the string-representation of the given
+         * base-type. Can be overwritten by subclasses.
+         * The default-implementation simply throws an error.
+         */
+        virtual std::string addTypedef(const std::string &baseType,
+                                       const std::string &typedefName);
+
+        /**
          * Function is called after the wrapper-functions and declarations
          * have been added to the source.
          * The default-implementation does nothing.

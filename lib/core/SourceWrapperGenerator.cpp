@@ -36,6 +36,12 @@ namespace sourcespec2ir
                 // Handle references
                 return addReference(getSrcReprOfType(baseType));
             }
+            else if (tag == llvm::dwarf::DW_TAG_typedef)
+            {
+                // Handle typedefs
+                auto typedefName = dType->getName().str();
+                return addTypedef(getSrcReprOfType(baseType), typedefName);
+            }
             else
             {
                 throw utils::PallasException(
@@ -72,6 +78,14 @@ namespace sourcespec2ir
         // Overwrite this in a subclass to support references.
         throw utils::PallasException(
             "References are not supported by this WrapperGenerator.");
+    }
+
+    std::string SourceWrapperGenerator::addTypedef(
+        const std::string &baseType, const std::string &typedefName)
+    {
+        // Overwrite this in a subclass to support typedefs.
+        throw utils::PallasException(
+            "Typedefs are not supported by this WrapperGenerator.");
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
