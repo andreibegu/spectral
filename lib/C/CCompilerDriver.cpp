@@ -2,8 +2,11 @@
 #include <fstream>
 #include <stdio.h>
 
+#include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 
 #include "CCompilerDriver.h"
@@ -12,32 +15,34 @@
 namespace sourcespec2ir
 {
 
-    CCompilerDriver::CCompilerDriver(std::string specLibPath)
-        : specLibPath(specLibPath)
+    CCompilerDriver::CCompilerDriver(std::string specLibPath,
+                                     const std::string &workingDir)
+        : SourceCompilerDriver(workingDir),
+          specLibPath(specLibPath)
     {
     }
-
-    /*
-     * TODO: Very ugly, try to use libclang or something like that.
-     * TODO: Cleanup file handling (or better: avoid using files altogether)
-     */
 
     std::unique_ptr<llvm::Module> CCompilerDriver::compileSource(
         const std::string &srcFilePath, llvm::LLVMContext &context)
     {
+        // Generate a file for the compiled ir in the working directory
+        std::string irFileName = "tmp_ir_source" +
+                                 std::to_string(callCounter++) + ".ll";
+        auto irOutPath = llvm::SmallString<128>(workingDir);
+        llvm::sys::path::append(irOutPath, irFileName);
+        auto irOutStr = irOutPath.str().str();
+
         // Run compiler to generate the IR
-        // srcFilePath.substr(0, srcFilePath.find_last_of(".")) + "_tmp.ll"; //
-        const std::string irFilePath = "tmp_ir_source.ll";
 
         std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + srcFilePath +
-                                " -o " + irFilePath +
-                                " -Xclang -disable-O0-optnone" + 
-                                " -I " + specLibPath +"/" ;
+                                " -o " + irOutStr +
+                                " -Xclang -disable-O0-optnone" +
+                                " -I " + specLibPath + "/";
         std::system(clangCall.c_str());
 
         // Parse the resulting file as an LLVM-IR module
         llvm::SMDiagnostic irSMDiag;
-        auto irModule = llvm::parseIRFile(irFilePath, irSMDiag, context);
+        auto irModule = llvm::parseIRFile(irOutStr, irSMDiag, context);
 
         if (!irModule)
         {

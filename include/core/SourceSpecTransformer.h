@@ -35,7 +35,8 @@ namespace sourcespec2ir
             std::unique_ptr<SourceCompilerDriver> compilerDriver,
             std::unique_ptr<SpecUnifier> specUnifier,
             std::string srcInPath, std::string outPath,
-            const utils::OutputConfig &outputConfig);
+            const utils::OutputConfig &outputConfig, 
+            const std::string &workingDir);
 
         void transformModule();
 
@@ -57,6 +58,7 @@ namespace sourcespec2ir
     private:
         std::string srcInPath;
         std::string outPath;
+        std::string workingDir;
         const utils::OutputConfig &outputConfig;
 
         std::unique_ptr<SourceWrapperGenerator> wrapperGenerator;
@@ -170,6 +172,12 @@ namespace sourcespec2ir
          */
         void removeDuplicateDefinitions(const llvm::Module &origModule,
                                         llvm::Module &moduleWithWrappers);
+
+        /**
+         * Returns the path where the source-file that has been extended with 
+         * wrappers should be saved. 
+         */
+        std::string getPathForSourceWithWrappers();
     };
 
 }

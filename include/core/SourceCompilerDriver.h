@@ -17,6 +17,11 @@ namespace sourcespec2ir
     class SourceCompilerDriver
     {
     public:
+        /** 
+         * Creates a new SourceCompilerDriver that uses the given 
+         * working-directory.
+         */
+        SourceCompilerDriver(const std::string &workingDir);
 
         /**
          * Compiles the provided source-file into an IR-representation. 
@@ -26,6 +31,8 @@ namespace sourcespec2ir
         virtual std::unique_ptr<llvm::Module> compileSource(
             const std::string &srcFilePath, llvm::LLVMContext &context) = 0;
 
+    protected:
+        const std::string workingDir;
     };
 
 }

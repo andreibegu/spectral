@@ -9,11 +9,12 @@ namespace sourcespec2ir
     CppSpecTransformer::CppSpecTransformer(
         std::string specLibPath,
         std::string srcInPath, std::string outPath,
-        const utils::OutputConfig &outputConfig)
+        const utils::OutputConfig &outputConfig,
+        const std::string &workingDir)
         : SourceSpecTransformer(
-            std::make_unique<CppCompilerDriver>(specLibPath),
-            std::make_unique<CppSpecUnifier>(outputConfig.printUnificationInfo),
-            srcInPath, outPath, outputConfig)
+              std::make_unique<CppCompilerDriver>(specLibPath, workingDir),
+              std::make_unique<CppSpecUnifier>(outputConfig.printUnificationInfo),
+              srcInPath, outPath, outputConfig, workingDir)
     {
     }
 
