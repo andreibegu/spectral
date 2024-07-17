@@ -24,14 +24,17 @@ namespace sourcespec2ir
                 // Recursively unwrap the pointer
                 auto baseRepr = getSrcReprOfType(baseType);
                 return addPointer(baseRepr);
-                // return baseRepr + "*";
             }
             else if (tag == llvm::dwarf::DW_TAG_const_type)
             {
                 // Handle const-types
                 auto baseRepr = getSrcReprOfType(baseType);
                 return addConst(baseRepr);
-                // return getSrcReprOfType(baseType) + " const ";
+            }
+            else if (tag == llvm::dwarf::DW_TAG_reference_type)
+            {
+                // Handle references
+                return addReference(getSrcReprOfType(baseType));
             }
             else
             {
@@ -62,6 +65,13 @@ namespace sourcespec2ir
         auto currentNSpace = nSpace->getName().str();
         auto parentNSpace = getSrcNamespace(nSpace->getScope());
         return addNamespace(parentNSpace, currentNSpace);
+    }
+
+    std::string SourceWrapperGenerator::addReference(const std::string &baseType)
+    {
+        // Overwrite this in a subclass to support references.
+        throw utils::PallasException(
+            "References are not supported by this WrapperGenerator.");
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(

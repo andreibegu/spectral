@@ -43,6 +43,11 @@ namespace sourcespec2ir
         return baseType + "*";
     }
 
+    std::string CppWrapperGenerator::addReference(const std::string &baseType)
+    {
+        return baseType + " &";
+    }
+
     std::string CppWrapperGenerator::addNamespace(
         const std::string &parentNamespace, const std::string &childNamespace)
     {
