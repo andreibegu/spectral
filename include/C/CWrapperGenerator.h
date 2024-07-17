@@ -19,12 +19,9 @@ namespace sourcespec2ir
 
     protected:
         std::string addConst(const std::string &baseType) override;
-
         std::string addPointer(const std::string &baseType) override;
-
-        std::string addNamespace(const std::string &parentNamespace,
-                                 const std::string &childNamespace) override;
-
+        std::string addTypedef(const std::string &baseType,
+                               const std::string &typedefName) override;
         void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
     };
 

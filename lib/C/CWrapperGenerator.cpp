@@ -13,7 +13,7 @@ namespace sourcespec2ir
     {
         std::stringstream stream;
 
-        // Use #pragma to enforce warnings being treated as errors 
+        // Use #pragma to enforce warnings being treated as errors
         // in wrapper-functions
         stream << "#pragma clang diagnostic push \n";
         stream << "#pragma clang diagnostic error \"-Wall\" \n";
@@ -51,17 +51,16 @@ namespace sourcespec2ir
         return baseType + "*";
     }
 
-    std::string CWrapperGenerator::addNamespace(const std::string &parentNamespace,
-                                                const std::string &childNamespace)
+    std::string CWrapperGenerator::addTypedef(
+        const std::string &baseType, const std::string &typedefName)
     {
-        // C does not have namespaces --> this should never happen
-        throw utils::PallasException("Namespaces in C are not supported");
+        return typedefName;
     }
-
+    
     void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
-        // Add include for the specification-library to the top of the 
-        // generated file. 
+        // Add include for the specification-library to the top of the
+        // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include <c_spec_lib.h>", 0));
     }

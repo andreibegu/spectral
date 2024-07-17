@@ -104,24 +104,48 @@ namespace sourcespec2ir
         /**
          * Adds a const-qualifier to the given base-type.
          */
-        virtual std::string addConst(const std::string &baseType) = 0;
+        virtual std::string addConst(const std::string &baseType);
 
         /**
          * Adds a pointer-qualifier to the given base-type.
          */
-        virtual std::string addPointer(const std::string &baseType) = 0;
+        virtual std::string addPointer(const std::string &baseType);
 
         /**
          * Adds a namespace-qualifier to the string represnetation of the given
          * parent-namespace.
          */
         virtual std::string addNamespace(const std::string &parentNamespace,
-                                         const std::string &childNamespace) = 0;
+                                         const std::string &childNamespace);
+
+        /**
+         * Adds a reference qualifier to the string-representation of the given
+         * base-type. Can be overwritten by subclasses.
+         * The default-implementation simply throws an error.
+         */
+        virtual std::string addReference(const std::string &baseType);
+
+        /**
+         * Adds a typedef qualifier to the string-representation of the given
+         * base-type. Can be overwritten by subclasses.
+         * The default-implementation simply throws an error.
+         */
+        virtual std::string addTypedef(const std::string &baseType,
+                                       const std::string &typedefName);
+
+        /**
+         * This function is called when a different type-tag is encountered that 
+         * is not handled by the default addXXX-methods. 
+         * The default-implementation just throws an error. 
+         * Subclasses can overwrite this to support other type-tags. 
+         */
+        virtual std::string addOtherQualifier(const std::string &baseType, 
+            const llvm::DIDerivedType & type);
 
         /**
          * Function is called after the wrapper-functions and declarations
-         * have been added to the source. 
-         * The default-implementation does nothing. 
+         * have been added to the source.
+         * The default-implementation does nothing.
          * Can be overridden by subclasses to apply constomizations.
          */
         virtual void modifySrcWithWrappers(std::vector<SrcLine> &srcLines);
