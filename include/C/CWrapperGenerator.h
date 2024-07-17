@@ -22,8 +22,6 @@ namespace sourcespec2ir
         std::string addPointer(const std::string &baseType) override;
         std::string addTypedef(const std::string &baseType,
                                const std::string &typedefName) override;
-        std::string addNamespace(const std::string &parentNamespace,
-                                 const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
     };
 

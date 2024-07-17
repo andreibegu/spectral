@@ -15,38 +15,20 @@ namespace sourcespec2ir
         // Check if type is a derived type
         if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
         {
-            auto tag = dType->getTag();
-            auto baseType = dType->getBaseType();
+            const auto tag = dType->getTag();
+            const auto baseType = dType->getBaseType();
+            const auto baseTyStr = getSrcReprOfType(baseType);
 
             if (tag == llvm::dwarf::DW_TAG_pointer_type)
-            {
-                // Handle Pointer-type
-                // Recursively unwrap the pointer
-                auto baseRepr = getSrcReprOfType(baseType);
-                return addPointer(baseRepr);
-            }
+                return addPointer(baseTyStr);
             else if (tag == llvm::dwarf::DW_TAG_const_type)
-            {
-                // Handle const-types
-                auto baseRepr = getSrcReprOfType(baseType);
-                return addConst(baseRepr);
-            }
+                return addConst(baseTyStr);
             else if (tag == llvm::dwarf::DW_TAG_reference_type)
-            {
-                // Handle references
-                return addReference(getSrcReprOfType(baseType));
-            }
+                return addReference(baseTyStr);
             else if (tag == llvm::dwarf::DW_TAG_typedef)
-            {
-                // Handle typedefs
-                auto typedefName = dType->getName().str();
-                return addTypedef(getSrcReprOfType(baseType), typedefName);
-            }
+                return addTypedef(baseTyStr, dType->getName().str());
             else
-            {
-                throw utils::PallasException(
-                    "Encountered an unsupported type-tag: " + dType->getTag());
-            }
+                return addOtherQualifier(baseTyStr, *dType);
         }
 
         // Assume that the DIType is a plain DIType and just get the name
@@ -73,9 +55,23 @@ namespace sourcespec2ir
         return addNamespace(parentNSpace, currentNSpace);
     }
 
+    std::string SourceWrapperGenerator::addConst(const std::string &baseType)
+    {
+        // Override this to support const.
+        throw utils::PallasException(
+            "Const is not supported by this WrapperGenerator.");
+    }
+
+    std::string SourceWrapperGenerator::addPointer(const std::string &baseType)
+    {
+        // Override this to support pointers.
+        throw utils::PallasException(
+            "Pointers are not supported by this WrapperGenerator.");
+    }
+
     std::string SourceWrapperGenerator::addReference(const std::string &baseType)
     {
-        // Overwrite this in a subclass to support references.
+        // Override this to support references.
         throw utils::PallasException(
             "References are not supported by this WrapperGenerator.");
     }
@@ -83,9 +79,26 @@ namespace sourcespec2ir
     std::string SourceWrapperGenerator::addTypedef(
         const std::string &baseType, const std::string &typedefName)
     {
-        // Overwrite this in a subclass to support typedefs.
+        // Override this to support typedefs.
         throw utils::PallasException(
             "Typedefs are not supported by this WrapperGenerator.");
+    }
+
+    std::string SourceWrapperGenerator::addOtherQualifier(
+        const std::string &baseType, const llvm::DIDerivedType &type)
+    {
+        // Override this to support other type-tags that are not
+        // supported by the default-implementation.
+        throw utils::PallasException(
+            "Encountered an unsupported type-tag: " + type.getTag());
+    }
+
+    std::string SourceWrapperGenerator::addNamespace(
+        const std::string &parentNamespace, const std::string &childNamespace)
+    {
+        // Override this to support namespaces.
+        throw utils::PallasException(
+            "Namespaces are not supported by this WrapperGenerator.");
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
