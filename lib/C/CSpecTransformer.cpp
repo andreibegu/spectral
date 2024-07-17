@@ -8,12 +8,14 @@ namespace sourcespec2ir
         std::unique_ptr<SourceCompilerDriver> compilerDriver,
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
-        const utils::OutputConfig &outputConfig)
+        const utils::OutputConfig &outputConfig,
+        const std::string &workingDir)
         : SourceSpecTransformer(std::move(compilerDriver),
-                                std::move(specUnifier), 
-                                srcInPath, 
-                                outPath, 
-                                outputConfig)
+                                std::move(specUnifier),
+                                srcInPath,
+                                outPath,
+                                outputConfig,
+                                workingDir)
     {
     }
 

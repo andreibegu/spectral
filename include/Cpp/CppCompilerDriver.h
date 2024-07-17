@@ -3,7 +3,6 @@
 
 #include "SourceCompilerDriver.h"
 
-
 namespace sourcespec2ir
 {
 
@@ -13,13 +12,16 @@ namespace sourcespec2ir
     class CppCompilerDriver : public SourceCompilerDriver
     {
     public:
-        CppCompilerDriver(std::string specLibPath);
+        CppCompilerDriver(std::string specLibPath, const std::string &workingDir);
 
         std::unique_ptr<llvm::Module> compileSource(
             const std::string &srcFilePath, llvm::LLVMContext &context);
 
     private:
         std::string specLibPath;
+        // Counter that is used to generate different filenames every time the 
+        // compiler-driver is called. 
+        std::size_t callCounter = 0;
     };
 
 }

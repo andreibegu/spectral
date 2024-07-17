@@ -26,27 +26,36 @@ enum ClSourceLang
 std::map<ClSourceLang, std::string> langNames = {
     {C, "C"}, {Cpp, "C++"}, {Infer, "Auto"}};
 
+static llvm::cl::OptionCategory SpecTransformCat(
+    "Specification transformation");
+
 static llvm::cl::opt<std::string> clInFile(
-    llvm::cl::Positional, llvm::cl::desc("input-file"), llvm::cl::Required);
+    llvm::cl::Positional, llvm::cl::desc("input-file"), llvm::cl::Required,
+    llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<std::string> clOutFile(
-    "o", llvm::cl::desc("output-file"), llvm::cl::value_desc("filename"));
+    "o",
+    llvm::cl::desc("output-file"),
+    llvm::cl::value_desc("Path to out-file"),
+    llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<bool> clPrintDebug(
-    "d", llvm::cl::desc("Print debug info"), llvm::cl::init(false));
+    "d", llvm::cl::desc("Print debug info"), llvm::cl::init(false),
+    llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<bool> clPrintMatching(
     "m", llvm::cl::desc("Print info about matching-stage"),
-    llvm::cl::init(false));
+    llvm::cl::init(false), llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<bool> clPrintUnification(
     "u", llvm::cl::desc("Print info about unification-stage"),
-    llvm::cl::init(false));
+    llvm::cl::init(false), llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<std::string> clLibPath(
     "lib", llvm::cl::desc("Path to specification-library"),
     llvm::cl::value_desc("Directory of the specification library"),
-    llvm::cl::init("../../res/spec_libs/c/"));
+    llvm::cl::init("../../res/spec_libs/c/"),
+    llvm::cl::cat(SpecTransformCat));
 
 static llvm::cl::opt<ClSourceLang> clLang(
     "lang", llvm::cl::desc("Source-language of the input-file"),
@@ -54,14 +63,23 @@ static llvm::cl::opt<ClSourceLang> clLang(
     llvm::cl::values(
         clEnumVal(C, "C"),
         clEnumVal(Cpp, "C++"),
-        clEnumVal(Infer, "Infer source-language from file-extension")));
+        clEnumVal(Infer, "Infer source-language from file-extension")),
+    llvm::cl::cat(SpecTransformCat));
+
+static llvm::cl::opt<std::string> clWorkDir(
+    "wDir",
+    llvm::cl::init(""),
+    llvm::cl::desc("The working directory. If the option is not set, the current directory is used."),
+    llvm::cl::value_desc("Path to the working-directory."),
+    llvm::cl::cat(SpecTransformCat));
 
 int main(int argc, char **argv)
 {
     // Parse commandline-options and wrap them in struct
+    llvm::cl::HideUnrelatedOptions(SpecTransformCat);
     llvm::cl::ParseCommandLineOptions(argc, argv);
 
-    // Bundle debout-optins in config-struct
+    // Bundle debug-options in config-struct
     sourcespec2ir::utils::OutputConfig config(
         clPrintMatching, clPrintUnification, clPrintDebug);
 
@@ -89,6 +107,7 @@ int main(int argc, char **argv)
     {
         llvm::outs() << "Source-language set to " << langNames[lang] << " \n";
         llvm::outs() << "From: " << clInFile << " to: " << clOutFile << "\n";
+        llvm::outs() << "Working directory: " << clWorkDir << "\n";
     }
 
     try
@@ -96,15 +115,15 @@ int main(int argc, char **argv)
         if (lang == C)
         {
             sourcespec2ir::CSpecTransformer transformer(
-                std::make_unique<sourcespec2ir::CCompilerDriver>(clLibPath),
+                std::make_unique<sourcespec2ir::CCompilerDriver>(clLibPath, clWorkDir),
                 std::make_unique<sourcespec2ir::CSpecUnifier>(config.printUnificationInfo),
-                clInFile, clOutFile, config);
+                clInFile, clOutFile, config, clWorkDir);
             transformer.transformModule();
         }
         else if (lang == Cpp)
         {
             sourcespec2ir::CppSpecTransformer transformer(
-                clLibPath, clInFile, clOutFile, config);
+                clLibPath, clInFile, clOutFile, config, clWorkDir);
             transformer.transformModule();
         }
     }
@@ -114,7 +133,8 @@ int main(int argc, char **argv)
         // We print the error message and return a non-zero return-value to
         // allow for lit-tests that expect the program to fail.
         llvm::errs() << "===============================================\n";
-        llvm::errs() << "ERROR: An error was encountered during the" << " specification transformation: \n";
+        llvm::errs() << "ERROR: An error was encountered during the"
+                     << " specification transformation: \n";
         llvm::errs() << e.what() << "\n";
         llvm::errs() << "===============================================\n";
         return 1;

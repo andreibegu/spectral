@@ -1,11 +1,14 @@
 #include <stdexcept>
 #include <vector>
 
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
@@ -25,9 +28,11 @@ namespace sourcespec2ir
         std::unique_ptr<SourceCompilerDriver> compilerDriver,
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
-        const utils::OutputConfig &outputConfig)
+        const utils::OutputConfig &outputConfig,
+        const std::string &workingDir)
         : srcInPath(srcInPath),
           outPath(outPath),
+          workingDir(workingDir),
           outputConfig(outputConfig),
           srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
@@ -109,16 +114,12 @@ namespace sourcespec2ir
             wrappers.push_back(wrapper.get());
 
         // Insert wrappers into source
-        // TODO: Remove hardcoded path, use the LLVM file-utilities to
-        //       generate a temporary file
-        const auto srcFileExt = srcInPath.substr(srcInPath.find_last_of(".") + 1);
-        const std::string tmpSrcPath = "source_wrappers." + srcFileExt;
-        wrapperGenerator->buildSrcWithWrappers(srcInPath, tmpSrcPath, wrappers,
-                                               *specDeclarations);
-
+        const auto srcWrapperPath = getPathForSourceWithWrappers();
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
+                                               wrappers, *specDeclarations);
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
-            tmpSrcPath, *irContext);
+            srcWrapperPath, *irContext);
 
         // Apply mem2reg to new module
         promoteMemToReg(*moduleWithWrappers);
@@ -391,6 +392,17 @@ namespace sourcespec2ir
             llvm::convertToDeclaration(g);
             // llvm::outs() << "Turned " << g.getName().str() << " into declaration.\n";
         }
+    }
+
+    std::string SourceSpecTransformer::getPathForSourceWithWrappers()
+    {
+        // Build the file-name using the extension from the source-file
+        const auto srcExt = srcInPath.substr(srcInPath.find_last_of(".") + 1);
+        const std::string tmpSrcFilename = "source_wrappers." + srcExt;
+        // Append the generated file-name to the path to the working-directory
+        auto tmpSrcPath = llvm::SmallString<128>(workingDir);
+        llvm::sys::path::append(tmpSrcPath, tmpSrcFilename);
+        return tmpSrcPath.str().str();
     }
 
     /*

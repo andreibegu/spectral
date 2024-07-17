@@ -13,13 +13,16 @@ namespace sourcespec2ir
     class CCompilerDriver : public SourceCompilerDriver
     {
     public:
-        CCompilerDriver(std::string specLibPath);
+        CCompilerDriver(std::string specLibPath, const std::string &workingDir);
 
         std::unique_ptr<llvm::Module> compileSource(
             const std::string &srcFilePath, llvm::LLVMContext &context);
 
     private:
         std::string specLibPath;
+        // Counter that is used to generate different filenames every time the 
+        // compiler-driver is called. 
+        std::size_t callCounter = 0;
     };
 
 }
