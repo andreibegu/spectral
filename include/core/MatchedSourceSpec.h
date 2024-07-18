@@ -1,8 +1,6 @@
 #ifndef PALLAS_MATCHEDSOURCESPEC_H
 #define PALLAS_MATCHEDSOURCESPEC_H
 
-#include "SpecParser.h"
-
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>

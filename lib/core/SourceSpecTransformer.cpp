@@ -21,6 +21,7 @@
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
+#include "wrapper/SpecParserWrapper.h"
 
 namespace sourcespec2ir
 {
@@ -46,6 +47,10 @@ namespace sourcespec2ir
         passBuilder.registerFunctionAnalyses(fam);
         passBuilder.registerLoopAnalyses(lam);
         passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
+    }
+
+    void SourceSpecTransformer::transformModule()
+    {
 
         // Compile the source-file into IR
         irModule = srcCompilerDriver->compileSource(srcInPath, *irContext);
@@ -62,30 +67,19 @@ namespace sourcespec2ir
         /*
         if (outputConfig.printDebugInfo)
         {
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
             llvm::outs() << "PRE-Transformation\n";
             writeToFile(*irModule, "");
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
         */
 
         // Parse the source-file to extract the specifications
-        srcFileStream = std::make_unique<std::ifstream>();
-        srcFileStream->open(srcInPath);
-        srcInStream = std::make_unique<antlr4::ANTLRInputStream>(*srcFileStream);
-        srcLexer = std::make_unique<SpecLexer>(srcInStream.get());
-        srcTokens = std::make_unique<antlr4::CommonTokenStream>(srcLexer.get());
-        srcParser = std::make_unique<SpecParser>(srcTokens.get());
-        srcParseTree = srcParser->file();
-
+        auto parser = std::make_unique<SpecParserWrapper>(srcInPath);
+        auto srcParseTree = parser->getSrcParseTree();
         if (!srcParseTree)
-        {
-            throw utils::PallasException("Unable to parse the provided source file.");
-        }
-    }
+            throw utils::PallasException("Unable to parse the source file.");
 
-    void SourceSpecTransformer::transformModule()
-    {
         // Set up the WrapperGenerator
         wrapperGenerator = createWrapperGenerator();
 
@@ -96,6 +90,9 @@ namespace sourcespec2ir
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
         auto matchedSpecs = specMatcher->matchSpecs();
+
+        // Release the parser and input-streams
+        parser.reset();
 
         // TODO: This should be bundled in the Wrapper generator, and not here
         // Create wrappers for function-contracts
@@ -135,10 +132,10 @@ namespace sourcespec2ir
 
         if (outputConfig.printDebugInfo)
         {
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
             llvm::outs() << "PRE-Unification\n";
             writeToFile(*irModule, "");
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++++++++++\n";
+            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
 
         // Generate metadata for specifications
@@ -213,7 +210,8 @@ namespace sourcespec2ir
         }
     }
 
-    void SourceSpecTransformer::encodeLoopInvBlock(const MatchedLoopInvariantBlock &invBlock)
+    void SourceSpecTransformer::encodeLoopInvBlock(
+        const MatchedLoopInvariantBlock &invBlock)
     {
         const auto numInvs = invBlock.invariants.size();
         if (numInvs == 0)
@@ -340,7 +338,8 @@ namespace sourcespec2ir
         return llvm::MDNode::get(*irContext, mdElems);
     }
 
-    void SourceSpecTransformer::writeToFile(const llvm::Module &module, std::string outPath)
+    void SourceSpecTransformer::writeToFile(
+        const llvm::Module &module, std::string outPath)
     {
         if (outPath.empty() || outputConfig.printDebugInfo)
         {
@@ -355,7 +354,8 @@ namespace sourcespec2ir
         {
             // Write the IR-representation to the given file.
             std::error_code eCode;
-            llvm::raw_fd_ostream outStream(outPath, eCode, llvm::sys::fs::CD_CreateAlways);
+            llvm::raw_fd_ostream outStream(outPath, eCode,
+                                           llvm::sys::fs::CD_CreateAlways);
             if (!eCode)
             {
                 // Use IRPrintingPasses alternatively
@@ -365,7 +365,8 @@ namespace sourcespec2ir
             else
             {
                 throw std::runtime_error("Failed to write output to " +
-                                         std::string(outPath) + ". Error code: " + eCode.message());
+                                         std::string(outPath) +
+                                         ". Error code: " + eCode.message());
             }
             outStream.close();
         }
@@ -411,7 +412,7 @@ namespace sourcespec2ir
     std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(
         SpecParser::FileContext *specParseTree, llvm::Module *irModule)
     {
-        return std::make_unique<IRBasedSourceSpecMatcher>(specParseTree, irModule,
-                                                          &fam, outputConfig.printMatchingInfo);
+        return std::make_unique<IRBasedSourceSpecMatcher>(
+            specParseTree, irModule, &fam, outputConfig.printMatchingInfo);
     }
 }
