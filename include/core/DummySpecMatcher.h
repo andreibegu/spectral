@@ -17,7 +17,7 @@ namespace sourcespec2ir
         DummySpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule, std::string contractDefaultCtxName);
 
     protected:
-        std::string getContractBlockContext(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
+        std::string matchFContract(size_t startLine, size_t startCol, size_t endLine, size_t endCol);
 
     private:
         std::string defaultContractCtx;

@@ -27,9 +27,10 @@ namespace sourcespec2ir
     class SourceSpecMatcher : SpecParserBaseVisitor
     {
     public:
-        SourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule);
+        SourceSpecMatcher(SpecParser::FileContext *specParseTree,
+                          llvm::Module *irModule);
 
-        // Starts the matching-process 
+        // Starts the matching-process
         std::unique_ptr<MatchedSpecifications> matchSpecs();
 
     protected:
@@ -43,14 +44,14 @@ namespace sourcespec2ir
          * TODO: Check if it makes more sense to return a pointer to the
          *       function instead of the name.
          */
-        virtual std::string getContractBlockContext(
+        virtual std::string matchFContract(
             size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
 
         /**
          * Given the location of a specification-block of loop-invariants,
          * returns a pointer to the loop that this specification refers to,
          * and a pointer to the function that the matched loop is contained in.
-         * If the spec-block cannot be matched, a runtime exception it thrown.
+         * If the spec-block cannot be matched, an exception it thrown.
          *
          * TODO: The loop-pointer might go out of scope. Return something
          *       else! E.g. a pointer to the llvm.loop md-node.
@@ -58,25 +59,54 @@ namespace sourcespec2ir
         virtual std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
             size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
 
+        /**
+         * Given the location of a block of spec-statements,
+         * returns a pointer to the instruction that the specification refer to.
+         * If the spec-block cannot be matched, an exception it thrown.
+         */
+        virtual llvm::Instruction *matchStatementBlock(
+            size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+
     private:
-        // Struct in which the matched specifications are collected. 
+        // Struct in which the matched specifications are collected.
         std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;
 
         // Temporarily stores the pointer to the current function-contract
         // while the contained contract-statements are collected
-        std::unique_ptr<sourcespec2ir::MatchedFunctionContract> contract = nullptr;
+        std::unique_ptr<sourcespec2ir::MatchedFunctionContract>
+            contract = nullptr;
 
-        // Overwritten visitor-methods
-        std::any visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx) override;
-        std::any visitSpecLoopInvariantBlock(SpecParser::SpecLoopInvariantBlockContext *ctx) override;
-        std::any visitRequiresClause(SpecParser::RequiresClauseContext *ctx) override;
-        std::any visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx) override;
+        // Temporary pointer to the current spec-statement-block while the
+        // statements are matched.
+        std::unique_ptr<sourcespec2ir::MatchedSpecStatementBlock>
+            stmntBlock = nullptr;
 
+        // Visitors for function-contracts
+        std::any visitSpecContractBlock(
+            SpecParser::SpecContractBlockContext *ctx) override;
+        std::any visitRequiresClause(
+            SpecParser::RequiresClauseContext *ctx) override;
+        std::any visitEnsuresClause(
+            SpecParser::EnsuresClauseContext *ctx) override;
+        // Visitor for loop-invariants
+        std::any visitSpecLoopInvariantBlock(
+            SpecParser::SpecLoopInvariantBlockContext *ctx) override;
+        // Visitor for specification-statement blocks.
+        std::any visitSpecStatementBlock(
+            SpecParser::SpecStatementBlockContext *ctx) override;
+        std::any visitAssertStatement(
+            SpecParser::AssertStatementContext *ctx) override;
+        std::any visitAssumeStatement(
+            SpecParser::AssumeStatementContext *ctx) override;
 
-        // Adds the given statement to the current function-contract 
+        // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
-        void addStatementToFContract(ContractStatementType type, 
-                                     SpecParser::SpecExpressionContext *expr);
+        void addToFContract(ContractStatementType type,
+                            SpecParser::SpecExpressionContext *expr);
+
+        // Adds a statement to the current block of specification-statements
+        void addToStmntBlock(SpecStatementType type,
+                             SpecParser::SpecExpressionContext *expr);
 
         /**
          * Retrieving the textual representation of the specification

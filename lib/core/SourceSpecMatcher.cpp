@@ -7,7 +7,8 @@
 
 namespace sourcespec2ir
 {
-    SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree, llvm::Module *irModule)
+    SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
+                                         llvm::Module *irModule)
         : specParseTree(specParseTree),
           irModule(irModule)
     {
@@ -23,7 +24,8 @@ namespace sourcespec2ir
         return std::move(matchedSpecs);
     }
 
-    std::any SourceSpecMatcher::visitSpecContractBlock(SpecParser::SpecContractBlockContext *ctx)
+    std::any SourceSpecMatcher::visitSpecContractBlock(
+        SpecParser::SpecContractBlockContext *ctx)
     {
         // Safety-check that the state of the object is valid
         assert(contract == nullptr);
@@ -33,10 +35,10 @@ namespace sourcespec2ir
         auto startCol = ctx->start->getCharPositionInLine();
         auto endLine = ctx->stop->getLine();
         auto endCol = ctx->stop->getCharPositionInLine();
-        const auto specFun = getContractBlockContext(startLine, startCol,
-                                                     endLine, endCol);
+        const auto specFun = matchFContract(startLine, startCol,
+                                            endLine, endCol);
         auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
-        assert(irFunction != nullptr); 
+        assert(irFunction != nullptr);
 
         // Create new matched contract
         contract = std::make_unique<MatchedFunctionContract>(irFunction);
@@ -50,22 +52,22 @@ namespace sourcespec2ir
         return 0;
     }
 
-    std::any SourceSpecMatcher::visitRequiresClause(SpecParser::RequiresClauseContext *ctx)
+    std::any SourceSpecMatcher::visitRequiresClause(
+        SpecParser::RequiresClauseContext *ctx)
     {
-        addStatementToFContract(ContractStatementType::Requires,
-                                ctx->specExpression());
+        addToFContract(Requires, ctx->specExpression());
         return 0;
     }
 
-    std::any SourceSpecMatcher::visitEnsuresClause(SpecParser::EnsuresClauseContext *ctx)
+    std::any SourceSpecMatcher::visitEnsuresClause(
+        SpecParser::EnsuresClauseContext *ctx)
     {
-        addStatementToFContract(ContractStatementType::Ensures,
-                                ctx->specExpression());
+        addToFContract(Ensures, ctx->specExpression());
         return 0;
     }
 
-    void SourceSpecMatcher::addStatementToFContract(ContractStatementType type,
-                                                    SpecParser::SpecExpressionContext *expr)
+    void SourceSpecMatcher::addToFContract(
+        ContractStatementType type, SpecParser::SpecExpressionContext *expr)
     {
         if (!contract)
             assert("No contract set while adding statement");
@@ -74,14 +76,16 @@ namespace sourcespec2ir
         contract->addStatement(std::move(stmnt));
     }
 
-    std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(SpecParser::SpecLoopInvariantBlockContext *ctx)
+    std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(
+        SpecParser::SpecLoopInvariantBlockContext *ctx)
     {
         // Match the spec-block to the IR
         auto startLine = ctx->start->getLine();
         auto startCol = ctx->start->getCharPositionInLine();
         auto endLine = ctx->stop->getLine();
         auto endCol = ctx->stop->getCharPositionInLine();
-        auto [parentFunc, loop] = matchLoopInvBlock(startLine, startCol, endLine, endCol);
+        auto [parentFunc, loop] = matchLoopInvBlock(
+            startLine, startCol, endLine, endCol);
 
         if (parentFunc == nullptr || loop == nullptr)
         {
@@ -93,7 +97,7 @@ namespace sourcespec2ir
         auto loopID = llvm::dyn_cast_or_null<llvm::MDTuple>(loop->getLoopID());
         if (loopID == nullptr)
         {
-            throw utils::PallasException("Failed to get llvm.loop md-node for loop");
+            throw utils::PallasException("Failed to get llvm.loop md-node");
         }
         auto loopHeader = loop->getHeader();
         auto invBlock = std::make_unique<MatchedLoopInvariantBlock>(
@@ -111,7 +115,59 @@ namespace sourcespec2ir
         return 0;
     }
 
-    std::string SourceSpecMatcher::getExprAsStr(const SpecParser::SpecExpressionContext &eCtx)
+    std::any SourceSpecMatcher::visitSpecStatementBlock(
+        SpecParser::SpecStatementBlockContext *ctx)
+    {
+        // Safety-check that the state of the object is valid
+        assert(stmntBlock == nullptr);
+
+        // Match contract to instruction
+        auto startLine = ctx->start->getLine();
+        auto startCol = ctx->start->getCharPositionInLine();
+        auto endLine = ctx->stop->getLine();
+        auto endCol = ctx->stop->getCharPositionInLine();
+        const auto instr = matchStatementBlock(startLine, startCol,
+                                               endLine, endCol);
+        assert(instr != nullptr);
+
+        // Create new matched contract-block
+        stmntBlock = std::make_unique<MatchedSpecStatementBlock>(instr);
+
+        // Add all statements to the contract by traversing the children
+        for (auto c : ctx->children)
+            visit(c);
+
+        // Add the new contract to the collection of contracts.
+        matchedSpecs->matchedStmntBlocks.push_back(std::move(stmntBlock));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitAssertStatement(
+        SpecParser::AssertStatementContext *ctx)
+    {
+        addToStmntBlock(Assert, ctx->specExpression());
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitAssumeStatement(
+        SpecParser::AssumeStatementContext *ctx)
+    {
+        addToStmntBlock(Assume, ctx->specExpression());
+        return 0;
+    }
+
+    void SourceSpecMatcher::addToStmntBlock(
+        SpecStatementType type, SpecParser::SpecExpressionContext *expr)
+    {
+        if (!stmntBlock)
+            assert("No parent set while adding spec-statement");
+        auto exprStr = getExprAsStr(*expr);
+        auto stmnt = std::make_unique<MatchedSpecStatement>(type, exprStr);
+        stmntBlock->addStatement(std::move(stmnt));
+    }
+
+    std::string SourceSpecMatcher::getExprAsStr(
+        const SpecParser::SpecExpressionContext &eCtx)
     {
         auto startToken = eCtx.start;
         auto stopToken = eCtx.stop;

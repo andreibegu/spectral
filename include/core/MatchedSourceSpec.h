@@ -5,6 +5,7 @@
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Instruction.h>
 #include <llvm/IR/Metadata.h>
 
 namespace sourcespec2ir
@@ -15,8 +16,17 @@ namespace sourcespec2ir
      */
     enum ContractStatementType
     {
-        Requires, // Requires-clause
-        Ensures   // Ensures-clause
+        Requires,
+        Ensures
+    };
+
+    /**
+     * Enum to represent the different types of specification-statements
+     */
+    enum SpecStatementType
+    {
+        Assert,
+        Assume
     };
 
     /**
@@ -96,6 +106,40 @@ namespace sourcespec2ir
     };
 
     /**
+     * Struct that represents a specification statement from the source-file.
+     */
+    struct MatchedSpecStatement
+    {
+        SpecStatementType type;
+        // The source-language expression of the statement
+        std::string expr;
+
+        MatchedSpecStatement(SpecStatementType type, std::string expr)
+            : type(type), expr(expr)
+        {
+        }
+    };
+
+    /**
+     * A struct that represents a block of specification-statements that have
+     * been matched to an instruction in the IR.
+     */
+    struct MatchedSpecStatementBlock
+    {
+        llvm::Instruction *inst;
+        llvm::SmallVector<std::unique_ptr<MatchedSpecStatement>> statements;
+
+        MatchedSpecStatementBlock(llvm::Instruction *inst) : inst(inst)
+        {
+        }
+
+        void addStatement(std::unique_ptr<MatchedSpecStatement> stmnt)
+        {
+            statements.push_back(std::move(stmnt));
+        }
+    };
+
+    /**
      * Struct that bundles the matched specifications.
      * Contains matched function-contracts and loop-invariants.
      *
@@ -107,10 +151,13 @@ namespace sourcespec2ir
             matchedFContracts;
         llvm::SmallVector<std::unique_ptr<MatchedLoopInvariantBlock>>
             matchedLoopInvariants;
+        llvm::SmallVector<std::unique_ptr<MatchedSpecStatementBlock>>
+            matchedStmntBlocks;
 
         MatchedSpecifications()
             : matchedFContracts(),
-              matchedLoopInvariants()
+              matchedLoopInvariants(), 
+              matchedStmntBlocks()
         {
         }
     };

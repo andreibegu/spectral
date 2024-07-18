@@ -15,6 +15,7 @@
 #include <llvm/IR/PassManager.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/InstIterator.h>
+#include <llvm/IR/Instruction.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/Support/FileSystem.h>
@@ -44,6 +45,16 @@ namespace
         auto loopLocStr = getLocationString(loopSLine, loopELine);
         llvm::outs() << "Matched invariant at " << specLocStr
                      << " to loop at " << loopLocStr << "\n";
+    }
+
+    void printStmntBlockMatchingInfo(size_t specSLine, size_t specELine,
+                                     size_t instLine, size_t instCol)
+    {
+        auto specLocStr = getLocationString(specSLine, specELine);
+        auto instLocStr = std::to_string(instLine) + "::" +
+                          std::to_string(instCol);
+        llvm::outs() << "Matched statement-block at " << specLocStr
+                     << " to instruction at " << instLocStr << "\n";
     }
 
     /**
@@ -108,7 +119,7 @@ namespace sourcespec2ir
     {
     }
 
-    std::string IRBasedSourceSpecMatcher::getContractBlockContext(
+    std::string IRBasedSourceSpecMatcher::matchFContract(
         size_t startLine, size_t startCol, size_t endLine, size_t endCol)
     {
         const llvm::Function *closestFunction = nullptr;
@@ -220,29 +231,7 @@ namespace sourcespec2ir
         size_t startLine, size_t startCol, size_t endLine, size_t endCol)
     {
         // Find the first function above the loop-invariant
-        llvm::Function *parentFunction = nullptr;
-        unsigned int parentStartLine = 0;
-        for (auto &f : *irModule)
-        {
-            if (auto subprog = f.getSubprogram())
-            {
-                // Skip functions that are not in the main-file.
-                if (!isFromMainFile(*subprog))
-                    continue;
-                // TODO: Determine the end of the scope by iterating over all
-                // instruction in the subscopes and comparing the line-numbers.
-                auto fLine = subprog->getLine();
-                // Skip all functions that start after the spec-block
-                if (fLine > startLine)
-                    continue;
-                if (parentFunction == nullptr || fLine > parentStartLine)
-                {
-                    // The current funct is below the current parent funct.
-                    parentFunction = &f;
-                    parentStartLine = fLine;
-                }
-            }
-        }
+        llvm::Function *parentFunction = getFirstFunctionAbove(startLine);
 
         if (parentFunction == nullptr ||
             parentFunction->isDeclaration() ||
@@ -285,6 +274,88 @@ namespace sourcespec2ir
         return std::make_pair(parentFunction, closestLoop);
     }
 
+    llvm::Instruction *IRBasedSourceSpecMatcher::matchStatementBlock(
+        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    {
+        // Get the first function above the spec-block
+        // TODO: Consider the range that is covered by the function instead of 
+        // just considering the starting-line. 
+        auto parentFunc = getFirstFunctionAbove(startLine);
+
+        if (parentFunc == nullptr)
+        {
+            throw utils::PallasException(
+                "Failed to get enclosing function for statement-block"); 
+        }
+
+        // Traverse instructions from beginning to the end and find the first
+        // instruction that is located after the end of the specification-block.
+        // This assumes, that instructions are not reordered by the compiler.
+        // Ignore debug intrinsics.
+        llvm::Instruction *closestInst = nullptr;
+        for (auto it = inst_begin(parentFunc), end = inst_end(parentFunc); it != end; ++it)
+        {
+            // Get location of instruction
+            auto dbgLoc = it->getDebugLoc();
+            if (!dbgLoc)
+                continue;
+            const auto iLine = dbgLoc.getLine();
+            const auto iCol = dbgLoc.getCol();
+
+            // Skip instructions that are above/ before the spec-block
+            if (iLine < endLine || (iLine == endLine && iCol <= endCol))
+                continue;
+            // Skip debug-intrinsics
+            if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
+                continue;
+
+            closestInst = &*it;
+            break;
+        }
+
+        if (closestInst == nullptr)
+            throw utils::PallasException("Failed to match statement-block");
+
+        if (printMatchingInfo)
+        {
+            printStmntBlockMatchingInfo(startLine, endLine,
+                                     closestInst->getDebugLoc().getLine(), 
+                                     closestInst->getDebugLoc().getCol());
+        }
+
+        return closestInst;
+    }
+
+    llvm::Function *IRBasedSourceSpecMatcher::getFirstFunctionAbove(
+        const size_t line)
+    {
+        // Find the first function above the given line
+        llvm::Function *parentFunction = nullptr;
+        unsigned int parentStartLine = 0;
+        for (auto &f : *irModule)
+        {
+            if (auto subprog = f.getSubprogram())
+            {
+                // Skip functions that are not in the main-file.
+                if (!isFromMainFile(*subprog))
+                    continue;
+                // TODO: Determine the end of the scope by iterating over all
+                // instruction in the subscopes and comparing the line-numbers.
+                auto fLine = subprog->getLine();
+                // Skip all functions that start after the spec-block
+                if (fLine > line)
+                    continue;
+                if (parentFunction == nullptr || fLine > parentStartLine)
+                {
+                    // The current funct is below the current parent funct.
+                    parentFunction = &f;
+                    parentStartLine = fLine;
+                }
+            }
+        }
+        return parentFunction;
+    }
+
     bool IRBasedSourceSpecMatcher::isFromMainFile(
         const llvm::DISubprogram &sProg)
     {
@@ -292,19 +363,20 @@ namespace sourcespec2ir
         // of the given function matched the source-file from the loaded module.
         const auto modulePath = makeAbsPath(irModule->getSourceFileName());
 
-        // Build a path for the scope of the function by joining directory and 
+        // Build a path for the scope of the function by joining directory and
         // filename. Sometimes, a leading ./ occurs, which we remove.
         const auto funcFile = llvm::sys::path::remove_leading_dotslash(
             sProg.getFilename());
         const auto funcDir = llvm::sys::path::remove_leading_dotslash(
             sProg.getDirectory());
-        const auto funcFullPath = (funcDir + llvm::sys::path::get_separator() + funcFile).str();
+        const auto funcFullPath = funcDir + llvm::sys::path::get_separator() +
+                                  funcFile;
 
         // llvm::errs() << "=================================\n";
         // llvm::errs() << "Function: " << sProg.getName().str() << "\n";
         // llvm::errs() << "Module-file:   " << modulePath << "\n";
         // llvm::errs() << "Function-file: " << funcFullPath << "\n";
 
-        return funcFullPath == modulePath;
+        return funcFullPath.str() == modulePath;
     }
 }

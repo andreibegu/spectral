@@ -11,9 +11,9 @@ namespace sourcespec2ir
 {
 
     /**
-     * An implementation of the SourceSpecMatcher that uses the line- and 
+     * An implementation of the SourceSpecMatcher that uses the line- and
      * column-information from the debug-information in the LLVM-IR.
-     * 
+     *
      * During the matching-process, only functions from the same
      * file are considered. This is required to previent conflicting
      * line-information when other files are included.
@@ -28,22 +28,33 @@ namespace sourcespec2ir
                                  const bool printMatchingInfo);
 
     protected:
-        std::string getContractBlockContext(size_t startLine, size_t startCol,
-                                            size_t endLine, size_t endCol) override;
-                                            
+        std::string matchFContract(size_t startLine, size_t startCol,
+                                   size_t endLine, size_t endCol) override;
+
         std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
-            size_t startLine, size_t startCol, size_t endLine, size_t endCol) override;
+            size_t startLine, size_t startCol,
+            size_t endLine, size_t endCol) override;
+
+        llvm::Instruction *matchStatementBlock(
+            size_t startLine, size_t startCol,
+            size_t endLine, size_t endCol) override;
 
     private:
         const bool printMatchingInfo;
         llvm::FunctionAnalysisManager *fam;
 
         /**
-         * Returns wether the given function that is represented by the given 
-         * DISubprogram is defined in the main source-file of the module 
+         * Returns wether the given function that is represented by the given
+         * DISubprogram is defined in the main source-file of the module
          * (as opposed to being defined in an included file).
          */
         bool isFromMainFile(const llvm::DISubprogram &sProg);
+
+        /**
+         * Returns the first function above the given line. 
+         * Only functions from the main-file are considered
+         */
+        llvm::Function *getFirstFunctionAbove(const size_t line);
     };
 
 }
