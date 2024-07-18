@@ -14,8 +14,6 @@
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 
-#include "antlr4-runtime.h"
-#include "SpecLexer.h"
 #include "SpecParser.h"
 
 #include "SourceSpecMatcher.h"
@@ -72,17 +70,6 @@ namespace sourcespec2ir
 
         // Pointer to the loaded llvm-ir module
         std::unique_ptr<llvm::Module> irModule;
-
-        /**
-         * Pointers to stuff that is required to keep the parse-tree of the
-         * source-file in scope.
-         */
-        std::unique_ptr<std::ifstream> srcFileStream;
-        std::unique_ptr<antlr4::ANTLRInputStream> srcInStream;
-        std::unique_ptr<SpecLexer> srcLexer;
-        std::unique_ptr<antlr4::CommonTokenStream> srcTokens;
-        std::unique_ptr<SpecParser> srcParser;
-        SpecParser::FileContext *srcParseTree;
 
         /**
          * Analysis managers and pass builder that are used to run
@@ -178,6 +165,7 @@ namespace sourcespec2ir
          * wrappers should be saved. 
          */
         std::string getPathForSourceWithWrappers();
+
     };
 
 }
