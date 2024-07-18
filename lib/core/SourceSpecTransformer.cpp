@@ -75,10 +75,8 @@ namespace sourcespec2ir
         */
 
         // Parse the source-file to extract the specifications
-        // TODO: We could use a unique-prt for the parser, and free it after the
-        //       matching-stage?!
-        SpecParserWrapper parser(srcInPath);
-        auto srcParseTree = parser.getSrcParseTree();
+        auto parser = std::make_unique<SpecParserWrapper>(srcInPath);
+        auto srcParseTree = parser->getSrcParseTree();
         if (!srcParseTree)
             throw utils::PallasException("Unable to parse the source file.");
 
@@ -92,6 +90,9 @@ namespace sourcespec2ir
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
         auto matchedSpecs = specMatcher->matchSpecs();
+
+        // Release the parser and input-streams
+        parser.reset();
 
         // TODO: This should be bundled in the Wrapper generator, and not here
         // Create wrappers for function-contracts
