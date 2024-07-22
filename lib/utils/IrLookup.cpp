@@ -11,12 +11,14 @@ namespace sourcespec2ir
 {
     namespace utils
     {
-        std::unique_ptr<std::set<llvm::DILocalVariable *>> getSrcVariablesForFunction(const llvm::Function &fun)
+        std::unique_ptr<std::set<llvm::DILocalVariable *>>
+        getSrcVariablesForFunction(const llvm::Function &fun)
         {
             if (fun.isDeclaration())
             {
                 // This is an external declaration, not a definition
-                throw utils::PallasException("Recieved a function declaration instead of a function definition");
+                throw utils::PallasException(
+                    "Function declarations are not supported.");
             }
 
             auto srcVarSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
@@ -40,19 +42,56 @@ namespace sourcespec2ir
             return srcVarSet;
         }
 
-        std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForLoopInv(
-           llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader)
+        std::unique_ptr<std::set<llvm::DILocalVariable *>> getVarsForLoopInv(
+            llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader)
         {
             auto varSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
             const llvm::DominatorTree domTree(*parentFunc);
 
             // Get all llvm.dbg.-intrinsics that dominate the loop
-            for (auto i = llvm::inst_begin(parentFunc), 
-                      end = llvm::inst_end(parentFunc); i != end; ++i)
+            for (auto i = llvm::inst_begin(parentFunc),
+                      end = llvm::inst_end(parentFunc);
+                 i != end; ++i)
             {
                 if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
                 {
-                    if (!domTree.dominates(intr, loopHeader)) 
+                    if (!domTree.dominates(intr, loopHeader))
+                        continue;
+                    auto *srcVar = intr->getVariable();
+                    varSet->insert(srcVar);
+                }
+            }
+
+            return varSet;
+        }
+
+        std::unique_ptr<std::set<llvm::DILocalVariable *>> getVarsForStatement(
+            llvm::Instruction *inst)
+        {
+            // Get the parent-function of the instruction
+            if (inst == nullptr ||
+                inst->getParent() == nullptr ||
+                inst->getParent()->getParent() == nullptr)
+            {
+                throw utils::PallasException(
+                    "Encountered instruction without parent");
+            }
+            auto parentFunc = inst->getParent()->getParent();
+
+            // Collect all variables from the llvm.dbg.-intrinsics that 
+            // dominate the instruction
+            auto varSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
+            const llvm::DominatorTree domTree(*parentFunc);
+            for (auto i = llvm::inst_begin(parentFunc),
+                      end = llvm::inst_end(parentFunc);
+                 i != end; ++i)
+            {
+                if (&*i == inst) 
+                    continue;
+
+                if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+                {
+                    if (!domTree.dominates(intr, inst))
                         continue;
                     auto *srcVar = intr->getVariable();
                     varSet->insert(srcVar);

@@ -291,7 +291,6 @@ namespace sourcespec2ir
         // Traverse instructions from beginning to the end and find the first
         // instruction that is located after the end of the specification-block.
         // This assumes, that instructions are not reordered by the compiler.
-        // Ignore debug intrinsics.
         llvm::Instruction *closestInst = nullptr;
         for (auto it = inst_begin(parentFunc), end = inst_end(parentFunc); it != end; ++it)
         {
@@ -306,8 +305,8 @@ namespace sourcespec2ir
             if (iLine < endLine || (iLine == endLine && iCol <= endCol))
                 continue;
             // Skip debug-intrinsics
-            if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
-                continue;
+            // if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
+            //    continue;
 
             closestInst = &*it;
             break;

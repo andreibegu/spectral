@@ -92,6 +92,8 @@ namespace sourcespec2ir
             fContractWrappers;
         std::map<const MatchedLoopInvariant *, std::unique_ptr<SrcWrapperFunction>>
             loopInvWrappers;
+        std::map<const MatchedSpecStatement *, std::unique_ptr<SrcWrapperFunction>>
+            statementWrappers;
 
         /**
          * Runs the mem2reg-pass on the given module.
@@ -143,6 +145,13 @@ namespace sourcespec2ir
          */
         void wrapLoopInvariantBlock(
             const MatchedLoopInvariantBlock &invBlock);
+
+        /**
+         * Uses the wrapper-generator to create wrapping-functions for all
+         * blocks of specification-statements.
+         */
+        void wrapSpecStatementBlock(
+            const MatchedSpecStatementBlock &stmntBlock);
 
         /**
          * Write the IR-representation of the given module into
