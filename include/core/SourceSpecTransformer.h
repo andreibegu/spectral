@@ -33,7 +33,7 @@ namespace sourcespec2ir
             std::unique_ptr<SourceCompilerDriver> compilerDriver,
             std::unique_ptr<SpecUnifier> specUnifier,
             std::string srcInPath, std::string outPath,
-            const utils::OutputConfig &outputConfig, 
+            const utils::OutputConfig &outputConfig,
             const std::string &workingDir);
 
         void transformModule();
@@ -133,6 +133,18 @@ namespace sourcespec2ir
                            llvm::SmallVector<llvm::Metadata *> &nodes);
 
         /**
+         * Encodes a block of specification-statements into metadata.
+         */
+        void encodeStmntBlock(const MatchedSpecStatementBlock &stmntBlock);
+
+        /**
+         * Encodes a statement from a block of spec-statements into a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
+
+        /**
          * Uses the wrapper generator to create wrapping-functions for all
          * statements in the given contract-block.
          */
@@ -170,11 +182,10 @@ namespace sourcespec2ir
                                         llvm::Module &moduleWithWrappers);
 
         /**
-         * Returns the path where the source-file that has been extended with 
-         * wrappers should be saved. 
+         * Returns the path where the source-file that has been extended with
+         * wrappers should be saved.
          */
         std::string getPathForSourceWithWrappers();
-
     };
 
 }
