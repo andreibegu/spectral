@@ -1,19 +1,20 @@
+// clang-format off
 // Test that loop-invariants are correctly encoded in metadata
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
-// COM: Get the md-nodes of the variables in the function
-// CHECK: void {{@[^(]+}}(
-// CHECK-SAME: [[arg1:%[0-9]+]]
-// CHECK: @llvm.dbg.value( 
-// CHECK-SAME: [[arg1]]
-// CHECK-SAME: metadata [[var1MD:![0-9]+]]
-// CHECK: @llvm.dbg.value(
-// CHECK-SAME: 0,
-// CHECK-SAME: metadata [[var2MD:![0-9]+]]
+// CHECK: void @_Z8test_funf(
+// CHECK-SAME: [[arg:%[0-9]+]]
+// CHECK: store float [[arg]], ptr [[argLoc:%[0-9]+]], align 4
+// CHECK: call void @llvm.dbg.declare(metadata ptr [[argLoc]], metadata [[argMD:![0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr [[cnt:%[0-9]+]], metadata [[cntMD:![0-9]+]]
+
+// COM: Check that wrapper-function is generated
+// CHECK: @_Z13PALLAS_SPEC_0fi
+// CHECK-SAME: !pallas.exprWrapper
 
 // COM: Check that MD-node of invariant references correct variables
 // CHECK: !{!"pallas.loopInv", [[invMD:![0-9]+]]}
-// CHECK: [[invMD]] = !{ptr [[wrapperFun:@.+]], [[var1MD]], [[var2MD]]}
+// CHECK: [[invMD]] = !{ptr @_Z13PALLAS_SPEC_0fi, [[argMD]], [[cntMD]]}
 
 void test_fun (float p1) {
     int cnt = 0;

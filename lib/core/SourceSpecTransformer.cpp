@@ -61,7 +61,7 @@ namespace sourcespec2ir
         mpm.run(*irModule, mam);
 
         // Run mem2reg
-        promoteMemToReg(*irModule);
+        // promoteMemToReg(*irModule);
 
         /*
         if (outputConfig.printDebugInfo)
