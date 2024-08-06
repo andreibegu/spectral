@@ -362,14 +362,12 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
-
         // Transform specification statements
         llvm::SmallVector<llvm::Metadata *> specStatementNodes;
-        const auto numStatements = contract.statements.size();
-        for (size_t i = 0; i < numStatements; ++i)
+        for (auto &matchedStmnt : contract.statements)
         {
-            auto mdNode = encodeFunctionContractStatement(
-                *parentFunction, *contract.statements[i].get());
+            auto mdNode = encodeFunctionContractStatement(*parentFunction,
+                                                          *matchedStmnt);
             specStatementNodes.push_back(mdNode);
         }
         auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);

@@ -48,6 +48,7 @@ namespace sourcespec2ir
     /**
      * A struct that represents a function contract-block
      *  that has been matched to an IR-function.
+     * The order of statements in the source must be maintained in the vector!
      */
     struct MatchedFunctionContract
     {
@@ -83,6 +84,7 @@ namespace sourcespec2ir
     /**
      * Struct that represents a block of loop-invariants that have been matched
      * to a loop in the IR.
+     * The order of invariants in the source must be maintained in the vector!
      */
     struct MatchedLoopInvariantBlock
     {
@@ -123,6 +125,7 @@ namespace sourcespec2ir
     /**
      * A struct that represents a block of specification-statements that have
      * been matched to an instruction in the IR.
+     * The order of statements in the source must be maintained in the vector!
      */
     struct MatchedSpecStatementBlock
     {
