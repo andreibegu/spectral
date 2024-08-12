@@ -113,6 +113,25 @@ namespace sourcespec2ir
         return invBlock.parentFunction->getSubprogram()->getLine();
     }
 
+    size_t SourceWrapperGenerator::getWrapperInsertLoc(
+        const MatchedSpecStatementBlock &stmntBlock)
+    {
+        auto instr = stmntBlock.inst;
+        // Get the parent-function of the instruction
+        if (instr == nullptr ||
+            instr->getParent() == nullptr ||
+            instr->getParent()->getParent() == nullptr)
+        {
+            throw utils::PallasException(
+                "Cannot get parent-function for instruction");
+        }
+        auto parentFunc = instr->getParent()->getParent();
+        if (parentFunc->getSubprogram() == nullptr)
+            throw utils::PallasException("Cannot get line-info for function");
+            
+        return parentFunc->getSubprogram()->getLine();
+    }
+
     std::string SourceWrapperGenerator::getNameForWrapperFunction()
     {
         return "PALLAS_SPEC_" + std::to_string(specFunCnt++);

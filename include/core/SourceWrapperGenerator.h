@@ -7,6 +7,7 @@
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/IR/DebugInfoMetadata.h>
+#include <llvm/IR/Instruction.h>
 
 #include <map>
 #include <memory>
@@ -52,6 +53,13 @@ namespace sourcespec2ir
          * The default-implementation returns the line of the parent-function.
          */
         size_t getWrapperInsertLoc(const MatchedLoopInvariantBlock &invBlock);
+
+        /**
+         * Return the line-number where the wrapper-function for a given
+         * specification-statement should be inserted. 
+         * The default-implementation returns the line of the parent-function.
+         */
+        size_t getWrapperInsertLoc(const MatchedSpecStatementBlock &stmntBlock);
 
         /**
          * Returns a new name for a wrapper-function.

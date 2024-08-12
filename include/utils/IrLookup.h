@@ -7,6 +7,7 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Instruction.h>
 
 namespace sourcespec2ir
 {
@@ -45,6 +46,16 @@ namespace sourcespec2ir
          */
         std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForLoopInv(
            llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader);
+
+        /**
+         * Collects the DILocalVariable-nodes that represent variables that can 
+         * be referenced in a specification-statement (e.g. assert) that is 
+         * attached to the given instruction. 
+         * 
+         * Global variables are currently ignored.
+         */
+        std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForStatement(
+           llvm::Instruction *inst);
     }
 
 }
