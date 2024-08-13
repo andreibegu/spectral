@@ -53,7 +53,6 @@ namespace sourcespec2ir
         void unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext);
 
     protected:
-        
         bool printDebugInfo;
 
         // Pointers to the loaded llvm-ir module and context
@@ -285,9 +284,15 @@ namespace sourcespec2ir
         /**
          * Helper to generate the functions of the unified specification library
          */
-        llvm::Function *createSpecLibFunction(const std::string &name,
-                                              llvm::Type *returnType, 
-                                              llvm::SmallVector<llvm::Type *> argTypes);
+        llvm::Function *createSpecLibFunction(
+            const std::string &name, 
+            llvm::Type *returnType,
+            llvm::SmallVector<llvm::Type *> argTypes);
+        llvm::Function *createSpecLibFunction(
+            const std::string &name, 
+            llvm::Type *returnType,
+            llvm::SmallVector<llvm::Type *> argTypes, 
+            const std::string &labelName);
 
         /**
          * Attaches a metadata-node to the given declaration that identifies it
@@ -299,7 +304,7 @@ namespace sourcespec2ir
                                    const std::string &identifier);
 
         /**
-         * Returns pointer to the boolean-type (i.e. Int1Ty) 
+         * Returns pointer to the boolean-type (i.e. Int1Ty)
          * in the current context.
          */
         inline llvm::Type *getBoolTy();

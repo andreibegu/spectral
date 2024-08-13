@@ -56,6 +56,13 @@ namespace sourcespec2ir
          */
         std::unique_ptr<std::set<llvm::DILocalVariable*>> getVarsForStatement(
            llvm::Instruction *inst);
+
+        /**
+         * Returns the effective return-type for an llvm-function. 
+         * I.e. the fact that returning a struct-type is encoded as a function-
+         * argument with the 'sret'-attribute is considered. 
+         */
+        llvm::Type *getReturnType(const llvm::Function &f);
     }
 
 }

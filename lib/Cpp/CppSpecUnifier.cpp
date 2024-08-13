@@ -1,4 +1,5 @@
 #include "CppSpecUnifier.h"
+#include "IrLookup.h"
 #include "PallasException.h"
 
 #include <llvm/ADT/StringRef.h>
@@ -20,8 +21,8 @@ namespace sourcespec2ir
         auto nameDemangle = llvm::demangle(fName);
         // llvm::outs() << "Demangle " << fName << " --> " << nameDemangle << "\n";
 
-        // Drop the return-type to avoid problems when the return-type contains 
-        // the namespace by finding index of last space before '(' 
+        // Drop the return-type to avoid problems when the return-type contains
+        // the namespace by finding index of last space before '('
         // and dropping everything in front.
         auto openIdx = nameDemangle.find_first_of('(');
         auto nameWithoutArgs = llvm::StringRef(nameDemangle).substr(0, openIdx);
@@ -85,9 +86,20 @@ namespace sourcespec2ir
 
     llvm::CallInst *CppSpecUnifier::transformOld(llvm::CallInst &oldCall)
     {
-        auto type = oldCall.getCalledFunction()->getReturnType();
-        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
-        return llvm::CallInst::Create(getUSpecOld(type), newArgs);
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            // Struct-type
+            auto newCall = llvm::CallInst::Create(
+                getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            return newCall;
+        }
+        else
+        {
+            return llvm::CallInst::Create(
+                getUSpecOld(type), {oldCall.getArgOperand(0)});
+        }
     }
 
     llvm::CallInst *CppSpecUnifier::transformResult(llvm::CallInst &oldCall)

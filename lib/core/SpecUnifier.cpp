@@ -297,17 +297,31 @@ namespace sourcespec2ir
         if (specOld.find(type) == specOld.end())
         {
             // Generate declaration for new old-function with the given type
-            // TODO: Consider sret when returning structs.
             auto cnt = specOld.size();
             auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs(
-                {llvm::PointerType::get(*irContext, 0)});
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
+
+            // Function-type differs for struct-types and non-struct-types.
+            llvm::Function *specFun = nullptr;
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct-type
+                llvm::SmallVector<llvm::Type *> specArgs(
+                    {llvm::PointerType::get(*irContext, 0),
+                     llvm::PointerType::get(*irContext, 0)});
+                specFun = createSpecLibFunction(specName, getVoidTy(), specArgs,
+                                                PALLAS_SPEC_OLD_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+            }
+            else
+            {
+                // Non-struct-type
+                llvm::SmallVector<llvm::Type *> specArgs(
+                    {llvm::PointerType::get(*irContext, 0)});
+                specFun = createSpecLibFunction(specName, type, specArgs,
+                                                PALLAS_SPEC_OLD_BASE);
+            }
             specOld[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_OLD_BASE);
         }
 
         return specOld[type];
@@ -387,7 +401,7 @@ namespace sourcespec2ir
         {
 
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecFracType(), 0), // Opaque, or non-opaque pointer?
+                llvm::PointerType::get(*irContext, 0),
                 llvm::Type::getInt32Ty(*irContext),
                 llvm::Type::getInt32Ty(*irContext)};
             auto specFun = createSpecLibFunction(PALLAS_SPEC_FRAC_OF,
@@ -492,12 +506,22 @@ namespace sourcespec2ir
         return specSeqAppend[type];
     }
 
-    llvm::Function *SpecUnifier::createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes)
+    llvm::Function *SpecUnifier::createSpecLibFunction(
+        const std::string &name, llvm::Type *returnType,
+        llvm::SmallVector<llvm::Type *> argTypes)
+    {
+        return createSpecLibFunction(name, returnType, argTypes, name);
+    }
+
+    llvm::Function *SpecUnifier::createSpecLibFunction(
+        const std::string &name, llvm::Type *returnType,
+        llvm::SmallVector<llvm::Type *> argTypes, const std::string &labelName)
     {
         auto specFunType = llvm::FunctionType::get(returnType, argTypes, false);
-        auto specFunction = llvm::Function::Create(specFunType, llvm::Function::ExternalLinkage, name, irModule);
+        auto specFunction = llvm::Function::Create(
+            specFunType, llvm::Function::ExternalLinkage, name, irModule);
         // Add metadata-marker to mark as specification-library-function
-        markAsSpecLibFunction(specFunction, name);
+        markAsSpecLibFunction(specFunction, labelName);
         return specFunction;
     }
 

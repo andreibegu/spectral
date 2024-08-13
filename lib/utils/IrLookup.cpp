@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 
+#include <llvm/IR/Attributes.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
@@ -99,6 +100,15 @@ namespace sourcespec2ir
             }
 
             return varSet;
+        }
+
+        llvm::Type *getReturnType(const llvm::Function &f)
+        {
+            if (f.hasParamAttribute(0, llvm::Attribute::StructRet))
+                return f.getParamStructRetType(0);
+            if (f.hasParamAttribute(1, llvm::Attribute::StructRet))
+                return f.getParamStructRetType(1);
+            return f.getReturnType();
         }
 
     }
