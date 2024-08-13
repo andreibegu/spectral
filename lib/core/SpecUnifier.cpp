@@ -334,13 +334,25 @@ namespace sourcespec2ir
             // Generate declaration for new result-function with the given type
             auto cnt = specResult.size();
             auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs;
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
-            specResult[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_RESULT_BASE);
+
+            // Function-types differ for struct- and non-struct-types
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                auto specFun = createSpecLibFunction(
+                    specName, getVoidTy(),
+                    {llvm::PointerType::get(*irContext, 0)},
+                    PALLAS_SPEC_RESULT_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+                specResult[type] = specFun;
+            }
+            else
+            {
+                // non-struct-type
+                specResult[type] = createSpecLibFunction(
+                    specName, type, {}, PALLAS_SPEC_RESULT_BASE);
+            }
         }
 
         return specResult[type];

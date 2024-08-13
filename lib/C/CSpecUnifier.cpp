@@ -84,9 +84,19 @@ namespace sourcespec2ir
     llvm::CallInst *CSpecUnifier::transformResult(llvm::CallInst &oldCall)
     {
         // \result
-        auto type = oldCall.getCalledFunction()->getReturnType();
-        llvm::SmallVector<llvm::Value *, 1> newArgs;
-        return llvm::CallInst::Create(getUSpecResult(type), newArgs);
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            auto newCall = llvm::CallInst::Create(
+                getUSpecResult(type), {oldCall.getArgOperand(0)});
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            return newCall;
+        }
+        else
+        {
+            llvm::SmallVector<llvm::Value *, 1> newArgs;
+            return llvm::CallInst::Create(getUSpecResult(type), newArgs);
+        }
     }
 
     llvm::CallInst *CSpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
