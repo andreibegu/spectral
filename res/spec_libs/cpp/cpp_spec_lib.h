@@ -38,7 +38,7 @@ namespace pallasSpec
      *                Special expressions              *
      ***************************************************/
     template<typename T> 
-    T old(T v);
+    T old(T *v);
 
     template<typename T>
     T result();

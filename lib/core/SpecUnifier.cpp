@@ -297,9 +297,12 @@ namespace sourcespec2ir
         if (specOld.find(type) == specOld.end())
         {
             // Generate declaration for new old-function with the given type
+            // TODO: Consider sret when returning structs.
             auto cnt = specOld.size();
             auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs({type});
+            // llvm::SmallVector<llvm::Type *> specArgs({type});
+            llvm::SmallVector<llvm::Type *> specArgs(
+                {llvm::PointerType::get(*irContext, 0)});
             auto specFType = llvm::FunctionType::get(type, specArgs, false);
             auto specFun = llvm::Function::Create(
                 specFType, llvm::Function::ExternalLinkage, specName, irModule);
