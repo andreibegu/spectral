@@ -61,8 +61,8 @@ namespace pallasSpec
     /***************************************************
      *                   Permissions                   *
      ***************************************************/
-    // template<typename T>
-    bool Perm(void *loc, frac p);
+    template<typename T>
+    bool Perm(T *loc, frac p);
 
     /***************************************************
      *              Sequence-operations                *

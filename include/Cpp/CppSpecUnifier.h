@@ -31,8 +31,7 @@ namespace sourcespec2ir
             {"exists(bool, bool)", Exists},
             {"forall(bool, bool)", Forall},
             {"forallSep(bool, bool)", ForallSep},
-            {"fracOf(int, int)", FracOf},
-            {"Perm(void*, pallasSpec::frac)", Perm},
+            {"fracOf(int, int)", FracOf}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"old<", Old},
@@ -41,7 +40,8 @@ namespace sourcespec2ir
             {"seqNew<", SeqNew},
             {"seqSize<", SeqSize},
             {"seqGet<", SeqGet},
-            {"seqAppend<", SeqAppend}
+            {"seqAppend<", SeqAppend}, 
+            {"Perm<", Perm}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";
