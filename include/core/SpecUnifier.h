@@ -225,6 +225,13 @@ namespace sourcespec2ir
          */
         llvm::StructType *getUSpecSeqType(llvm::Type *type);
 
+        /**
+         * Helper that adds the sret attribute to the argument with the given 
+         * index of the given function. 
+         */
+        void addSret(
+            llvm::CallInst* call, unsigned int argNo, llvm::Type *rType);
+
     private:
         /**
          * Pointers to the unified specification functions within irModule.
@@ -313,6 +320,7 @@ namespace sourcespec2ir
          * Returns pointer to the void-type in the current context.
          */
         inline llvm::Type *getVoidTy();
+
     };
 
 }

@@ -1,0 +1,24 @@
+// clang-format off
+// Test that bound-variables work properly with struct-types.
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+
+// COM: Declaration is created and labled with md-node
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @pallas.boundVar.0(ptr sret(%class.ClumsyClass), ptr)
+// CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
+
+// COM: Spec-function is called with sret-attribute
+// CHECK-DAG call void @pallas.boundVar.0(ptr sret(%class.ClumsyClass) {{%[0-9]+}}, ptr {{%[0-9]+}})
+
+class ClumsyClass {
+    public:
+    int i1, i2, i3, i4, i5;
+    double d1, d2, d3;
+};
+
+/*@
+ ensures pallasSpec::forall(0 <= pallasSpec::bVar<ClumsyClass>("i").i1,  true);
+@*/
+double fun (ClumsyClass c) {
+    return c.d1 + c.d2;
+}
+

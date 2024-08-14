@@ -71,7 +71,7 @@ namespace sourcespec2ir
             // Struct-type
             auto newCall = llvm::CallInst::Create(
                 getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
-            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            addSret(newCall, 0, type);
             return newCall;
         }
         else
@@ -89,7 +89,7 @@ namespace sourcespec2ir
         {
             auto newCall = llvm::CallInst::Create(
                 getUSpecResult(type), {oldCall.getArgOperand(0)});
-            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            addSret(newCall, 0, type);
             return newCall;
         }
         else
@@ -101,10 +101,21 @@ namespace sourcespec2ir
 
     llvm::CallInst *CSpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
     {
-        // Bound variable
-        auto type = oldCall.getCalledFunction()->getReturnType();
-        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
-        return llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0), 
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+            addSret(newCall, 0, type);
+            return newCall;
+        }
+        else
+        {
+            llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+            return llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+        }
     }
 
     llvm::CallInst *CSpecUnifier::transformExists(llvm::CallInst &oldCall)

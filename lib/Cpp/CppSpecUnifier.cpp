@@ -14,7 +14,8 @@ namespace sourcespec2ir
     {
     }
 
-    std::optional<SpecUnifier::SpecLibElement> CppSpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
+    std::optional<SpecUnifier::SpecLibElement>
+    CppSpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
     {
         // Implement: Make less bad, check scope
         auto fName = f.getName().str();
@@ -105,14 +106,14 @@ namespace sourcespec2ir
     llvm::CallInst *CppSpecUnifier::transformResult(llvm::CallInst &oldCall)
     {
         auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        if (llvm::isa<llvm::StructType>(type)) 
+        if (llvm::isa<llvm::StructType>(type))
         {
             auto newCall = llvm::CallInst::Create(
                 getUSpecResult(type), {oldCall.getArgOperand(0)});
             newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
             return newCall;
         }
-        else 
+        else
         {
             llvm::SmallVector<llvm::Value *, 1> newArgs;
             return llvm::CallInst::Create(getUSpecResult(type), newArgs);
@@ -121,9 +122,21 @@ namespace sourcespec2ir
 
     llvm::CallInst *CppSpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
     {
-        auto type = oldCall.getCalledFunction()->getReturnType();
-        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
-        return llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            return newCall;
+        }
+        else
+        {
+            return llvm::CallInst::Create(
+                getUSpecBoundVar(type), {oldCall.getArgOperand(0)});
+        }
     }
 
     llvm::CallInst *CppSpecUnifier::transformExists(llvm::CallInst &oldCall)

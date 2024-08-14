@@ -365,13 +365,27 @@ namespace sourcespec2ir
             // Generate declaration
             auto cnt = specBoundVar.size();
             auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs({llvm::PointerType::get(*irContext, 0)});
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
-            specBoundVar[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_BOUND_VAR);
+
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                llvm::SmallVector<llvm::Type *> args(
+                    {llvm::PointerType::get(*irContext, 0),
+                     llvm::PointerType::get(*irContext, 0)});
+                auto specFun = createSpecLibFunction(
+                    specName, getVoidTy(), args, PALLAS_SPEC_BOUND_VAR);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+                specBoundVar[type] = specFun;
+            }
+            else
+            {
+                // non-struct-type
+                llvm::SmallVector<llvm::Type *> args(
+                    {llvm::PointerType::get(*irContext, 0)});
+                specBoundVar[type] = createSpecLibFunction(
+                    specName, type, args, PALLAS_SPEC_BOUND_VAR);
+            }
         }
 
         return specBoundVar[type];
@@ -551,5 +565,12 @@ namespace sourcespec2ir
     llvm::Type *SpecUnifier::getVoidTy()
     {
         return llvm::Type::getVoidTy(*irContext);
+    }
+
+    void SpecUnifier::addSret(
+        llvm::CallInst *call, unsigned int argNo, llvm::Type *rType)
+    {
+        call->addParamAttr(
+            argNo, llvm::Attribute::getWithStructRetType(*irContext, rType));
     }
 }
