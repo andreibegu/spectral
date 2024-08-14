@@ -299,13 +299,29 @@ namespace sourcespec2ir
             // Generate declaration for new old-function with the given type
             auto cnt = specOld.size();
             auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs({type});
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
+
+            // Function-type differs for struct-types and non-struct-types.
+            llvm::Function *specFun = nullptr;
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct-type
+                llvm::SmallVector<llvm::Type *> specArgs(
+                    {llvm::PointerType::get(*irContext, 0),
+                     llvm::PointerType::get(*irContext, 0)});
+                specFun = createSpecLibFunction(specName, getVoidTy(), specArgs,
+                                                PALLAS_SPEC_OLD_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+            }
+            else
+            {
+                // Non-struct-type
+                llvm::SmallVector<llvm::Type *> specArgs(
+                    {llvm::PointerType::get(*irContext, 0)});
+                specFun = createSpecLibFunction(specName, type, specArgs,
+                                                PALLAS_SPEC_OLD_BASE);
+            }
             specOld[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_OLD_BASE);
         }
 
         return specOld[type];
@@ -318,13 +334,25 @@ namespace sourcespec2ir
             // Generate declaration for new result-function with the given type
             auto cnt = specResult.size();
             auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs;
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
-            specResult[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_RESULT_BASE);
+
+            // Function-types differ for struct- and non-struct-types
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                auto specFun = createSpecLibFunction(
+                    specName, getVoidTy(),
+                    {llvm::PointerType::get(*irContext, 0)},
+                    PALLAS_SPEC_RESULT_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+                specResult[type] = specFun;
+            }
+            else
+            {
+                // non-struct-type
+                specResult[type] = createSpecLibFunction(
+                    specName, type, {}, PALLAS_SPEC_RESULT_BASE);
+            }
         }
 
         return specResult[type];
@@ -337,13 +365,27 @@ namespace sourcespec2ir
             // Generate declaration
             auto cnt = specBoundVar.size();
             auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> specArgs({llvm::PointerType::get(*irContext, 0)});
-            auto specFType = llvm::FunctionType::get(type, specArgs, false);
-            auto specFun = llvm::Function::Create(
-                specFType, llvm::Function::ExternalLinkage, specName, irModule);
-            specBoundVar[type] = specFun;
-            // Add metadata-marker to mark as specification-library-function
-            markAsSpecLibFunction(specFun, PALLAS_SPEC_BOUND_VAR);
+
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                llvm::SmallVector<llvm::Type *> args(
+                    {llvm::PointerType::get(*irContext, 0),
+                     llvm::PointerType::get(*irContext, 0)});
+                auto specFun = createSpecLibFunction(
+                    specName, getVoidTy(), args, PALLAS_SPEC_BOUND_VAR);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
+                                             *irContext, type));
+                specBoundVar[type] = specFun;
+            }
+            else
+            {
+                // non-struct-type
+                llvm::SmallVector<llvm::Type *> args(
+                    {llvm::PointerType::get(*irContext, 0)});
+                specBoundVar[type] = createSpecLibFunction(
+                    specName, type, args, PALLAS_SPEC_BOUND_VAR);
+            }
         }
 
         return specBoundVar[type];
@@ -385,7 +427,7 @@ namespace sourcespec2ir
         {
 
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecFracType(), 0), // Opaque, or non-opaque pointer?
+                llvm::PointerType::get(*irContext, 0),
                 llvm::Type::getInt32Ty(*irContext),
                 llvm::Type::getInt32Ty(*irContext)};
             auto specFun = createSpecLibFunction(PALLAS_SPEC_FRAC_OF,
@@ -452,17 +494,36 @@ namespace sourcespec2ir
     {
         if (specSeqGet.find(type) == specSeqGet.end())
         {
-            // Generate function declaration
             auto cnt = specSeqGet.size();
             auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::Type::getInt64Ty(*irContext)};
-            auto specFun = createSpecLibFunction(name, type, argList);
-            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
-            specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
-            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
-            specSeqGet[type] = specFun;
+
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                llvm::SmallVector<llvm::Type *> argList = {
+                    llvm::PointerType::get(*irContext, 0),
+                    llvm::PointerType::get(getUSpecSeqType(type), 0),
+                    llvm::Type::getInt64Ty(*irContext)};
+                auto specFun = createSpecLibFunction(
+                    name, getVoidTy(), argList, PALLAS_SPEC_SEQ_GET_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+                specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+                specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+                specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+                specSeqGet[type] = specFun;
+            }
+            else
+            {
+                llvm::SmallVector<llvm::Type *> argList = {
+                    llvm::PointerType::get(getUSpecSeqType(type), 0),
+                    llvm::Type::getInt64Ty(*irContext)};
+                auto specFun = createSpecLibFunction(
+                    name, type, argList, PALLAS_SPEC_SEQ_GET_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+                specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+                specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+                specSeqGet[type] = specFun;
+            }
         }
 
         return specSeqGet[type];
@@ -472,30 +533,49 @@ namespace sourcespec2ir
     {
         if (specSeqAppend.find(type) == specSeqAppend.end())
         {
-            // Generate function declaration
             auto cnt = specSeqAppend.size();
             auto name = PALLAS_SPEC_SEQ_APPEND_BASE + "." + std::to_string(cnt);
+            const bool isStructT = llvm::isa<llvm::StructType>(type);
+
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                type};
-            auto specFun = createSpecLibFunction(name, getVoidTy(), argList);
+                llvm::PointerType::get(*irContext, 0),
+                llvm::PointerType::get(*irContext, 0)};
+            // If the content-type is a struct, the last argument is a pointer.
+            if (isStructT)
+                argList.push_back(llvm::PointerType::get(*irContext, 0));
+            else
+                argList.push_back(type);
+
+            auto specFun = createSpecLibFunction(
+                name, getVoidTy(), argList, PALLAS_SPEC_SEQ_APPEND_BASE);
             specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(1, llvm::Attribute::NoUndef);
             specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+            if (isStructT)
+                 specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, type));
             specSeqAppend[type] = specFun;
         }
 
         return specSeqAppend[type];
     }
 
-    llvm::Function *SpecUnifier::createSpecLibFunction(const std::string &name, llvm::Type *returnType, llvm::SmallVector<llvm::Type *> argTypes)
+    llvm::Function *SpecUnifier::createSpecLibFunction(
+        const std::string &name, llvm::Type *returnType,
+        llvm::SmallVector<llvm::Type *> argTypes)
+    {
+        return createSpecLibFunction(name, returnType, argTypes, name);
+    }
+
+    llvm::Function *SpecUnifier::createSpecLibFunction(
+        const std::string &name, llvm::Type *returnType,
+        llvm::SmallVector<llvm::Type *> argTypes, const std::string &labelName)
     {
         auto specFunType = llvm::FunctionType::get(returnType, argTypes, false);
-        auto specFunction = llvm::Function::Create(specFunType, llvm::Function::ExternalLinkage, name, irModule);
+        auto specFunction = llvm::Function::Create(
+            specFunType, llvm::Function::ExternalLinkage, name, irModule);
         // Add metadata-marker to mark as specification-library-function
-        markAsSpecLibFunction(specFunction, name);
+        markAsSpecLibFunction(specFunction, labelName);
         return specFunction;
     }
 
@@ -513,5 +593,12 @@ namespace sourcespec2ir
     llvm::Type *SpecUnifier::getVoidTy()
     {
         return llvm::Type::getVoidTy(*irContext);
+    }
+
+    void SpecUnifier::addSret(
+        llvm::CallInst *call, unsigned int argNo, llvm::Type *rType)
+    {
+        call->addParamAttr(
+            argNo, llvm::Attribute::getWithStructRetType(*irContext, rType));
     }
 }
