@@ -185,16 +185,23 @@ namespace sourcespec2ir
 
     llvm::CallInst *CSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
     {
-        // Get on sequences
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {
-            oldCall.getArgOperand(0),
-            oldCall.getArgOperand(1),
-        };
+        // Check the signature of the old call to determine if a
+        // struct-type is returned.
+        bool containsStruct = oldCall.getCalledFunction()->getReturnType() == llvm::Type::getVoidTy(*irContext);
+
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(containsStruct ? 1 : 0));
+        llvm::SmallVector<llvm::Value *, 4> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+        if (containsStruct)
+            newArgs.push_back(oldCall.getArgOperand(2));
         auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        unsigned int argIdx = 0;
+        if (containsStruct)
+            addSret(newCall, argIdx++, cType);
+        newCall->addParamAttr(argIdx, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(argIdx++, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(cType)));
+        newCall->addParamAttr(argIdx, llvm::Attribute::NoUndef);
         return newCall;
     }
 
@@ -213,6 +220,9 @@ namespace sourcespec2ir
         newCall->addParamAttr(1, llvm::Attribute::NoUndef);
         newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
         newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        // If the seq contains structs, the last arg is a by-value pointer.
+        if (llvm::isa<llvm::StructType>(cType))
+            newCall->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, cType));
         return newCall;
     }
 

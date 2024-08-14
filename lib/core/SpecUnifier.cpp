@@ -494,17 +494,36 @@ namespace sourcespec2ir
     {
         if (specSeqGet.find(type) == specSeqGet.end())
         {
-            // Generate function declaration
             auto cnt = specSeqGet.size();
             auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(cnt);
-            llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::Type::getInt64Ty(*irContext)};
-            auto specFun = createSpecLibFunction(name, type, argList);
-            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
-            specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
-            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
-            specSeqGet[type] = specFun;
+
+            if (llvm::isa<llvm::StructType>(type))
+            {
+                // struct type
+                llvm::SmallVector<llvm::Type *> argList = {
+                    llvm::PointerType::get(*irContext, 0),
+                    llvm::PointerType::get(getUSpecSeqType(type), 0),
+                    llvm::Type::getInt64Ty(*irContext)};
+                auto specFun = createSpecLibFunction(
+                    name, getVoidTy(), argList, PALLAS_SPEC_SEQ_GET_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+                specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+                specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+                specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+                specSeqGet[type] = specFun;
+            }
+            else
+            {
+                llvm::SmallVector<llvm::Type *> argList = {
+                    llvm::PointerType::get(getUSpecSeqType(type), 0),
+                    llvm::Type::getInt64Ty(*irContext)};
+                auto specFun = createSpecLibFunction(
+                    name, type, argList, PALLAS_SPEC_SEQ_GET_BASE);
+                specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+                specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+                specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+                specSeqGet[type] = specFun;
+            }
         }
 
         return specSeqGet[type];
@@ -514,18 +533,27 @@ namespace sourcespec2ir
     {
         if (specSeqAppend.find(type) == specSeqAppend.end())
         {
-            // Generate function declaration
             auto cnt = specSeqAppend.size();
             auto name = PALLAS_SPEC_SEQ_APPEND_BASE + "." + std::to_string(cnt);
+            const bool isStructT = llvm::isa<llvm::StructType>(type);
+
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                llvm::PointerType::get(getUSpecSeqType(type), 0),
-                type};
-            auto specFun = createSpecLibFunction(name, getVoidTy(), argList);
+                llvm::PointerType::get(*irContext, 0),
+                llvm::PointerType::get(*irContext, 0)};
+            // If the content-type is a struct, the last argument is a pointer.
+            if (isStructT)
+                argList.push_back(llvm::PointerType::get(*irContext, 0));
+            else
+                argList.push_back(type);
+
+            auto specFun = createSpecLibFunction(
+                name, getVoidTy(), argList, PALLAS_SPEC_SEQ_APPEND_BASE);
             specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(1, llvm::Attribute::NoUndef);
             specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+            if (isStructT)
+                 specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, type));
             specSeqAppend[type] = specFun;
         }
 

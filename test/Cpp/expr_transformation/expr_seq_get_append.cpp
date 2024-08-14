@@ -10,8 +10,8 @@
 // CHECK-DAG: declare !pallas.specLib [[appMD:![0-9]+]] void [[app:@pallas.seq.append.[0-9]+]](ptr sret(%pallas.seq.{{[0-9+]}}), ptr noundef byval(%pallas.seq.{{[0-9]+}}), double noundef)
 
 // COM: Check that the metadata-annotations are present
-// CHECK-DAG: [[getMD]] = !{!"pallas.seq.get.{{[0-9]+}}"}
-// CHECK-DAG: [[appMD]] = !{!"pallas.seq.append.{{[0-9]+}}"}
+// CHECK-DAG: [[getMD]] = !{!"pallas.seq.get"}
+// CHECK-DAG: [[appMD]] = !{!"pallas.seq.append"}
 
 // COM: Check that the spec-functions are called
 // CHECK-DAG: call void [[app]](ptr sret(%pallas.seq.{{[0-9]+}}) %{{[0-9]+}}, ptr noundef byval(%pallas.seq.{{[0-9]+}}) %{{[0-9]+}}, double noundef 
