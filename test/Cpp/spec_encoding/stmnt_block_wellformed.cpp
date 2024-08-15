@@ -8,10 +8,10 @@
 
 // COM: MD-Node of the statement-block is wellformed
 // COM: Statements are in correct order
-// CHECK: [[blockMD]] = !{[[assumeMD1:![0-9]+]], [[assumeMD2:![0-9]+]], [[assertMD:![0-9]+]]}
-// CHECK: [[assumeMD1]] = !{!"pallas.assume", ptr @_Z13PALLAS_SPEC_0ff,
-// CHECK: [[assumeMD2]] = !{!"pallas.assume", ptr @_Z13PALLAS_SPEC_1ff,
-// CHECK: [[assertMD]] = !{!"pallas.assert", ptr @_Z13PALLAS_SPEC_2ff,
+// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD1:![0-9]+]], [[assumeMD2:![0-9]+]], [[assertMD:![0-9]+]]}
+// CHECK: [[assumeMD1]] = !{!"pallas.assume", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0ff,
+// CHECK: [[assumeMD2]] = !{!"pallas.assume", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_1ff,
+// CHECK: [[assertMD]] = !{!"pallas.assert", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_2ff,
 
 bool ferociousFunction (float x, float y) {
     /*@

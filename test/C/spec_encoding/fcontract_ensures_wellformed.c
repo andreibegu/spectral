@@ -14,8 +14,8 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the ensures-Clause is wellformed
-// CHECK: [[contractMD]] = !{[[cClauseMD:![0-9]+]]}
-// CHECK: [[cClauseMD]] = !{!"pallas.ensures", ptr [[wrapperFunc]], [[arg1MD]]}
+// CHECK: [[contractMD]] = !{{{![0-9]+}}, [[cClauseMD:![0-9]+]]}
+// CHECK: [[cClauseMD]] = !{!"pallas.ensures", {{![0-9]+}}, ptr [[wrapperFunc]], [[arg1MD]]}
 
 /*@
 ensures x >= 0;

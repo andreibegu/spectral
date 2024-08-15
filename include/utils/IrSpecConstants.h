@@ -30,6 +30,9 @@ namespace sourcespec2ir
     // Metadata-identifier that is used to mark generated functions that wrap specification expressions
     const std::string PALLAS_GENERATED_MARKER = "pallas.exprWrapper";
 
+    // String that is used to identify a MD-Tuple as a source-location
+    const std::string PALLAS_SRC_LOCATION_MARKER = "pallas.srcLoc";
+
     /* Constants used to name specification-functions */
     const std::string PALLAS_SPEC_IMPLY = "pallas.imply";
 

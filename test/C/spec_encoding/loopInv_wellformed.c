@@ -11,8 +11,8 @@
 // CHECK: [[wrapperFun:@PALLAS_SPEC_[0-9]+]]
 
 // COM: Check that MD-node of invariant references correct variables
-// CHECK: !{!"pallas.loopInv", [[invMD:![0-9]+]]}
-// CHECK: [[invMD]] = !{ptr [[wrapperFun]], [[md1]], [[md2]]}
+// CHECK: !{!"pallas.loopInv", {{![0-9]+}}, [[invMD:![0-9]+]]}
+// CHECK: [[invMD]] = !{{{![0-9]+}}, ptr [[wrapperFun]], [[md1]], [[md2]]}
 
 void test_fun (float p1) {
     int cnt = 0;

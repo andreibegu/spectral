@@ -32,8 +32,12 @@ namespace sourcespec2ir
         SrcRange(size_t startLine, size_t startColumn,
                  size_t endLine, size_t endColumn);
 
-        inline SrcLocation getStart() { return startLoc; }
-        inline SrcLocation getEnd() { return endLoc; }
+        inline SrcLocation *getStart() { return &startLoc; }
+        inline SrcLocation *getEnd() { return &endLoc; }
+        inline size_t getStartLine() { return startLoc.getLine(); }
+        inline size_t getStartCol() { return startLoc.getColumn(); }
+        inline size_t getEndLine() { return endLoc.getLine(); }
+        inline size_t getEndCol() { return endLoc.getColumn(); }
     };
 }
 

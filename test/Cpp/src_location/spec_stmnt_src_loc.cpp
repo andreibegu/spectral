@@ -1,0 +1,24 @@
+// clang-format off
+// Test that source-locations are correctly added to specification statements.
+// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | FileCheck-15 %s
+
+int bar (int x) {
+    /*@ assume x > 0;
+        assert x - 1 >= 0; @*/
+    return x - 1; 
+}
+
+// COM: Find MD-node of statement-block
+// CHECK: !pallas.stmntBlock [[mdStmntBlock:![0-9]+]]
+
+// COM: MD-node of the statement-block has location-info
+// CHECK: [[mdStmntBlock]] = !{[[stmntBlockLoc:![0-9]+]], [[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
+// CHECK-DAG: [[stmntBlockLoc]] = !{!"pallas.srcLoc", !"6", !"4", !"7", !"27"}
+
+// COM: MD-Node of the assume-statement has location-info
+// CHECK-DAG: [[assumeMD]] = !{!"pallas.assume", [[assumeLoc:![0-9]+]], ptr @ 
+// CHECK-DAG: [[assumeLoc]] = !{!"pallas.srcLoc", !"6", !"8", !"6", !"20"}
+
+// COM: MD-Node of the assert-statement has location-info
+// CHECK-DAG: [[assertMD]] = !{!"pallas.assert", [[assertLoc:![0-9]+]], ptr @ 
+// CHECK-DAG: [[assertLoc]] = !{!"pallas.srcLoc", !"7", !"8", !"7", !"25"}

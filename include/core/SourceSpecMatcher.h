@@ -104,7 +104,8 @@ namespace sourcespec2ir
 
         // Adds a statement to the current block of specification-statements
         void addToStmntBlock(SpecStatementType type,
-                             SpecParser::SpecExpressionContext *expr);
+                             SpecParser::SpecExpressionContext *expr, 
+                             const SrcRange &loc);
 
         /**
          * Retrieving the textual representation of the specification

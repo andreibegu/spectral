@@ -243,10 +243,6 @@ namespace sourcespec2ir
         if (numInvs == 0)
             return;
 
-        // Determine the variables that can be referenced in the invariant
-        // auto availableVars = utils::getVarsForLoopInv(
-        //    invBlock.parentFunction, invBlock.loopHeader);
-
         // Vector of MD-nodes that makes up the tuple with the invariants
         llvm::SmallVector<llvm::Metadata *> invNodes;
 
@@ -254,6 +250,9 @@ namespace sourcespec2ir
         auto invIDNode = llvm::MDString::get(*irContext,
                                              PALLAS_LOOP_INV_BLOCK);
         invNodes.push_back(invIDNode);
+
+        // Add info on srcLocation
+        invNodes.push_back(encodeSrcLoc(invBlock.srcLoc));
 
         // Transform the individual invariants and add them to invNodes
         for (auto &inv : invBlock.invariants)
@@ -278,7 +277,10 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
 
         // Assemble MD-node to represent invariant-statement
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *> mdElems;
+        // Add source-location info
+        mdElems.push_back(encodeSrcLoc(inv.srcLoc));
+
         // Add ref to wrapper-function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
         // Add references to the metadata-nodes that describe how the arguments
@@ -300,6 +302,10 @@ namespace sourcespec2ir
 
         // Transform specification statements
         llvm::SmallVector<llvm::Metadata *> stmntNodes;
+
+        // Add location-information
+        stmntNodes.push_back(encodeSrcLoc(stmntBlock.srcLoc));
+
         for (auto &stmnt : stmntBlock.statements)
             stmntNodes.push_back(encodeSpecStatement(*stmnt));
 
@@ -329,6 +335,9 @@ namespace sourcespec2ir
         else
             throw utils::PallasException("Unsupported statement-type");
         mdElems.push_back(llvm::MDString::get(*irContext, mdId));
+
+        // Add info on srcLocation
+        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
         // Add reference to function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
@@ -362,15 +371,20 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
+        llvm::SmallVector<llvm::Metadata *> contractMDNodes;
+
+        // Add src-location information
+        contractMDNodes.push_back(encodeSrcLoc(contract.srcLoc));
+
         // Transform specification statements
-        llvm::SmallVector<llvm::Metadata *> specStatementNodes;
         for (auto &matchedStmnt : contract.statements)
         {
             auto mdNode = encodeFunctionContractStatement(*parentFunction,
                                                           *matchedStmnt);
-            specStatementNodes.push_back(mdNode);
+            contractMDNodes.push_back(mdNode);
         }
-        auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
+
+        auto contractMDNode = llvm::MDTuple::get(*irContext, contractMDNodes);
         parentFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
     }
 
@@ -387,7 +401,7 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
 
         // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *> mdElems;
 
         // Add statement identifier
         std::string mdId;
@@ -399,6 +413,9 @@ namespace sourcespec2ir
             throw utils::PallasException("Unsupported statement-type");
         auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
         mdElems.push_back(mdIdentifier);
+
+        // Add src-location information
+        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
         // Add reference to function
         auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
@@ -478,6 +495,18 @@ namespace sourcespec2ir
         auto tmpSrcPath = llvm::SmallString<128>(workingDir);
         llvm::sys::path::append(tmpSrcPath, tmpSrcFilename);
         return tmpSrcPath.str().str();
+    }
+
+    llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
+    {
+        llvm::SmallVector<llvm::Metadata *> mdElems = {
+            llvm::MDString::get(*irContext, PALLAS_SRC_LOCATION_MARKER),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.line)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.column)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.line)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.column)),
+        };
+        return llvm::MDTuple::get(*irContext, mdElems);
     }
 
     /*

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Metadata.h>
@@ -180,6 +181,11 @@ namespace sourcespec2ir
          */
         void removeDuplicateDefinitions(const llvm::Module &origModule,
                                         llvm::Module &moduleWithWrappers);
+
+        /**
+         * Generates a MDTuple that encodes a source-location.
+         */
+        llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
 
         /**
          * Returns the path where the source-file that has been extended with

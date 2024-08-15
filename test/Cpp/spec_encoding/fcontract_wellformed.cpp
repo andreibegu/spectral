@@ -4,9 +4,9 @@
 
 // CHECK: i32 {{@[^(]+}}(
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
-// CHECK: [[contractMD]] = !{[[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
-// CHECK-DAG: [[reqMD]] = !{!"pallas.requires",
-// CHECK-DAG: [[ensMD]] = !{!"pallas.ensures",
+// CHECK: [[contractMD]] = !{{{![0-9]+}}, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
+// CHECK-DAG: [[reqMD]] = !{!"pallas.requires", {{![0-9]+}},
+// CHECK-DAG: [[ensMD]] = !{!"pallas.ensures", {{![0-9]+}},
 
 /*@
 requires x >= 0;

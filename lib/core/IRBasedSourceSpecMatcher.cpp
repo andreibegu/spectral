@@ -122,7 +122,7 @@ namespace sourcespec2ir
     std::string IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
     {
         const llvm::Function *closestFunction = nullptr;
-        auto endLine = loc.getEnd().getLine();
+        auto endLine = loc.getEnd()->getLine();
 
         // Set for checking that all functions are declared on distinct lines.
         llvm::SmallSet<unsigned int, 16> lineNumberSet;
@@ -172,10 +172,10 @@ namespace sourcespec2ir
         if (closestFunction == nullptr)
         {
 
-            auto locStr = std::to_string(loc.getStart().getLine()) + ":" +
-                          std::to_string(loc.getStart().getColumn()) + "-" +
-                          std::to_string(loc.getEnd().getLine()) + ":" +
-                          std::to_string(loc.getEnd().getColumn());
+            auto locStr = std::to_string(loc.getStartLine()) + ":" +
+                          std::to_string(loc.getStartCol()) + "-" +
+                          std::to_string(loc.getEndLine()) + ":" +
+                          std::to_string(loc.getEndCol());
             throw utils::PallasException(
                 "Unable to match contract (" + locStr + ") to function");
         }
@@ -226,7 +226,7 @@ namespace sourcespec2ir
         if (printMatchingInfo)
         {
             printContractMatchingInfo(
-                loc.getStart().getLine(), loc.getEnd().getLine(),
+                loc.getStartLine(), loc.getEndLine(),
                 utils::getSrcNameOfFunction(*closestFunction));
         }
 
@@ -237,7 +237,7 @@ namespace sourcespec2ir
     IRBasedSourceSpecMatcher::matchLoopInvBlock(SrcRange loc)
     {
         // Find the first function above the loop-invariant
-        auto startLine = loc.getStart().getLine();
+        auto startLine = loc.getStartLine();
         llvm::Function *parentFunction = getFirstFunctionAbove(startLine);
 
         if (parentFunction == nullptr ||
@@ -274,7 +274,7 @@ namespace sourcespec2ir
 
         if (printMatchingInfo)
         {
-            printInvMatchingInfo(startLine, loc.getEnd().getLine(),
+            printInvMatchingInfo(startLine, loc.getEndLine(),
                                  closestLoopStart, closestLoopEnd);
         }
 
@@ -286,9 +286,9 @@ namespace sourcespec2ir
         // Get the first function above the spec-block
         // TODO: Consider the range that is covered by the function instead of
         // just considering the starting-line.
-        auto startLine = loc.getStart().getLine();
-        auto endLine = loc.getEnd().getLine();
-        auto endCol = loc.getEnd().getColumn();
+        auto startLine = loc.getStartLine();
+        auto endLine = loc.getEndLine();
+        auto endCol = loc.getEndCol();
         auto parentFunc = getFirstFunctionAbove(startLine);
 
         if (parentFunc == nullptr)

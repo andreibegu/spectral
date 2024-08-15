@@ -134,24 +134,24 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitAssertStatement(
         SpecParser::AssertStatementContext *ctx)
     {
-        addToStmntBlock(Assert, ctx->specExpression());
+        addToStmntBlock(Assert, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
     }
 
     std::any SourceSpecMatcher::visitAssumeStatement(
         SpecParser::AssumeStatementContext *ctx)
     {
-        addToStmntBlock(Assume, ctx->specExpression());
+        addToStmntBlock(Assume, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
     }
 
     void SourceSpecMatcher::addToStmntBlock(
-        SpecStatementType type, SpecParser::SpecExpressionContext *expr)
+        SpecStatementType type, SpecParser::SpecExpressionContext *expr,
+        const SrcRange &loc)
     {
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
         auto exprStr = getExprAsStr(*expr);
-        auto loc = getLocFromCtx(expr);
         auto stmnt = std::make_unique<MatchedSpecStatement>(type, exprStr, loc);
         stmntBlock->addStatement(std::move(stmnt));
     }

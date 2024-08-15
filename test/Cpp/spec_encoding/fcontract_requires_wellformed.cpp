@@ -19,8 +19,8 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the requires-Clause is wellformed
-// CHECK: [[contractMD]] = !{[[rMD:![0-9]+]]}
-// CHECK: [[rMD]] = !{!"pallas.requires", ptr [[wrapperFunc]], [[arg1MD]], [[arg2MD]]}
+// CHECK: [[contractMD]] = !{{{![0-9]+}}, [[rMD:![0-9]+]]}
+// CHECK: [[rMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr [[wrapperFunc]], [[arg1MD]], [[arg2MD]]}
 
 /*@
 requires x >= 0;

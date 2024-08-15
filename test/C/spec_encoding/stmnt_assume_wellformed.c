@@ -14,8 +14,8 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the assert-statement is wellformed
-// CHECK: [[blockMD]] = !{[[assumeMD:![0-9]+]]}
-// CHECK: [[assumeMD]] = !{!"pallas.assume", ptr [[wrapperFunc]], [[xMD]]}
+// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
+// CHECK: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr [[wrapperFunc]], [[xMD]]}
 
 
 float bar (float x) {
