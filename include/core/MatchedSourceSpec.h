@@ -1,6 +1,8 @@
 #ifndef PALLAS_MATCHEDSOURCESPEC_H
 #define PALLAS_MATCHEDSOURCESPEC_H
 
+#include "wrapper/SrcLocation.h"
+
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/BasicBlock.h>
@@ -12,7 +14,7 @@ namespace sourcespec2ir
 {
 
     /**
-     * Enum to identify differtent types of contract statements.
+     * Enum to identify different types of contract statements.
      */
     enum ContractStatementType
     {
@@ -38,9 +40,12 @@ namespace sourcespec2ir
         ContractStatementType type;
         // The source-language expression of the statement
         std::string expr;
+        // The location of the expression in the source-file
+        SrcRange srcLoc;
 
-        MatchedFContractStatement(ContractStatementType type, std::string expr)
-            : type(type), expr(expr)
+        MatchedFContractStatement(ContractStatementType type, std::string expr,
+                                  const SrcRange &srcLoc)
+            : type(type), expr(expr), srcLoc(srcLoc)
         {
         }
     };
@@ -54,9 +59,10 @@ namespace sourcespec2ir
     {
         llvm::Function *function;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
+        SrcRange srcLoc;
 
-        MatchedFunctionContract(llvm::Function *function)
-            : function(function)
+        MatchedFunctionContract(llvm::Function *function, const SrcRange &srcLoc)
+            : function(function), srcLoc(srcLoc)
         {
         }
 
@@ -69,14 +75,14 @@ namespace sourcespec2ir
     /**
      * Struct that represents a loop invariant that has been matched to a loop
      * in the IR.
-     * TODO: Remove this and replace it with a vector of strings.
      */
     struct MatchedLoopInvariant
     {
         std::string expr;
+        SrcRange srcLoc;
 
-        MatchedLoopInvariant(std::string expr)
-            : expr(expr)
+        MatchedLoopInvariant(std::string expr, const SrcRange &srcLoc)
+            : expr(expr), srcLoc(srcLoc)
         {
         }
     };
@@ -91,13 +97,15 @@ namespace sourcespec2ir
         llvm::Function *parentFunction;
         llvm::MDTuple *loopID;
         llvm::BasicBlock *loopHeader;
-
         llvm::SmallVector<std::unique_ptr<MatchedLoopInvariant>> invariants;
+        SrcRange srcLoc;
 
         MatchedLoopInvariantBlock(llvm::Function *parentFunction,
-                                  llvm::MDTuple *loopID, llvm::BasicBlock *loopHeader)
+                                  llvm::MDTuple *loopID,
+                                  llvm::BasicBlock *loopHeader,
+                                  const SrcRange &srcLoc)
             : parentFunction(parentFunction), loopID(loopID),
-              loopHeader(loopHeader), invariants()
+              loopHeader(loopHeader), invariants(), srcLoc(srcLoc)
         {
         }
 
@@ -115,9 +123,11 @@ namespace sourcespec2ir
         SpecStatementType type;
         // The source-language expression of the statement
         std::string expr;
+        SrcRange srcLoc;
 
-        MatchedSpecStatement(SpecStatementType type, std::string expr)
-            : type(type), expr(expr)
+        MatchedSpecStatement(SpecStatementType type, std::string expr,
+                             const SrcRange &srcLoc)
+            : type(type), expr(expr), srcLoc(srcLoc)
         {
         }
     };
@@ -131,8 +141,10 @@ namespace sourcespec2ir
     {
         llvm::Instruction *inst;
         llvm::SmallVector<std::unique_ptr<MatchedSpecStatement>> statements;
+        SrcRange srcLoc;
 
-        MatchedSpecStatementBlock(llvm::Instruction *inst) : inst(inst)
+        MatchedSpecStatementBlock(llvm::Instruction *inst, const SrcRange &srcLoc) 
+            : inst(inst), srcLoc(srcLoc)
         {
         }
 
@@ -159,7 +171,7 @@ namespace sourcespec2ir
 
         MatchedSpecifications()
             : matchedFContracts(),
-              matchedLoopInvariants(), 
+              matchedLoopInvariants(),
               matchedStmntBlocks()
         {
         }

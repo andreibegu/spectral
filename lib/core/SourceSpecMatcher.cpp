@@ -17,10 +17,8 @@ namespace sourcespec2ir
     std::unique_ptr<MatchedSpecifications> SourceSpecMatcher::matchSpecs()
     {
         matchedSpecs = std::make_unique<MatchedSpecifications>();
-
         // Traverse the parse-tree and match all specifications
         visit(specParseTree);
-
         return std::move(matchedSpecs);
     }
 
@@ -31,17 +29,13 @@ namespace sourcespec2ir
         assert(contract == nullptr);
 
         // Match contract to function
-        auto startLine = ctx->start->getLine();
-        auto startCol = ctx->start->getCharPositionInLine();
-        auto endLine = ctx->stop->getLine();
-        auto endCol = ctx->stop->getCharPositionInLine();
-        const auto specFun = matchFContract(startLine, startCol,
-                                            endLine, endCol);
+        auto loc = getLocFromCtx(ctx);
+        const auto specFun = matchFContract(loc);
         auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
         assert(irFunction != nullptr);
 
         // Create new matched contract
-        contract = std::make_unique<MatchedFunctionContract>(irFunction);
+        contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
 
         // Add all statements to the contract by traversing the children
         for (auto c : ctx->children)
@@ -55,24 +49,26 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitRequiresClause(
         SpecParser::RequiresClauseContext *ctx)
     {
-        addToFContract(Requires, ctx->specExpression());
+        addToFContract(Requires, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
     }
 
     std::any SourceSpecMatcher::visitEnsuresClause(
         SpecParser::EnsuresClauseContext *ctx)
     {
-        addToFContract(Ensures, ctx->specExpression());
+        addToFContract(Ensures, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
     }
 
     void SourceSpecMatcher::addToFContract(
-        ContractStatementType type, SpecParser::SpecExpressionContext *expr)
+        ContractStatementType type, SpecParser::SpecExpressionContext *expr,
+        const SrcRange &loc)
     {
         if (!contract)
             assert("No contract set while adding statement");
         auto exprStr = getExprAsStr(*expr);
-        auto stmnt = std::make_unique<MatchedFContractStatement>(type, exprStr);
+        auto stmnt = std::make_unique<MatchedFContractStatement>(
+            type, exprStr, loc);
         contract->addStatement(std::move(stmnt));
     }
 
@@ -80,12 +76,8 @@ namespace sourcespec2ir
         SpecParser::SpecLoopInvariantBlockContext *ctx)
     {
         // Match the spec-block to the IR
-        auto startLine = ctx->start->getLine();
-        auto startCol = ctx->start->getCharPositionInLine();
-        auto endLine = ctx->stop->getLine();
-        auto endCol = ctx->stop->getCharPositionInLine();
-        auto [parentFunc, loop] = matchLoopInvBlock(
-            startLine, startCol, endLine, endCol);
+        auto loc = getLocFromCtx(ctx);
+        auto [parentFunc, loop] = matchLoopInvBlock(loc);
 
         if (parentFunc == nullptr || loop == nullptr)
         {
@@ -101,14 +93,15 @@ namespace sourcespec2ir
         }
         auto loopHeader = loop->getHeader();
         auto invBlock = std::make_unique<MatchedLoopInvariantBlock>(
-            parentFunc, loopID, loopHeader);
+            parentFunc, loopID, loopHeader, loc);
 
         // Collect the individual invariants from the invariant-block
         for (auto *inv : ctx->specLoopInvariant())
         {
             auto stringRepr = getExprAsStr(*inv->specExpression());
+            auto invLoc = getLocFromCtx(inv);
             invBlock->addInvariant(
-                std::make_unique<MatchedLoopInvariant>(stringRepr));
+                std::make_unique<MatchedLoopInvariant>(stringRepr, invLoc));
         }
 
         matchedSpecs->matchedLoopInvariants.push_back(std::move(invBlock));
@@ -122,16 +115,12 @@ namespace sourcespec2ir
         assert(stmntBlock == nullptr);
 
         // Match contract to instruction
-        auto startLine = ctx->start->getLine();
-        auto startCol = ctx->start->getCharPositionInLine();
-        auto endLine = ctx->stop->getLine();
-        auto endCol = ctx->stop->getCharPositionInLine();
-        const auto instr = matchStatementBlock(startLine, startCol,
-                                               endLine, endCol);
+        auto loc = getLocFromCtx(ctx);
+        const auto instr = matchStatementBlock(loc);
         assert(instr != nullptr);
 
         // Create new matched contract-block
-        stmntBlock = std::make_unique<MatchedSpecStatementBlock>(instr);
+        stmntBlock = std::make_unique<MatchedSpecStatementBlock>(instr, loc);
 
         // Add all statements to the contract by traversing the children
         for (auto c : ctx->children)
@@ -162,7 +151,8 @@ namespace sourcespec2ir
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
         auto exprStr = getExprAsStr(*expr);
-        auto stmnt = std::make_unique<MatchedSpecStatement>(type, exprStr);
+        auto loc = getLocFromCtx(expr);
+        auto stmnt = std::make_unique<MatchedSpecStatement>(type, exprStr, loc);
         stmntBlock->addStatement(std::move(stmnt));
     }
 
@@ -176,6 +166,12 @@ namespace sourcespec2ir
         antlr4::misc::Interval i(startToken->getStartIndex(),
                                  stopToken->getStopIndex());
         return charStream->getText(i);
+    }
+
+    SrcRange SourceSpecMatcher::getLocFromCtx(const antlr4::ParserRuleContext *ctx)
+    {
+        return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine(),
+                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine());
     }
 
 }

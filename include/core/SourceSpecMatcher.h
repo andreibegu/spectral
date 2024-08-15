@@ -4,6 +4,7 @@
 #include "MatchedSourceSpec.h"
 #include "SpecParser.h"
 #include "SpecParserBaseVisitor.h"
+#include "wrapper/SrcLocation.h"
 
 #include <memory>
 #include <utility>
@@ -44,8 +45,7 @@ namespace sourcespec2ir
          * TODO: Check if it makes more sense to return a pointer to the
          *       function instead of the name.
          */
-        virtual std::string matchFContract(
-            size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+        virtual std::string matchFContract(SrcRange loc) = 0;
 
         /**
          * Given the location of a specification-block of loop-invariants,
@@ -53,19 +53,16 @@ namespace sourcespec2ir
          * and a pointer to the function that the matched loop is contained in.
          * If the spec-block cannot be matched, an exception it thrown.
          *
-         * TODO: The loop-pointer might go out of scope. Return something
-         *       else! E.g. a pointer to the llvm.loop md-node.
          */
-        virtual std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
-            size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+        virtual std::pair<llvm::Function *, llvm::Loop *>
+        matchLoopInvBlock(SrcRange loc) = 0;
 
         /**
          * Given the location of a block of spec-statements,
          * returns a pointer to the instruction that the specification refer to.
          * If the spec-block cannot be matched, an exception it thrown.
          */
-        virtual llvm::Instruction *matchStatementBlock(
-            size_t startLine, size_t startCol, size_t endLine, size_t endCol) = 0;
+        virtual llvm::Instruction *matchStatementBlock(SrcRange loc) = 0;
 
     private:
         // Struct in which the matched specifications are collected.
@@ -102,7 +99,8 @@ namespace sourcespec2ir
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
-                            SpecParser::SpecExpressionContext *expr);
+                            SpecParser::SpecExpressionContext *expr, 
+                            const SrcRange &loc);
 
         // Adds a statement to the current block of specification-statements
         void addToStmntBlock(SpecStatementType type,
@@ -115,6 +113,12 @@ namespace sourcespec2ir
          * whitespaces by using the underlying token-stream.
          */
         std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
+
+        /**
+         * Extracts the source-location from a given parser-rule context and
+         * returns it as a SrcRange. 
+         */
+        SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
     };
 
 }

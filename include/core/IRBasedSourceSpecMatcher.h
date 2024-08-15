@@ -28,16 +28,12 @@ namespace sourcespec2ir
                                  const bool printMatchingInfo);
 
     protected:
-        std::string matchFContract(size_t startLine, size_t startCol,
-                                   size_t endLine, size_t endCol) override;
+        std::string matchFContract(SrcRange loc) override;
 
         std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
-            size_t startLine, size_t startCol,
-            size_t endLine, size_t endCol) override;
+            SrcRange loc) override;
 
-        llvm::Instruction *matchStatementBlock(
-            size_t startLine, size_t startCol,
-            size_t endLine, size_t endCol) override;
+        llvm::Instruction *matchStatementBlock(SrcRange loc) override;
 
     private:
         const bool printMatchingInfo;
