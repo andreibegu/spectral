@@ -167,6 +167,22 @@ namespace sourcespec2ir
             const MatchedSpecStatementBlock &stmntBlock);
 
         /**
+         * Modifies the debug-locations of the instructions in the generated
+         * wrapper-functions to represent the locations from the original
+         * source-file.
+         * Modifies irModule and uses the passed mateched specificarions and
+         * wrappers from fContractWrappers, loopInvWrappers and statementWrappers.
+         */
+        void rewriteWrapperLocations();
+
+        /**
+         * Modifies the debug-locations of the instructions in the passed
+         * wrapper function to represent the location in the source file.
+         */
+        void rewriteWrapperLocations(const SrcWrapperFunction &wFun,
+                                     const SrcLocation &exprStartLoc);
+
+        /**
          * Write the IR-representation of the given module into
          * a file at the given path.
          */

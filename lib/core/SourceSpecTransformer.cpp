@@ -3,6 +3,7 @@
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
@@ -132,6 +133,10 @@ namespace sourcespec2ir
 
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers));
+
+        // Update the debug-locations in the generated wrapper-functions
+        // to match the locations in the original source-file.
+        rewriteWrapperLocations();
 
         if (outputConfig.printDebugInfo)
         {
@@ -427,6 +432,60 @@ namespace sourcespec2ir
             mdElems.push_back(arg);
 
         return llvm::MDNode::get(*irContext, mdElems);
+    }
+
+    void SourceSpecTransformer::rewriteWrapperLocations()
+    {
+        for (auto &[cStmnt, wrapper] : fContractWrappers)
+            rewriteWrapperLocations(*wrapper, cStmnt->exprLoc);
+        for (auto &[inv, wrapper] : loopInvWrappers)
+            rewriteWrapperLocations(*wrapper, inv->exprLoc);
+        for (auto &[stmnt, wrapper] : statementWrappers)
+            rewriteWrapperLocations(*wrapper, stmnt->exprLoc);
+    }
+
+    void SourceSpecTransformer::rewriteWrapperLocations(
+        const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc)
+    {
+        // Get the wrapper-function
+        auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
+        if (irWrapperF == nullptr)
+            throw utils::PallasException("Failed to get wrapper-function by name");
+
+        // Update the location of the wrapper-functions DISubprogram
+        auto oldFLine = irWrapperF->getSubprogram()->getLine();
+        // TODO: Implement
+
+        // Update the dbg-locations of the instructions within the function
+        auto [lineOffset, colOffset] = wrapperGenerator->getOffsetToExprStart(wFun);
+        for (auto it = inst_begin(irWrapperF), end = inst_end(irWrapperF); it != end; ++it)
+        {
+            auto &oldInstrLoc = it->getDebugLoc();
+            if (!oldInstrLoc)
+                continue;
+
+            // If the debug-location refers to one of the wrapper function's
+            // arguments, we just drop the debug-location.
+            // Otherwise, the location-calculation overflows.
+            if (oldInstrLoc.getLine() < oldFLine + lineOffset ||
+                oldInstrLoc.getCol() < colOffset)
+            {
+                // Drop the dbg-location
+                it->dropLocation();
+            }
+            else
+            {
+                // Update the dbg-location
+                auto newLine = exprStartLoc.line +
+                               (oldInstrLoc.getLine() - oldFLine - lineOffset);
+                auto newCol = exprStartLoc.column +
+                              (oldInstrLoc.getCol() - colOffset);
+                // TODO: handle inlined at and implicit code
+                auto newDebugLoc = llvm::DILocation::get(
+                    *irContext, newLine, newCol, oldInstrLoc.getScope());
+                it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
+            }
+        }
     }
 
     void SourceSpecTransformer::writeToFile(

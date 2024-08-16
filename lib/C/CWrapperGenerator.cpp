@@ -41,6 +41,12 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::pair<size_t, size_t> CWrapperGenerator::getOffsetToExprStart(
+        const SrcWrapperFunction &wFun)
+    {
+        return std::make_pair(3, 7);
+    }
+
     std::string CWrapperGenerator::addConst(const std::string &baseType)
     {
         return baseType + " const ";
@@ -56,7 +62,7 @@ namespace sourcespec2ir
     {
         return typedefName;
     }
-    
+
     void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
         // Add include for the specification-library to the top of the

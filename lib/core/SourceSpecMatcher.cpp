@@ -68,7 +68,7 @@ namespace sourcespec2ir
             assert("No contract set while adding statement");
         auto exprStr = getExprAsStr(*expr);
         auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc);
+            type, exprStr, loc, getExprStartLoc(*expr));
         contract->addStatement(std::move(stmnt));
     }
 
@@ -99,9 +99,10 @@ namespace sourcespec2ir
         for (auto *inv : ctx->specLoopInvariant())
         {
             auto stringRepr = getExprAsStr(*inv->specExpression());
+            auto exprLoc = getExprStartLoc(*inv->specExpression());
             auto invLoc = getLocFromCtx(inv);
             invBlock->addInvariant(
-                std::make_unique<MatchedLoopInvariant>(stringRepr, invLoc));
+                std::make_unique<MatchedLoopInvariant>(stringRepr, invLoc, exprLoc));
         }
 
         matchedSpecs->matchedLoopInvariants.push_back(std::move(invBlock));
@@ -152,7 +153,8 @@ namespace sourcespec2ir
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
         auto exprStr = getExprAsStr(*expr);
-        auto stmnt = std::make_unique<MatchedSpecStatement>(type, exprStr, loc);
+        auto stmnt = std::make_unique<MatchedSpecStatement>(
+            type, exprStr, loc, getExprStartLoc(*expr));
         stmntBlock->addStatement(std::move(stmnt));
     }
 
@@ -170,8 +172,17 @@ namespace sourcespec2ir
 
     SrcRange SourceSpecMatcher::getLocFromCtx(const antlr4::ParserRuleContext *ctx)
     {
-        return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine(),
-                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine());
+        // We change the column-numbering to start with 1 to be consistent with 
+        // the line-info of LLVM
+        return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine() + 1,
+                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1);
+    }
+
+    SrcLocation SourceSpecMatcher::getExprStartLoc(
+        const SpecParser::SpecExpressionContext &exprCtx)
+    {
+        return SrcLocation(exprCtx.start->getLine(),
+                           exprCtx.start->getCharPositionInLine());
     }
 
 }

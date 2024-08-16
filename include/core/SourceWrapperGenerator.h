@@ -2,6 +2,7 @@
 #define PALLAS_SOURCEWRAPPERGENERATOR_H
 
 #include "MatchedSourceSpec.h"
+#include "wrapper/SrcLocation.h"
 #include "wrapper/SrcWrapperFunction.h"
 #include "SpecDeclaration.h"
 
@@ -12,6 +13,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace sourcespec2ir
 {
@@ -37,6 +39,34 @@ namespace sourcespec2ir
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const std::string &expr,
             const std::string &functionName) = 0;
+
+        /**
+         * For a given SrcWrapperFunction, return the line- and column-offset 
+         * from the start of the wrapper-function to the beginning of the 
+         * wrapped expression in the source.
+         * This method is used to generate accurate debug-locations for 
+         * instructions within wrapper-functions. 
+         * 
+         * E.g. for a wrapper-function
+         * bool w(int a, int b) {
+         *     return a >= b;
+         * }
+         *  
+         * the result should be <1, 11> because the wrapped expression (a >= b)
+         * starts one line and eleven columns from the beginning of the function. 
+         */
+        virtual std::pair<size_t, size_t> getOffsetToExprStart(
+            const SrcWrapperFunction &wFun) = 0;
+
+        /**
+         * Given a wrapper-function and its line-number, returns a location
+         * that points to the beginning of the wrapped expression in the original
+         * source-file. 
+         * 
+         * Has to be overwritten by the lanuage-specific wrapper generator. 
+         */
+        //virtual SrcLocation getExprStartLocForWrapper(size_t wFunLine, 
+        //    const SrcWrapperFunction &wFun) = 0;
 
         /**
          * Return the line-number where the wrapper-functions for the

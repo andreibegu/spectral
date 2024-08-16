@@ -17,6 +17,9 @@ namespace sourcespec2ir
             const std::string &expr,
             const std::string &functionName) override;
 
+        std::pair<size_t, size_t> getOffsetToExprStart(
+            const SrcWrapperFunction &wFun) override;
+
     protected:
         // Overwritten methods to customize the default-WrapperGenerator
         std::string addConst(const std::string &baseType) override;

@@ -120,6 +120,13 @@ namespace sourcespec2ir
          * returns it as a SrcRange. 
          */
         SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
+
+        /**
+         * Returns the location in the source-file where the given expression 
+         * starts. 
+         */
+        SrcLocation getExprStartLoc(
+            const SpecParser::SpecExpressionContext &exprCtx);
     };
 
 }

@@ -40,12 +40,15 @@ namespace sourcespec2ir
         ContractStatementType type;
         // The source-language expression of the statement
         std::string expr;
-        // The location of the expression in the source-file
+        // The location of the contract statement in the source-file
         SrcRange srcLoc;
+        // The start-position of the statements expression in the source-file. 
+        SrcLocation exprLoc;
 
         MatchedFContractStatement(ContractStatementType type, std::string expr,
-                                  const SrcRange &srcLoc)
-            : type(type), expr(expr), srcLoc(srcLoc)
+                                  const SrcRange &srcLoc, 
+                                  const SrcLocation &exprLoc)
+            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
         {
         }
     };
@@ -53,7 +56,7 @@ namespace sourcespec2ir
     /**
      * A struct that represents a function contract-block
      *  that has been matched to an IR-function.
-     * The order of statements in the source must be maintained in the vector!
+     * The order of statement's in the source must be maintained in the vector!
      */
     struct MatchedFunctionContract
     {
@@ -80,9 +83,12 @@ namespace sourcespec2ir
     {
         std::string expr;
         SrcRange srcLoc;
+        // The start-position of the invariant's expression in the source-file. 
+        SrcLocation exprLoc;
 
-        MatchedLoopInvariant(std::string expr, const SrcRange &srcLoc)
-            : expr(expr), srcLoc(srcLoc)
+        MatchedLoopInvariant(std::string expr, const SrcRange &srcLoc, 
+                             const SrcLocation &exprLoc)
+            : expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
         {
         }
     };
@@ -123,11 +129,14 @@ namespace sourcespec2ir
         SpecStatementType type;
         // The source-language expression of the statement
         std::string expr;
+        // The start- and end-position of the statement in the source-file
         SrcRange srcLoc;
+        // The start-position of the expression in the source-file. 
+        SrcLocation exprLoc;
 
         MatchedSpecStatement(SpecStatementType type, std::string expr,
-                             const SrcRange &srcLoc)
-            : type(type), expr(expr), srcLoc(srcLoc)
+                             const SrcRange &srcLoc, const SrcLocation &exprLoc)
+            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
         {
         }
     };

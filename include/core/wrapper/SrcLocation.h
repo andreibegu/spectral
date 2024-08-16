@@ -15,6 +15,7 @@ namespace sourcespec2ir
         size_t column;
 
         SrcLocation(size_t line, size_t column);
+        SrcLocation(const SrcLocation &baseLoc, size_t colOffset);
 
         inline size_t getLine() { return line; }
         inline size_t getColumn() { return column; }
