@@ -170,17 +170,22 @@ namespace sourcespec2ir
          * Modifies the debug-locations of the instructions in the generated
          * wrapper-functions to represent the locations from the original
          * source-file.
-         * Modifies irModule and uses the passed mateched specificarions and
-         * wrappers from fContractWrappers, loopInvWrappers and statementWrappers.
+         * Modifies irModule and uses the passed matched specifications 
+         * to find the wrapper-functions and to determine the appropriate scopes.
          */
-        void rewriteWrapperLocations();
+        void rewriteWrapperLocations(const MatchedSpecifications &matchedSpecs);
 
         /**
          * Modifies the debug-locations of the instructions in the passed
          * wrapper function to represent the location in the source file.
+         * 
+         * The passed compilation-unit and scope-file are used as the 
+         * cu and scope of the wrapper-function.
          */
         void rewriteWrapperLocations(const SrcWrapperFunction &wFun,
-                                     const SrcLocation &exprStartLoc);
+                                     const SrcLocation &exprStartLoc,
+                                     llvm::DICompileUnit *cu,  
+                                     llvm::DIFile *scopeFile);
 
         /**
          * Write the IR-representation of the given module into
@@ -202,6 +207,20 @@ namespace sourcespec2ir
          * Generates a MDTuple that encodes a source-location.
          */
         llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
+
+        /**
+         * Helper that returns the DIFile for a given function and checks for 
+         * nullpointers. 
+         */
+        llvm::DIFile *getFileForFunc(llvm::Function *f);
+
+        /**
+         * Helper that returns the cimpilation-unit for a given function and 
+         * checks for nullpointers. 
+         */
+        llvm::DICompileUnit *getCUForFunc(llvm::Function *f);
+
+        
 
         /**
          * Returns the path where the source-file that has been extended with

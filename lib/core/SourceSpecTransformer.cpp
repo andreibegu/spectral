@@ -3,6 +3,7 @@
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
@@ -136,7 +137,7 @@ namespace sourcespec2ir
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
-        rewriteWrapperLocations();
+        rewriteWrapperLocations(*matchedSpecs);
 
         if (outputConfig.printDebugInfo)
         {
@@ -434,27 +435,72 @@ namespace sourcespec2ir
         return llvm::MDNode::get(*irContext, mdElems);
     }
 
-    void SourceSpecTransformer::rewriteWrapperLocations()
+    void SourceSpecTransformer::rewriteWrapperLocations(
+        const MatchedSpecifications &matchedSpecs)
     {
-        for (auto &[cStmnt, wrapper] : fContractWrappers)
-            rewriteWrapperLocations(*wrapper, cStmnt->exprLoc);
-        for (auto &[inv, wrapper] : loopInvWrappers)
-            rewriteWrapperLocations(*wrapper, inv->exprLoc);
-        for (auto &[stmnt, wrapper] : statementWrappers)
-            rewriteWrapperLocations(*wrapper, stmnt->exprLoc);
+        // Handle function-contracts
+        for (auto &contr : matchedSpecs.matchedFContracts)
+        {
+            auto cu = getCUForFunc(contr->function);
+            auto scopeFile = getFileForFunc(contr->function);
+            for (auto &stmnt : contr->statements)
+                rewriteWrapperLocations(*fContractWrappers[stmnt.get()],
+                                        stmnt->exprLoc, cu, scopeFile);
+        }
+        // Handle loop-invariants
+        for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
+        {
+            auto cu = getCUForFunc(invBlock->parentFunction);
+            auto scopeFile = getFileForFunc(invBlock->parentFunction);
+            for (auto &inv : invBlock->invariants)
+                rewriteWrapperLocations(*loopInvWrappers[inv.get()],
+                                        inv->exprLoc, cu, scopeFile);
+        }
+        // Handle specification statements
+        for (auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
+        {
+            auto instr = stmntBlock->inst;
+            auto parentFunc = instr->getParent()->getParent();
+            auto cu = getCUForFunc(parentFunc);
+            auto scopeFile = getFileForFunc(parentFunc);
+            for (auto &stmnt : stmntBlock->statements)
+                rewriteWrapperLocations(*statementWrappers[stmnt.get()],
+                                        stmnt->exprLoc, cu, scopeFile);
+        }
     }
 
     void SourceSpecTransformer::rewriteWrapperLocations(
-        const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc)
+        const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+        llvm::DICompileUnit *cu, llvm::DIFile *scopeFile)
     {
         // Get the wrapper-function
         auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
         if (irWrapperF == nullptr)
             throw utils::PallasException("Failed to get wrapper-function by name");
 
+        auto oldSProg = irWrapperF->getSubprogram();
+        auto oldFLine = oldSProg->getLine(); // Needed to calculate new positions for instructions
+        llvm::DIBuilder diBuilder(*irModule, true, cu);
+
         // Update the location of the wrapper-functions DISubprogram
-        auto oldFLine = irWrapperF->getSubprogram()->getLine();
-        // TODO: Implement
+        // The line-info cannot be modified manually, so we replace the full
+        // DISubprogram of the wrapper-function.
+        auto newSProg = diBuilder.createFunction(
+            scopeFile, // New scope
+            oldSProg->getName(),
+            oldSProg->getLinkageName(),
+            scopeFile,         // New file
+            exprStartLoc.line, // New line
+            oldSProg->getType(),
+            exprStartLoc.line, // New scope line
+            oldSProg->getFlags(),
+            oldSProg->getSPFlags(),
+            oldSProg->getTemplateParams(),
+            oldSProg->getDeclaration(),
+            oldSProg->getThrownTypes(),
+            oldSProg->getAnnotations(),
+            oldSProg->getTargetFuncName());
+        irWrapperF->setSubprogram(newSProg);
 
         // Update the dbg-locations of the instructions within the function
         auto [lineOffset, colOffset] = wrapperGenerator->getOffsetToExprStart(wFun);
@@ -467,8 +513,9 @@ namespace sourcespec2ir
             // If the debug-location refers to one of the wrapper function's
             // arguments, we just drop the debug-location.
             // Otherwise, the location-calculation overflows.
-            if (oldInstrLoc.getLine() < oldFLine + lineOffset ||
-                oldInstrLoc.getCol() < colOffset)
+            if (exprStartLoc.line + oldInstrLoc.getLine() < oldFLine + lineOffset ||
+                (oldInstrLoc.getLine() - oldFLine + lineOffset == 0 &&
+                 exprStartLoc.column + oldInstrLoc.getCol() < colOffset))
             {
                 // Drop the dbg-location
                 it->dropLocation();
@@ -476,16 +523,66 @@ namespace sourcespec2ir
             else
             {
                 // Update the dbg-location
-                auto newLine = exprStartLoc.line +
-                               (oldInstrLoc.getLine() - oldFLine - lineOffset);
-                auto newCol = exprStartLoc.column +
-                              (oldInstrLoc.getCol() - colOffset);
-                // TODO: handle inlined at and implicit code
+                auto newLine = exprStartLoc.line + oldInstrLoc.getLine() - oldFLine - lineOffset;
+                auto newCol = oldInstrLoc.getCol();
+                // If the instruction is on the first-line, we need to add
+                // the additional column-offset.
+                if (newLine == exprStartLoc.line)
+                {
+                    newCol += exprStartLoc.column;
+                    newCol -= colOffset;
+                }
+
+                auto newScope = oldInstrLoc.getScope();
+                // Replace references to old DISubprogram
+                if (newScope == oldSProg)
+                    newScope = newSProg;
+
+                // TODO: This needs some more work, if there are local scopes,
+                // these will also have to be adapted.
+
+                // TODO: handle inlined at, and implicit code
                 auto newDebugLoc = llvm::DILocation::get(
-                    *irContext, newLine, newCol, oldInstrLoc.getScope());
+                    *irContext, newLine, newCol, newScope);
                 it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
             }
+
+            // If the instruction is a call to a debug-intrinsic, update the
+            // scope of the DIVariables.
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
+            {
+                auto oldVar = intr->getVariable();
+                if (oldVar->isParameter())
+                {
+                    auto newVar = diBuilder.createParameterVariable(
+                        newSProg, // New scope
+                        oldVar->getName(),
+                        oldVar->getArg(),
+                        scopeFile,         // New File
+                        exprStartLoc.line, // New line
+                        oldVar->getType(),
+                        false, // TODO: Check if alwaysPreserve should be true
+                        oldVar->getFlags(),
+                        oldVar->getAnnotations());
+                    intr->setVariable(newVar);
+                }
+                else
+                {
+                    auto newVar = diBuilder.createAutoVariable(
+                        newSProg, // New scope
+                        oldVar->getName(),
+                        scopeFile,         // New file
+                        exprStartLoc.line, // New line
+                        oldVar->getType(),
+                        false, // TODO: Check if alwaysPreserve should be true
+                        oldVar->getFlags(),
+                        oldVar->getAlignInBits());
+                    intr->setVariable(newVar);
+                }
+            }
         }
+
+        diBuilder.finalize();
     }
 
     void SourceSpecTransformer::writeToFile(
@@ -566,6 +663,30 @@ namespace sourcespec2ir
             llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.column)),
         };
         return llvm::MDTuple::get(*irContext, mdElems);
+    }
+
+    llvm::DIFile *SourceSpecTransformer::getFileForFunc(llvm::Function *f)
+    {
+        if (f == nullptr)
+            throw utils::PallasException("Passed function is nullptr.");
+        if (f->getSubprogram() == nullptr)
+            throw utils::PallasException("Encountered a function without a subprogram");
+        auto *file = f->getSubprogram()->getFile();
+        if (file == nullptr)
+            throw utils::PallasException("Encountered a function without a file.");
+        return file;
+    }
+
+    llvm::DICompileUnit *SourceSpecTransformer::getCUForFunc(llvm::Function *f)
+    {
+        if (f == nullptr)
+            throw utils::PallasException("Passed function is nullptr.");
+        if (f->getSubprogram() == nullptr)
+            throw utils::PallasException("Encountered a function without a subprogram");
+        auto *cu = f->getSubprogram()->getUnit();
+        if (cu == nullptr)
+            throw utils::PallasException("Encountered a function without a compile-unit.");
+        return cu;
     }
 
     /*
