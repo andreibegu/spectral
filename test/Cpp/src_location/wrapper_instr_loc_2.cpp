@@ -29,8 +29,8 @@ float bar (float x, float y) {
 // CHECK-NEXT: %6 = fcmp ogt float %5, 0.000000e+00, !dbg [[cmp2MD:![0-9]+]]
 
 // COM: Check that the locations are set correctly:
-// CHECK: [[dbgValMD]] = !DILocation(line: 0, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[cmpMD]] = !DILocation(line: 8, column: 13, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[brMD]] = !DILocation(line: 9, column: 5, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[addMD]] = !DILocation(line: 9, column: 10, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[cmp2MD]] = !DILocation(line: 9, column: 14, scope: [[sProgMD:![0-9]+]])
+// CHECK: [[dbgValMD]] = !DILocation(line: 0, scope: [[sProgMD]])
+// CHECK: [[cmpMD]] = !DILocation(line: 8, column: 13, scope: [[sProgMD]])
+// CHECK: [[brMD]] = !DILocation(line: 9, column: 5, scope: [[sProgMD]])
+// CHECK: [[addMD]] = !DILocation(line: 9, column: 10, scope: [[sProgMD]])
+// CHECK: [[cmp2MD]] = !DILocation(line: 9, column: 14, scope: [[sProgMD]])

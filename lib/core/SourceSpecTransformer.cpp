@@ -511,11 +511,10 @@ namespace sourcespec2ir
                 continue;
 
             // If the debug-location refers to one of the wrapper function's
-            // arguments, we just drop the debug-location.
-            // Otherwise, the location-calculation overflows.
+            // arguments or a return-instruction, it would go out of scope. 
+            // In these cases, we drop the location
             if (exprStartLoc.line + oldInstrLoc.getLine() < oldFLine + lineOffset ||
-                (oldInstrLoc.getLine() - oldFLine + lineOffset == 0 &&
-                 exprStartLoc.column + oldInstrLoc.getCol() < colOffset))
+                (oldInstrLoc.getLine() - oldFLine - lineOffset == 0 && oldInstrLoc.getCol() < colOffset))
             {
                 // Drop the dbg-location
                 it->dropLocation();

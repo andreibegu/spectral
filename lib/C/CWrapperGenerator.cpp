@@ -44,7 +44,7 @@ namespace sourcespec2ir
     std::pair<size_t, size_t> CWrapperGenerator::getOffsetToExprStart(
         const SrcWrapperFunction &wFun)
     {
-        return std::make_pair(3, 7);
+        return std::make_pair(1, 7);
     }
 
     std::string CWrapperGenerator::addConst(const std::string &baseType)

@@ -21,6 +21,6 @@ int bar (int x) {
 // CHECK-NEXT: %3 = icmp sgt i32 %2, 0, !dbg [[icmpMD:![0-9]+]]
 
 // COM: Check that the locations are set correctly:
-// CHECK: [[dbgValMD]] = !DILocation(line: 0, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[addMD]] = !DILocation(line: 7, column: 12, scope: [[sProgMD:![0-9]+]])
-// CHECK: [[icmpMD]] = !DILocation(line: 7, column: 16, scope: [[sProgMD:![0-9]+]])
+// CHECK: [[dbgValMD]] = !DILocation(line: 0, scope: [[sProgMD]])
+// CHECK: [[addMD]] = !DILocation(line: 7, column: 12, scope: [[sProgMD]])
+// CHECK: [[icmpMD]] = !DILocation(line: 7, column: 16, scope: [[sProgMD]])
