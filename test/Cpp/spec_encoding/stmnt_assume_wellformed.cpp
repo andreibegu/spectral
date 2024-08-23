@@ -15,8 +15,8 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the assert-statement is wellformed
-// CHECK: [[blockMD]] = !{[[assumeMD:![0-9]+]]}
-// CHECK: [[assumeMD]] = !{!"pallas.assume", ptr @_Z13PALLAS_SPEC_0ff, [[xMD]], [[yMD]]}
+// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
+// CHECK: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0ff, [[xMD]], [[yMD]]}
 
 bool fabulousFunction (float x, float y) {
     /*@

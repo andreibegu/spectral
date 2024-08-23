@@ -33,6 +33,12 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::pair<size_t, size_t> CppWrapperGenerator::getOffsetToExprStart(
+        const SrcWrapperFunction &wFun)
+    {
+        return std::make_pair(1, 7);
+    }
+
     std::string CppWrapperGenerator::addConst(const std::string &baseType)
     {
         return baseType + " const ";
@@ -62,8 +68,8 @@ namespace sourcespec2ir
 
     void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
-        // Add include for the specification-library to the top of the 
-        // generated file. 
+        // Add include for the specification-library to the top of the
+        // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include \"cpp_spec_lib.h\"", 0));
     }

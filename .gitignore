@@ -1,5 +1,11 @@
+# Build-files
 .build/
 build/
 grammar/.antlr/
 grammar/demo/.antlr/
+# Local temporary/ working directory
 .tmp
+# Local files used for testing
+examples/cpp_test.cpp
+examples/cpp_test.h
+examples/c_test.c

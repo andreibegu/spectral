@@ -1,20 +1,23 @@
 # LLVM specification-format 
 
-
 ## Function contracts
 Function-contracts are encoded by attaching a metadata-node to the corresponding function. 
-The node is labeled as `!pallas.fcontract` and consists of a tuple that lists the clauses of the contract. 
+The node is labeled as `!pallas.fcontract` and consists of a MD-tuple that consists of:
+- a reference to a MD-tuple that encodes the location in the source-file
+- followed by a list of the clauses of the contract. 
 
 The individual clauses of the contract are encoded as metadata-tuples that consist of 
 - a MD-String that identifies the type of the statement ( `!"pallas.requires"` or `!"pallas.ensures"` )
+- a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the clause 
-- A list of references to the `!DILocalVariable`s that represent the variables that are available in the expression. The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
+- a list of references to the `!DILocalVariable`s that represent the variables that are available in the expression. The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
 
 **Supported constructs**: 
 - `requires EXPR ;`
 - `ensures EXPR ;`
 
 ### Example (C++):
+
 **Source-contract:**
 ```
 /*@
@@ -32,20 +35,23 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   store i32 %0, ptr %3, align 4
-  call void @llvm.dbg.declare(metadata ptr %3, metadata !113, metadata !DIExpression())
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !115, metadata !DIExpression()), !dbg !119
   store i32 %1, ptr %4, align 4
-  call void @llvm.dbg.declare(metadata ptr %4, metadata !114, metadata !DIExpression())
+  call void @llvm.dbg.declare(metadata ptr %4, metadata !116, metadata !DIExpression()), !dbg !120
   [...]
 }
 
 [...]
 
 ; Encoding of the contract
-!111 = !{!112, !115} 
-!112 = !{!"pallas.requires", ptr @_Z13PALLAS_SPEC_0ii, !113, !114}
-!113 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 5, type: !20)
-!114 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 5, type: !20)
-!115 = !{!"pallas.ensures", ptr @_Z13PALLAS_SPEC_1ii, !113, !114}
+!111 = !{!112, !113, !117}
+!112 = !{!"pallas.srcLoc", !"1", !"1", !"4", !"1"}
+!113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
+!114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}
+!115 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 5, type: !20)
+!116 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 5, type: !20)
+!117 = !{!"pallas.ensures", !118, ptr @_Z13PALLAS_SPEC_1ii, !115, !116}
+!118 = !{!"pallas.srcLoc", !"3", !"1", !"3", !"43"}
 ```
 
 ## Loop invariants
@@ -55,9 +61,11 @@ This assumes that all loops are in [Loop Simplify Form](https://llvm.org/docs/Lo
 
 The tuple that encodes the set of loop-invariants (`!128`) consists of 
 - a MD-string that identifies the tuple as a set of loop invariants (`!"pallas.loopInv"`)
+- a reference to a MD-tuple that encodes the location in the source-file
 - a list of MD-nodes that encode the individual invariants. 
 
 The encoding of the individual invariants  (`!129`) is structured similarly to the encoding of function-contract clauses, i.e. as a MD-tuple that consists of 
+- a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the invariant 
 - a list of references to the `!DILocalVariable`s that represent the variables that are available in the expression. The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
 
@@ -65,6 +73,7 @@ The encoding of the individual invariants  (`!129`) is structured similarly to t
 - `loop_invariant EXPR ;`
 
 ### Example (C++):
+
 **Source-invariant:**
 ```
 int foo (int a, int b) {
@@ -78,35 +87,40 @@ int foo (int a, int b) {
     }
     return a;
 }
-
 ```
 
 **IR-invariant:**
 ```
-; Function Attrs: mustprogress noinline nounwind uwtable
 define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !dbg !106 {
   [...]
   br label %6, !dbg !117, !llvm.loop !125
   [...]
 }
 
+[...]
+
 !111 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 1, type: !20)
 !113 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 1, type: !20)
 !115 = !DILocalVariable(name: "i", scope: !106, file: !107, line: 5, type: !20)
 !125 = distinct !{!125, !117, !126, !127, !128}
 ; Encoding of invariant
-!128 = !{!"pallas.loopInv", !129}
-!129 = !{ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
+!128 = !{!"pallas.loopInv", !129, !130}
+!129 = !{!"pallas.srcLoc", !"2", !"5", !"4", !"26"}
+!130 = !{!131, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
 
 ## Specification-statements
 Specification-statements like assume- or assert-statements are encoded as metadata-nodes and attached to the instruction before which they are executed. 
 
-A blovk of statements is encoded as a MD-tuple that is labeled with `!pallas.stmntBlock` (`!122` in the example). This tuple contains references to the MD-nodes that encode the individual specification statements. 
+A block of statements is encoded as a MD-tuple that is labeled with `!pallas.stmntBlock` (`!122` in the example). 
+This tuple contains:
+- a reference to a MD-tuple that encodes the location in the source-file
+- followed by references to the MD-nodes that encode the individual specification statements. 
 
 Individual specification-statements are encoded as MD-nodes (`!123`) that consist of
 - a MD-string that identifies the type of the statement ( `!"pallas.assume"` or `!"pallas.assert"` )
-- - a pointer to the function that wraps the expression of the specification-statement (`@_Z13PALLAS_SPEC_0iii`)
+- a reference to a MD-tuple that encodes the location in the source-file
+- a pointer to the function that wraps the expression of the specification-statement (`@_Z13PALLAS_SPEC_0iii`)
 - A list of references to the `!DILocalVariable`s that represent the variables that are available in the expression (`!111`, `!113` and `!115`). The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
 
 **Supported constructs:**
@@ -114,6 +128,7 @@ Individual specification-statements are encoded as MD-nodes (`!123`) that consis
 - `assume EXPR ;`
 
 ### Example (C++):
+
 **Source-statement:**
 ```
 int foo (int a, int b) {
@@ -128,7 +143,6 @@ int foo (int a, int b) {
 
 **IR-statement:**
 ```
-; Function Attrs: mustprogress noinline nounwind uwtable
 define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
   [...]
   store i32 %9, ptr %5, align 4
@@ -148,8 +162,9 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
 !120 = !DILocalVariable(name: "j", scope: !106, file: !107, line: 6, type: !20)
 
 ; Encoding of the statement-block
-!122 = !{!123}
-!123 = !{!"pallas.assume", ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
+!122 = !{!123, !124}
+!123 = !{!"pallas.srcLoc", !"3", !"5", !"5", !"5"}
+!124 = !{!"pallas.assume", !125, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
 
 ## Ghost-code
@@ -162,6 +177,7 @@ The variables that are accesible in the wrapped expression are passed as argumen
 To identify generated wrapper-functions, an MD-node that contains an empty MD-string (`!126` in the example) is attached to the function and labeled with `!pallas.exprWrapper`.
 
 ### Example (C++):
+
 In the example below, the expresion from the requires-clause is wrapped in the function 
 `@_Z13PALLAS_SPEC_0ii`. For all variables that are available in the expression (`a` and `b`), arguments are added to the wrapper-function (`%0`, `%1`).
 
@@ -183,22 +199,45 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 
 ; Generated wrapper-function
 define dso_local noundef zeroext i1 @_Z13PALLAS_SPEC_0ii(i32 noundef %0, i32 noundef %1) #0 !pallas.exprWrapper !126 {
-  %3 = icmp sge i32 %0, 0, !dbg !130
-  br i1 %3, label %4, label %6, !dbg !131
+  %3 = icmp sge i32 %0, 0
+  br i1 %3, label %4, label %6
 4:                                                ; preds = %2
-  %5 = icmp sge i32 %1, 0, !dbg !132
+  %5 = icmp sge i32 %1, 0
   br label %6
 6:                                                ; preds = %4, %2
-  %7 = phi i1 [ false, %2 ], [ %5, %4 ], !dbg !128
+  %7 = phi i1 [ false, %2 ], [ %5, %4 ]
   ret i1 %7, !dbg !133
 }
 
-!111 = !{!112}
-!112 = !{!"pallas.requires", ptr @_Z13PALLAS_SPEC_0ii, !113, !114}
-!113 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 4, type: !20)
-!114 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 4, type: !20)
+!111 = !{!112, !113}
+!112 = !{!"pallas.srcLoc", !"1", !"1", !"3", !"1"}
+!113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
+!114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}
 !126 = !{!""}
 ```
+
+## Source-locations:
+Specification-constructs like contract or blocks of invariants contain information about 
+where in the source-file the specification-construct occurs. This information is intended to be 
+used by verification-backends to provide meaningfull error-messages. 
+
+The intuitive way to encode this information would be to use the DILocation-nodes that 
+are already a part of LLVM. However this causes LLVM's verify-pass to fail which only allows DILocation-nodes 
+to be used in certain places.
+
+As a result, we use MD-tuples to encode source-location information in specification-constructs. 
+A source-location-tuple cosists of:
+- A MD-string that identified the tuple as a source-location (`pallas.srcLoc`)
+- A MD-string that contains the start-line
+- A MD-string that contains the start-column
+- A MD-string that contains the end-line
+- A MD-string that contains the end-column
+
+Line- and coumn-numbers both start at 1 in order to be consistent with the numbering used by LLVM.
+The start-line and -column point to the position before the first parser-token of the specification-construct.
+The end-line and -column point to the position before the last parser-token of the specification-construct. 
+
+See the examples of the previous sections for reference. 
 
 # Unified specification-library
 The unified specification-library conains a set of LLVM-IR function- and type declarations that are used to encode expressions with specification-specific constructs.  

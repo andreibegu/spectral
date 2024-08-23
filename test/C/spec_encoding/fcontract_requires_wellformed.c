@@ -19,7 +19,7 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the requires-Clause is wellformed
-// CHECK: !{!"pallas.requires", ptr [[wrapperFunc]], [[arg1MD]], [[arg2MD]]}
+// CHECK: !{!"pallas.requires", {{![0-9]+}}, ptr [[wrapperFunc]], [[arg1MD]], [[arg2MD]]}
 
 /*@
 requires x >= 0;

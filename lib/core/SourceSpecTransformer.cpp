@@ -3,6 +3,8 @@
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/InstIterator.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
@@ -133,6 +135,10 @@ namespace sourcespec2ir
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers));
 
+        // Update the debug-locations in the generated wrapper-functions
+        // to match the locations in the original source-file.
+        rewriteWrapperLocations(*matchedSpecs);
+
         if (outputConfig.printDebugInfo)
         {
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -243,10 +249,6 @@ namespace sourcespec2ir
         if (numInvs == 0)
             return;
 
-        // Determine the variables that can be referenced in the invariant
-        // auto availableVars = utils::getVarsForLoopInv(
-        //    invBlock.parentFunction, invBlock.loopHeader);
-
         // Vector of MD-nodes that makes up the tuple with the invariants
         llvm::SmallVector<llvm::Metadata *> invNodes;
 
@@ -254,6 +256,9 @@ namespace sourcespec2ir
         auto invIDNode = llvm::MDString::get(*irContext,
                                              PALLAS_LOOP_INV_BLOCK);
         invNodes.push_back(invIDNode);
+
+        // Add info on srcLocation
+        invNodes.push_back(encodeSrcLoc(invBlock.srcLoc));
 
         // Transform the individual invariants and add them to invNodes
         for (auto &inv : invBlock.invariants)
@@ -278,7 +283,10 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
 
         // Assemble MD-node to represent invariant-statement
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *> mdElems;
+        // Add source-location info
+        mdElems.push_back(encodeSrcLoc(inv.srcLoc));
+
         // Add ref to wrapper-function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
         // Add references to the metadata-nodes that describe how the arguments
@@ -300,6 +308,10 @@ namespace sourcespec2ir
 
         // Transform specification statements
         llvm::SmallVector<llvm::Metadata *> stmntNodes;
+
+        // Add location-information
+        stmntNodes.push_back(encodeSrcLoc(stmntBlock.srcLoc));
+
         for (auto &stmnt : stmntBlock.statements)
             stmntNodes.push_back(encodeSpecStatement(*stmnt));
 
@@ -329,6 +341,9 @@ namespace sourcespec2ir
         else
             throw utils::PallasException("Unsupported statement-type");
         mdElems.push_back(llvm::MDString::get(*irContext, mdId));
+
+        // Add info on srcLocation
+        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
         // Add reference to function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
@@ -362,15 +377,20 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
+        llvm::SmallVector<llvm::Metadata *> contractMDNodes;
+
+        // Add src-location information
+        contractMDNodes.push_back(encodeSrcLoc(contract.srcLoc));
+
         // Transform specification statements
-        llvm::SmallVector<llvm::Metadata *> specStatementNodes;
         for (auto &matchedStmnt : contract.statements)
         {
             auto mdNode = encodeFunctionContractStatement(*parentFunction,
                                                           *matchedStmnt);
-            specStatementNodes.push_back(mdNode);
+            contractMDNodes.push_back(mdNode);
         }
-        auto contractMDNode = llvm::MDTuple::get(*irContext, specStatementNodes);
+
+        auto contractMDNode = llvm::MDTuple::get(*irContext, contractMDNodes);
         parentFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
     }
 
@@ -387,7 +407,7 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
 
         // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *> mdElems;
 
         // Add statement identifier
         std::string mdId;
@@ -400,6 +420,9 @@ namespace sourcespec2ir
         auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
         mdElems.push_back(mdIdentifier);
 
+        // Add src-location information
+        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
+
         // Add reference to function
         auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
         mdElems.push_back(specFuncAsMd);
@@ -410,6 +433,155 @@ namespace sourcespec2ir
             mdElems.push_back(arg);
 
         return llvm::MDNode::get(*irContext, mdElems);
+    }
+
+    void SourceSpecTransformer::rewriteWrapperLocations(
+        const MatchedSpecifications &matchedSpecs)
+    {
+        // Handle function-contracts
+        for (auto &contr : matchedSpecs.matchedFContracts)
+        {
+            auto cu = getCUForFunc(contr->function);
+            auto scopeFile = getFileForFunc(contr->function);
+            for (auto &stmnt : contr->statements)
+                rewriteWrapperLocations(*fContractWrappers[stmnt.get()],
+                                        stmnt->exprLoc, cu, scopeFile);
+        }
+        // Handle loop-invariants
+        for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
+        {
+            auto cu = getCUForFunc(invBlock->parentFunction);
+            auto scopeFile = getFileForFunc(invBlock->parentFunction);
+            for (auto &inv : invBlock->invariants)
+                rewriteWrapperLocations(*loopInvWrappers[inv.get()],
+                                        inv->exprLoc, cu, scopeFile);
+        }
+        // Handle specification statements
+        for (auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
+        {
+            auto instr = stmntBlock->inst;
+            auto parentFunc = instr->getParent()->getParent();
+            auto cu = getCUForFunc(parentFunc);
+            auto scopeFile = getFileForFunc(parentFunc);
+            for (auto &stmnt : stmntBlock->statements)
+                rewriteWrapperLocations(*statementWrappers[stmnt.get()],
+                                        stmnt->exprLoc, cu, scopeFile);
+        }
+    }
+
+    void SourceSpecTransformer::rewriteWrapperLocations(
+        const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+        llvm::DICompileUnit *cu, llvm::DIFile *scopeFile)
+    {
+        // Get the wrapper-function
+        auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
+        if (irWrapperF == nullptr)
+            throw utils::PallasException("Failed to get wrapper-function by name");
+
+        auto oldSProg = irWrapperF->getSubprogram();
+        auto oldFLine = oldSProg->getLine(); // Needed to calculate new positions for instructions
+        llvm::DIBuilder diBuilder(*irModule, true, cu);
+
+        // Update the location of the wrapper-functions DISubprogram
+        // The line-info cannot be modified manually, so we replace the full
+        // DISubprogram of the wrapper-function.
+        auto newSProg = diBuilder.createFunction(
+            scopeFile, // New scope
+            oldSProg->getName(),
+            oldSProg->getLinkageName(),
+            scopeFile,         // New file
+            exprStartLoc.line, // New line
+            oldSProg->getType(),
+            exprStartLoc.line, // New scope line
+            oldSProg->getFlags(),
+            oldSProg->getSPFlags(),
+            oldSProg->getTemplateParams(),
+            oldSProg->getDeclaration(),
+            oldSProg->getThrownTypes(),
+            oldSProg->getAnnotations(),
+            oldSProg->getTargetFuncName());
+        irWrapperF->setSubprogram(newSProg);
+
+        // Update the dbg-locations of the instructions within the function
+        auto [lineOffset, colOffset] = wrapperGenerator->getOffsetToExprStart(wFun);
+        for (auto it = inst_begin(irWrapperF), end = inst_end(irWrapperF); it != end; ++it)
+        {
+            auto &oldInstrLoc = it->getDebugLoc();
+            if (!oldInstrLoc)
+                continue;
+
+            // If the debug-location refers to one of the wrapper function's
+            // arguments or a return-instruction, it would go out of scope. 
+            // In these cases, we drop the location
+            if (exprStartLoc.line + oldInstrLoc.getLine() < oldFLine + lineOffset ||
+                (oldInstrLoc.getLine() - oldFLine - lineOffset == 0 && oldInstrLoc.getCol() < colOffset))
+            {
+                // Drop the dbg-location
+                it->dropLocation();
+            }
+            else
+            {
+                // Update the dbg-location
+                auto newLine = exprStartLoc.line + oldInstrLoc.getLine() - oldFLine - lineOffset;
+                auto newCol = oldInstrLoc.getCol();
+                // If the instruction is on the first-line, we need to add
+                // the additional column-offset.
+                if (newLine == exprStartLoc.line)
+                {
+                    newCol += exprStartLoc.column;
+                    newCol -= colOffset;
+                }
+
+                auto newScope = oldInstrLoc.getScope();
+                // Replace references to old DISubprogram
+                if (newScope == oldSProg)
+                    newScope = newSProg;
+
+                // TODO: This needs some more work, if there are local scopes,
+                // these will also have to be adapted.
+
+                // TODO: handle inlined at, and implicit code
+                auto newDebugLoc = llvm::DILocation::get(
+                    *irContext, newLine, newCol, newScope);
+                it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
+            }
+
+            // If the instruction is a call to a debug-intrinsic, update the
+            // scope of the DIVariables.
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
+            {
+                auto oldVar = intr->getVariable();
+                if (oldVar->isParameter())
+                {
+                    auto newVar = diBuilder.createParameterVariable(
+                        newSProg, // New scope
+                        oldVar->getName(),
+                        oldVar->getArg(),
+                        scopeFile,         // New File
+                        exprStartLoc.line, // New line
+                        oldVar->getType(),
+                        false, // TODO: Check if alwaysPreserve should be true
+                        oldVar->getFlags(),
+                        oldVar->getAnnotations());
+                    intr->setVariable(newVar);
+                }
+                else
+                {
+                    auto newVar = diBuilder.createAutoVariable(
+                        newSProg, // New scope
+                        oldVar->getName(),
+                        scopeFile,         // New file
+                        exprStartLoc.line, // New line
+                        oldVar->getType(),
+                        false, // TODO: Check if alwaysPreserve should be true
+                        oldVar->getFlags(),
+                        oldVar->getAlignInBits());
+                    intr->setVariable(newVar);
+                }
+            }
+        }
+
+        diBuilder.finalize();
     }
 
     void SourceSpecTransformer::writeToFile(
@@ -478,6 +650,42 @@ namespace sourcespec2ir
         auto tmpSrcPath = llvm::SmallString<128>(workingDir);
         llvm::sys::path::append(tmpSrcPath, tmpSrcFilename);
         return tmpSrcPath.str().str();
+    }
+
+    llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
+    {
+        llvm::SmallVector<llvm::Metadata *> mdElems = {
+            llvm::MDString::get(*irContext, PALLAS_SRC_LOCATION_MARKER),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.line)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.column)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.line)),
+            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.column)),
+        };
+        return llvm::MDTuple::get(*irContext, mdElems);
+    }
+
+    llvm::DIFile *SourceSpecTransformer::getFileForFunc(llvm::Function *f)
+    {
+        if (f == nullptr)
+            throw utils::PallasException("Passed function is nullptr.");
+        if (f->getSubprogram() == nullptr)
+            throw utils::PallasException("Encountered a function without a subprogram");
+        auto *file = f->getSubprogram()->getFile();
+        if (file == nullptr)
+            throw utils::PallasException("Encountered a function without a file.");
+        return file;
+    }
+
+    llvm::DICompileUnit *SourceSpecTransformer::getCUForFunc(llvm::Function *f)
+    {
+        if (f == nullptr)
+            throw utils::PallasException("Passed function is nullptr.");
+        if (f->getSubprogram() == nullptr)
+            throw utils::PallasException("Encountered a function without a subprogram");
+        auto *cu = f->getSubprogram()->getUnit();
+        if (cu == nullptr)
+            throw utils::PallasException("Encountered a function without a compile-unit.");
+        return cu;
     }
 
     /*

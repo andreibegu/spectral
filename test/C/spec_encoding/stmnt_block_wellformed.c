@@ -7,9 +7,9 @@
 
 // COM: MD-Node of the statement-block is wellformed (i.e. a tuple with 
 // COM: references to an assume- and an assert-node (in this order.))
-// CHECK: [[blockMD]] = !{[[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
-// CHECK: [[assumeMD]] = !{!"pallas.assume", ptr @PALLAS_SPEC_0,
-// CHECK: [[assertMD]] = !{!"pallas.assert", ptr @PALLAS_SPEC_1,
+// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
+// CHECK: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @PALLAS_SPEC_0,
+// CHECK: [[assertMD]] = !{!"pallas.assert", {{![0-9]+}}, ptr @PALLAS_SPEC_1,
 
 
 float bar (float x, double z) {

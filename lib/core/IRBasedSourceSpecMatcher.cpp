@@ -119,10 +119,10 @@ namespace sourcespec2ir
     {
     }
 
-    std::string IRBasedSourceSpecMatcher::matchFContract(
-        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    std::string IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
     {
         const llvm::Function *closestFunction = nullptr;
+        auto endLine = loc.getEnd()->getLine();
 
         // Set for checking that all functions are declared on distinct lines.
         llvm::SmallSet<unsigned int, 16> lineNumberSet;
@@ -149,7 +149,8 @@ namespace sourcespec2ir
                 lineNumberSet.insert(line);
 
                 // Check if function occurs after contract and is closer than current closest function.
-                if (line > endLine && (closestFunction == nullptr || line < closestFunction->getSubprogram()->getLine()))
+                if (line > endLine &&
+                    (closestFunction == nullptr || line < closestFunction->getSubprogram()->getLine()))
                 {
                     closestFunction = &f;
                 }
@@ -170,9 +171,13 @@ namespace sourcespec2ir
 
         if (closestFunction == nullptr)
         {
-            auto locStr = std::to_string(startLine) + ":" + std::to_string(startCol) + "-" +
-                          std::to_string(endLine) + ":" + std::to_string(endCol);
-            throw utils::PallasException("Unable to match contract (" + locStr + ") to function");
+
+            auto locStr = std::to_string(loc.getStartLine()) + ":" +
+                          std::to_string(loc.getStartCol()) + "-" +
+                          std::to_string(loc.getEndLine()) + ":" +
+                          std::to_string(loc.getEndCol());
+            throw utils::PallasException(
+                "Unable to match contract (" + locStr + ") to function");
         }
 
         // Check that no instructions are between the specification and the function declaration.
@@ -220,17 +225,19 @@ namespace sourcespec2ir
         // Print info about matched contract to the console
         if (printMatchingInfo)
         {
-            printContractMatchingInfo(startLine, endLine,
-                                      utils::getSrcNameOfFunction(*closestFunction));
+            printContractMatchingInfo(
+                loc.getStartLine(), loc.getEndLine(),
+                utils::getSrcNameOfFunction(*closestFunction));
         }
 
         return utils::getSrcNameOfFunction(*closestFunction);
     }
 
-    std::pair<llvm::Function *, llvm::Loop *> IRBasedSourceSpecMatcher::matchLoopInvBlock(
-        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    std::pair<llvm::Function *, llvm::Loop *> 
+    IRBasedSourceSpecMatcher::matchLoopInvBlock(SrcRange loc)
     {
         // Find the first function above the loop-invariant
+        auto startLine = loc.getStartLine();
         llvm::Function *parentFunction = getFirstFunctionAbove(startLine);
 
         if (parentFunction == nullptr ||
@@ -267,25 +274,27 @@ namespace sourcespec2ir
 
         if (printMatchingInfo)
         {
-            printInvMatchingInfo(startLine, endLine,
+            printInvMatchingInfo(startLine, loc.getEndLine(),
                                  closestLoopStart, closestLoopEnd);
         }
 
         return std::make_pair(parentFunction, closestLoop);
     }
 
-    llvm::Instruction *IRBasedSourceSpecMatcher::matchStatementBlock(
-        size_t startLine, size_t startCol, size_t endLine, size_t endCol)
+    llvm::Instruction *IRBasedSourceSpecMatcher::matchStatementBlock(SrcRange loc)
     {
         // Get the first function above the spec-block
-        // TODO: Consider the range that is covered by the function instead of 
-        // just considering the starting-line. 
+        // TODO: Consider the range that is covered by the function instead of
+        // just considering the starting-line.
+        auto startLine = loc.getStartLine();
+        auto endLine = loc.getEndLine();
+        auto endCol = loc.getEndCol();
         auto parentFunc = getFirstFunctionAbove(startLine);
 
         if (parentFunc == nullptr)
         {
             throw utils::PallasException(
-                "Failed to get enclosing function for statement-block"); 
+                "Failed to get enclosing function for statement-block");
         }
 
         // Traverse instructions from beginning to the end and find the first
@@ -318,8 +327,8 @@ namespace sourcespec2ir
         if (printMatchingInfo)
         {
             printStmntBlockMatchingInfo(startLine, endLine,
-                                     closestInst->getDebugLoc().getLine(), 
-                                     closestInst->getDebugLoc().getCol());
+                                        closestInst->getDebugLoc().getLine(),
+                                        closestInst->getDebugLoc().getCol());
         }
 
         return closestInst;
