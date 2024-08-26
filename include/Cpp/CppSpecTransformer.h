@@ -16,7 +16,8 @@ namespace sourcespec2ir
             std::string specLibPath,
             std::string srcInPath, std::string outPath,
             const utils::OutputConfig &outputConfig, 
-            const std::string &workingDir);
+            const std::string &workingDir, 
+            bool runMem2Reg);
     protected:
         std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() override;
     };

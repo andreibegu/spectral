@@ -34,11 +34,13 @@ namespace sourcespec2ir
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig,
-        const std::string &workingDir)
+        const std::string &workingDir, 
+        bool runMem2Reg)
         : srcInPath(srcInPath),
           outPath(outPath),
           workingDir(workingDir),
           outputConfig(outputConfig),
+          runMem2Reg(runMem2Reg),
           srcCompilerDriver(std::move(compilerDriver)),
           specUnifier(std::move(specUnifier))
     {
@@ -64,8 +66,9 @@ namespace sourcespec2ir
             llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
         mpm.run(*irModule, mam);
 
-        // Run mem2reg
-        // promoteMemToReg(*irModule);
+        // Run mem2reg only if cl-option was set.
+        if (runMem2Reg) 
+            promoteMemToReg(*irModule);
 
         /*
         if (outputConfig.printDebugInfo)

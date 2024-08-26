@@ -73,6 +73,11 @@ static llvm::cl::opt<std::string> clWorkDir(
     llvm::cl::value_desc("Path to the working-directory."),
     llvm::cl::cat(SpecTransformCat));
 
+
+static llvm::cl::opt<bool> clMem2Reg(
+    "mem2reg", llvm::cl::desc("Apply mem2reg pass to the compiled source."), llvm::cl::init(false),
+    llvm::cl::cat(SpecTransformCat));
+
 int main(int argc, char **argv)
 {
     // Parse commandline-options and wrap them in struct
@@ -117,13 +122,13 @@ int main(int argc, char **argv)
             sourcespec2ir::CSpecTransformer transformer(
                 std::make_unique<sourcespec2ir::CCompilerDriver>(clLibPath, clWorkDir),
                 std::make_unique<sourcespec2ir::CSpecUnifier>(config.printUnificationInfo),
-                clInFile, clOutFile, config, clWorkDir);
+                clInFile, clOutFile, config, clWorkDir, clMem2Reg);
             transformer.transformModule();
         }
         else if (lang == Cpp)
         {
             sourcespec2ir::CppSpecTransformer transformer(
-                clLibPath, clInFile, clOutFile, config, clWorkDir);
+                clLibPath, clInFile, clOutFile, config, clWorkDir, clMem2Reg);
             transformer.transformModule();
         }
     }
