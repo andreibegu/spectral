@@ -46,6 +46,15 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitPureFlag(SpecParser::PureFlagContext *ctx)
+    {
+        // Set pure-flag of contract to true
+        if (!contract) 
+            throw utils::PallasException("Encountered pure-flag without contract.");
+        contract->isPure = true; 
+        return 0;
+    }
+
     std::any SourceSpecMatcher::visitRequiresClause(
         SpecParser::RequiresClauseContext *ctx)
     {
