@@ -81,6 +81,7 @@ namespace sourcespec2ir
         // Visitors for function-contracts
         std::any visitSpecContractBlock(
             SpecParser::SpecContractBlockContext *ctx) override;
+        std::any visitPureFlag(SpecParser::PureFlagContext *ctx) override;
         std::any visitRequiresClause(
             SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(

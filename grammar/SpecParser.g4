@@ -7,7 +7,7 @@ spec: specContractBlock | specStatementBlock | specLoopInvariantBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
-specContractBlock: SPEC_START specContractClause+ SPEC_END;
+specContractBlock: SPEC_START specPureFlag? specContractClause+ SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
@@ -17,6 +17,9 @@ specContractClause
     : ('requires' specExpression ';') # requiresClause
     | ('ensures'  specExpression ';') # ensuresClause
     ;
+
+specPureFlag
+    : 'pure' ';' # pureFlag;
 
 specLoopInvariant
     : ('loop_invariant' specExpression ';')

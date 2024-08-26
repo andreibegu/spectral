@@ -3,11 +3,13 @@
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/IR/Metadata.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Path.h>
@@ -382,6 +384,11 @@ namespace sourcespec2ir
         // Add src-location information
         contractMDNodes.push_back(encodeSrcLoc(contract.srcLoc));
 
+        // Add pure-flag
+        auto pureFlagConst = llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::getBool(*irContext, contract.isPure));
+        contractMDNodes.push_back(pureFlagConst);
+
         // Transform specification statements
         for (auto &matchedStmnt : contract.statements)
         {
@@ -536,9 +543,6 @@ namespace sourcespec2ir
                 // Replace references to old DISubprogram
                 if (newScope == oldSProg)
                     newScope = newSProg;
-
-                // TODO: This needs some more work, if there are local scopes,
-                // these will also have to be adapted.
 
                 // TODO: handle inlined at, and implicit code
                 auto newDebugLoc = llvm::DILocation::get(

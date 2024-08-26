@@ -8,6 +8,7 @@ The node is labeled as `!pallas.fcontract` and consists of a MD-tuple that consi
 
 The individual clauses of the contract are encoded as metadata-tuples that consist of 
 - a MD-String that identifies the type of the statement ( `!"pallas.requires"` or `!"pallas.ensures"` )
+- a boolean value that specifies if the contract is marked as pure
 - a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the clause 
 - a list of references to the `!DILocalVariable`s that represent the variables that are available in the expression. The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
@@ -44,7 +45,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 [...]
 
 ; Encoding of the contract
-!111 = !{!112, !113, !117}
+!111 = !{!112, i1 false, !113, !117}
 !112 = !{!"pallas.srcLoc", !"1", !"1", !"4", !"1"}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
 !114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}
@@ -209,7 +210,7 @@ define dso_local noundef zeroext i1 @_Z13PALLAS_SPEC_0ii(i32 noundef %0, i32 nou
   ret i1 %7, !dbg !133
 }
 
-!111 = !{!112, !113}
+!111 = !{!112, i1 false, !113}
 !112 = !{!"pallas.srcLoc", !"1", !"1", !"3", !"1"}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
 !114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}

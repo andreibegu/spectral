@@ -15,7 +15,7 @@ float bar (float x) {
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
 // COM: MD-Nodes of the contract have location-info 
-// CHECK: [[contractMD]] = !{[[contrLoc:![0-9]+]], [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
+// CHECK: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
 // CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", !"5", !"1", !"8", !"1"}
 
 // CHECK-DAG: [[reqMD]] = !{!"pallas.requires", [[reqLoc:![0-9]+]], 

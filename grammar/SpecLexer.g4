@@ -15,6 +15,7 @@ ASSERT: 'assert';
 ASSUME: 'assume';
 DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
+PURE: 'pure';
 
 SEMI: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);
