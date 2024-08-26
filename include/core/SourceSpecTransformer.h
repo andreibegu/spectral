@@ -35,7 +35,8 @@ namespace sourcespec2ir
             std::unique_ptr<SpecUnifier> specUnifier,
             std::string srcInPath, std::string outPath,
             const utils::OutputConfig &outputConfig,
-            const std::string &workingDir);
+            const std::string &workingDir, 
+            bool runMem2Reg);
 
         void transformModule();
 
@@ -58,7 +59,8 @@ namespace sourcespec2ir
         std::string srcInPath;
         std::string outPath;
         std::string workingDir;
-        const utils::OutputConfig &outputConfig;
+        const utils::OutputConfig outputConfig;
+        const bool runMem2Reg;
 
         std::unique_ptr<SourceWrapperGenerator> wrapperGenerator;
 

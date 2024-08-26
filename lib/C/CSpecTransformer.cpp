@@ -9,13 +9,15 @@ namespace sourcespec2ir
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig,
-        const std::string &workingDir)
+        const std::string &workingDir, 
+        bool runMem2Reg)
         : SourceSpecTransformer(std::move(compilerDriver),
                                 std::move(specUnifier),
                                 srcInPath,
                                 outPath,
                                 outputConfig,
-                                workingDir)
+                                workingDir, 
+                                runMem2Reg)
     {
     }
 

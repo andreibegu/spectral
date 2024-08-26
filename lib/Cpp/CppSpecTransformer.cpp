@@ -10,11 +10,12 @@ namespace sourcespec2ir
         std::string specLibPath,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig,
-        const std::string &workingDir)
+        const std::string &workingDir, 
+        bool runMem2Reg)
         : SourceSpecTransformer(
               std::make_unique<CppCompilerDriver>(specLibPath, workingDir),
               std::make_unique<CppSpecUnifier>(outputConfig.printUnificationInfo),
-              srcInPath, outPath, outputConfig, workingDir)
+              srcInPath, outPath, outputConfig, workingDir, runMem2Reg)
     {
     }
 
