@@ -60,6 +60,12 @@ namespace sourcespec2ir
         }
     }
 
+    llvm::CallInst *SpecUnifier::transformSepConj(llvm::CallInst &oldCall)
+    {
+        throw utils::PallasException(
+            "The separating conjunction is not supported by this frontend.");
+    }
+
     llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)
     {
         // Get the content-type of the ADT from the first element of the struct
@@ -101,13 +107,6 @@ namespace sourcespec2ir
                 throw utils::PallasException("Failed to generate a new call to replace use of " + srcSpecName);
             }
 
-            // Transfer Metadata
-            /* TODO: Check if it makes sense to transfer the line/ column-info from the old call to the new call.
-             * The metadata from the old call is not very helpfull, as it refers to the line- and column-numbers
-             * within the generated temporary file. Hence we have to derive the approprate location information from
-             * the parser.
-             */
-
             // Replace old call
             if (!oldCall->use_empty())
             {
@@ -131,6 +130,8 @@ namespace sourcespec2ir
         {
         case Imply:
             return transformImply(oldCall);
+        case SepConj:
+            return transformSepConj(oldCall);
         case Old:
             return transformOld(oldCall);
         case Result:
@@ -290,6 +291,16 @@ namespace sourcespec2ir
             markAsSpecLibFunction(specImply, PALLAS_SPEC_IMPLY);
         }
         return specImply;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecSepConj()
+    {
+        if (!specSepConj)
+        {
+            specSepConj = createSpecLibFunction(
+                PALLAS_SPEC_SEPCONJ, getBoolTy(), {getBoolTy(), getBoolTy()});
+        }
+        return specSepConj;
     }
 
     llvm::Function *SpecUnifier::getUSpecOld(llvm::Type *type)
@@ -553,7 +564,7 @@ namespace sourcespec2ir
             specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(2, llvm::Attribute::NoUndef);
             if (isStructT)
-                 specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, type));
+                specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, type));
             specSeqAppend[type] = specFun;
         }
 

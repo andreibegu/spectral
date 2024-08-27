@@ -31,6 +31,7 @@ namespace sourcespec2ir
         enum SpecLibElement
         {
             Imply,     // Implication
+            SepConj,   // Separating conjunction
             Old,       // Old value of variable
             Result,    // Result in fucntion contract
             BoundVar,  // Bound variable of a quantifier
@@ -97,6 +98,8 @@ namespace sourcespec2ir
          */
         virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall) = 0;
 
+        virtual llvm::CallInst *transformSepConj(llvm::CallInst &oldCall);
+
         virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall) = 0;
 
         virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall) = 0;
@@ -140,6 +143,12 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for implications.
          */
         llvm::Function *getUSpecImply();
+
+        /**
+         * Returns pointer to the unified specification-function for 
+         * the separating conjunction.
+         */
+        llvm::Function *getUSpecSepConj();
 
         /**
          * Returns pointer to the unified specification-function for the
@@ -238,6 +247,8 @@ namespace sourcespec2ir
          * Raw pointers, ownership lies with module.
          */
         llvm::Function *specImply = nullptr;
+
+        llvm::Function *specSepConj;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
 

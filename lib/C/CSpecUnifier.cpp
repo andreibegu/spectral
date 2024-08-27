@@ -62,6 +62,13 @@ namespace sourcespec2ir
         return llvm::CallInst::Create(getUSpecImply(), newArgs);
     }
 
+    llvm::CallInst *CSpecUnifier::transformSepConj(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0),
+                                                       oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecSepConj(), newArgs);
+    }
+
     llvm::CallInst *CSpecUnifier::transformOld(llvm::CallInst &oldCall)
     {
         // \old
@@ -105,7 +112,7 @@ namespace sourcespec2ir
         if (llvm::isa<llvm::StructType>(type))
         {
             llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(0), 
+                oldCall.getArgOperand(0),
                 oldCall.getArgOperand(1)};
             auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
             addSret(newCall, 0, type);
@@ -191,8 +198,8 @@ namespace sourcespec2ir
 
         auto cType = getContentTypeOfADT(*oldCall.getArgOperand(containsStruct ? 1 : 0));
         llvm::SmallVector<llvm::Value *, 4> newArgs = {
-                oldCall.getArgOperand(0),
-                oldCall.getArgOperand(1)};
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
         if (containsStruct)
             newArgs.push_back(oldCall.getArgOperand(2));
         auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);

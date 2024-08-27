@@ -85,6 +85,13 @@ namespace sourcespec2ir
         return llvm::CallInst::Create(getUSpecImply(), newArgs);
     }
 
+    llvm::CallInst *CppSpecUnifier::transformSepConj(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecSepConj(), newArgs);
+    }
+
     llvm::CallInst *CppSpecUnifier::transformOld(llvm::CallInst &oldCall)
     {
         auto type = utils::getReturnType(*oldCall.getCalledFunction());

@@ -258,6 +258,14 @@ declare !pallas.specLib !144 i1 @pallas.imply(i1, i1)
 !144 = !{!"pallas.imply"}
 ```
 
+### Separating conjunction
+Models the separating conjunction from separation-logic.
+```
+declare !pallas.specLib !144 i1 @pallas.sepConj(i1, i1)
+
+!144 = !{!"pallas.sepConj"}
+```
+
 ### Old
 To be used in the ensures-clause. Returns the value at the given menory location at the beginning of the execution of the function. 
 

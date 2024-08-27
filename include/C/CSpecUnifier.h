@@ -27,6 +27,7 @@ namespace sourcespec2ir
             {"forallP", ForallSep},
             {"fracOf", FracOf},
             {"Perm", Perm},
+            {"sep", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"PALLAS_OLD___", Old},
@@ -54,6 +55,8 @@ namespace sourcespec2ir
         llvm::Type *getSrcLibFracType() override;
 
         llvm::CallInst *transformImply(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSepConj(llvm::CallInst &oldCall) override;
 
         llvm::CallInst *transformOld(llvm::CallInst &oldCall) override;
 
