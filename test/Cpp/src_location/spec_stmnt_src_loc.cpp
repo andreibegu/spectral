@@ -13,12 +13,12 @@ int bar (int x) {
 
 // COM: MD-node of the statement-block has location-info
 // CHECK: [[mdStmntBlock]] = !{[[stmntBlockLoc:![0-9]+]], [[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
-// CHECK-DAG: [[stmntBlockLoc]] = !{!"pallas.srcLoc", !"6", !"5", !"7", !"28"}
+// CHECK-DAG: [[stmntBlockLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 7, i64 28}
 
 // COM: MD-Node of the assume-statement has location-info
 // CHECK-DAG: [[assumeMD]] = !{!"pallas.assume", [[assumeLoc:![0-9]+]], ptr @ 
-// CHECK-DAG: [[assumeLoc]] = !{!"pallas.srcLoc", !"6", !"9", !"6", !"21"}
+// CHECK-DAG: [[assumeLoc]] = !{!"pallas.srcLoc", i64 6, i64 9, i64 6, i64 21}
 
 // COM: MD-Node of the assert-statement has location-info
 // CHECK-DAG: [[assertMD]] = !{!"pallas.assert", [[assertLoc:![0-9]+]], ptr @ 
-// CHECK-DAG: [[assertLoc]] = !{!"pallas.srcLoc", !"7", !"9", !"7", !"26"}
+// CHECK-DAG: [[assertLoc]] = !{!"pallas.srcLoc", i64 7, i64 9, i64 7, i64 26}

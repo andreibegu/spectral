@@ -46,13 +46,13 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 
 ; Encoding of the contract
 !111 = !{!112, i1 false, !113, !117}
-!112 = !{!"pallas.srcLoc", !"1", !"1", !"4", !"1"}
+!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 4, i64 1}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
-!114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}
+!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26}
 !115 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 5, type: !20)
 !116 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 5, type: !20)
 !117 = !{!"pallas.ensures", !118, ptr @_Z13PALLAS_SPEC_1ii, !115, !116}
-!118 = !{!"pallas.srcLoc", !"3", !"1", !"3", !"43"}
+!118 = !{!"pallas.srcLoc", i64 3, i64 1, i64 3, i64 43}
 ```
 
 ## Loop invariants
@@ -106,7 +106,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !dbg !
 !125 = distinct !{!125, !117, !126, !127, !128}
 ; Encoding of invariant
 !128 = !{!"pallas.loopInv", !129, !130}
-!129 = !{!"pallas.srcLoc", !"2", !"5", !"4", !"26"}
+!129 = !{!"pallas.srcLoc", i64 2, i64 5, i64 4, i64 26}
 !130 = !{!131, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
 
@@ -164,7 +164,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
 
 ; Encoding of the statement-block
 !122 = !{!123, !124}
-!123 = !{!"pallas.srcLoc", !"3", !"5", !"5", !"5"}
+!123 = !{!"pallas.srcLoc", i64 3, i64 5, i64 5, i64 5}
 !124 = !{!"pallas.assume", !125, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
 
@@ -211,9 +211,9 @@ define dso_local noundef zeroext i1 @_Z13PALLAS_SPEC_0ii(i32 noundef %0, i32 nou
 }
 
 !111 = !{!112, i1 false, !113}
-!112 = !{!"pallas.srcLoc", !"1", !"1", !"3", !"1"}
+!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 3, i64 1}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
-!114 = !{!"pallas.srcLoc", !"2", !"1", !"2", !"26"}
+!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26}
 !126 = !{!""}
 ```
 
@@ -229,10 +229,10 @@ to be used in certain places.
 As a result, we use MD-tuples to encode source-location information in specification-constructs. 
 A source-location-tuple cosists of:
 - A MD-string that identified the tuple as a source-location (`pallas.srcLoc`)
-- A MD-string that contains the start-line
-- A MD-string that contains the start-column
-- A MD-string that contains the end-line
-- A MD-string that contains the end-column
+- An integer that corresponds to the start-line
+- An integer that corresponds to the start-column
+- An integer that corresponds to the end-line
+- An integer that corresponds to the end-column
 
 Line- and coumn-numbers both start at 1 in order to be consistent with the numbering used by LLVM.
 The start-line and -column point to the position before the first parser-token of the specification-construct.
