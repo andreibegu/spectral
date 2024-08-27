@@ -661,13 +661,20 @@ namespace sourcespec2ir
 
     llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
     {
+        auto *nTy = llvm::Type::getInt64Ty(*irContext);
+
         llvm::SmallVector<llvm::Metadata *> mdElems = {
             llvm::MDString::get(*irContext, PALLAS_SRC_LOCATION_MARKER),
-            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.line)),
-            llvm::MDString::get(*irContext, std::to_string(srcLoc.startLoc.column)),
-            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.line)),
-            llvm::MDString::get(*irContext, std::to_string(srcLoc.endLoc.column)),
+            llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::get(nTy, srcLoc.startLoc.line)),
+            llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::get(nTy, srcLoc.startLoc.column)),
+            llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::get(nTy, srcLoc.endLoc.line)),
+            llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column))
         };
+
         return llvm::MDTuple::get(*irContext, mdElems);
     }
 

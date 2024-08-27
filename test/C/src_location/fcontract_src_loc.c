@@ -15,10 +15,10 @@ float bar (float x) {
 
 // COM: MD-Nodes of the contract have location-info 
 // CHECK: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
-// CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", !"5", !"1", !"7", !"1"}
+// CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 5, i64 1, i64 7, i64 1}
 
 // CHECK-DAG: [[reqMD]] = !{!"pallas.requires", [[reqLoc:![0-9]+]], 
-// CHECK-DAG: [[reqLoc]] = !{!"pallas.srcLoc", !"6", !"5", !"6", !"19"}
+// CHECK-DAG: [[reqLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 6, i64 19}
 
 // CHECK-DAG: [[ensMD]] = !{!"pallas.ensures", [[ensLoc:![0-9]+]], 
-// CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", !"6", !"21", !"6", !"35"}
+// CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", i64 6, i64 21, i64 6, i64 35}

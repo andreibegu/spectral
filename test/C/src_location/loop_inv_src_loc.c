@@ -18,8 +18,8 @@ int bar (int x) {
 
 // COM: MD-node of the invariant-block has location-info
 // CHECK: = !{!"pallas.loopInv", [[invBlockLoc:![0-9]+]], [[invMD:![0-9]+]]}
-// CHECK-DAG: [[invBlockLoc]] = !{!"pallas.srcLoc", !"7", !"5", !"12", !"5"}
+// CHECK-DAG: [[invBlockLoc]] = !{!"pallas.srcLoc", i64 7, i64 5, i64 12, i64 5}
 
 // COM: MD-Node of the invariant has location-info 
 // CHECK-DAG: [[invMD]] = !{[[invLoc:![0-9]+]], ptr @ 
-// CHECK-DAG: [[invLoc]] = !{!"pallas.srcLoc", !"8", !"5", !"11", !"18"}
+// CHECK-DAG: [[invLoc]] = !{!"pallas.srcLoc", i64 8, i64 5, i64 11, i64 18}
