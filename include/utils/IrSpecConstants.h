@@ -36,6 +36,8 @@ namespace sourcespec2ir
     /* Constants used to name specification-functions */
     const std::string PALLAS_SPEC_IMPLY = "pallas.imply";
 
+    const std::string PALLAS_SPEC_SEPCONJ = "pallas.sepConj";
+
     const std::string PALLAS_SPEC_OLD_BASE = "pallas.old";
 
     const std::string PALLAS_SPEC_RESULT_BASE = "pallas.result";
@@ -58,7 +60,9 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_SEQ_GET_BASE = "pallas.seq.get";
 
-    const std::string PALLAS_SPEC_SEQ_APPEND_BASE = "pallas.seq.append";
+    const std::string PALLAS_SPEC_SEQ_PREPEND_BASE = "pallas.seq.prepend";
+
+    const std::string PALLAS_SPEC_SEQ_EQUALS_BASE = "pallas.seq.equals";
 
 
     /* Constants used to name specification-types */

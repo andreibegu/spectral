@@ -31,6 +31,7 @@ namespace sourcespec2ir
         enum SpecLibElement
         {
             Imply,     // Implication
+            SepConj,   // Separating conjunction
             Old,       // Old value of variable
             Result,    // Result in fucntion contract
             BoundVar,  // Bound variable of a quantifier
@@ -42,7 +43,8 @@ namespace sourcespec2ir
             SeqNew,    // New sequence
             SeqSize,   // Size of sequence
             SeqGet,    // Get element from sequence
-            SeqAppend  // Append element to sequence
+            SeqPrepend,// Prepend element to sequence
+            SeqEquals  // Equality of two sequences
         };
 
         SpecUnifier(const bool printDebugInfo);
@@ -97,6 +99,8 @@ namespace sourcespec2ir
          */
         virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall) = 0;
 
+        virtual llvm::CallInst *transformSepConj(llvm::CallInst &oldCall);
+
         virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall) = 0;
 
         virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall) = 0;
@@ -119,7 +123,9 @@ namespace sourcespec2ir
 
         virtual llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) = 0;
 
-        virtual llvm::CallInst *transformSeqAppend(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall);
 
         /*
          *  General helper functions for subclasses
@@ -140,6 +146,12 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for implications.
          */
         llvm::Function *getUSpecImply();
+
+        /**
+         * Returns pointer to the unified specification-function for 
+         * the separating conjunction.
+         */
+        llvm::Function *getUSpecSepConj();
 
         /**
          * Returns pointer to the unified specification-function for the
@@ -209,9 +221,15 @@ namespace sourcespec2ir
 
         /**
          * Returns a pointer to the unified specification-function for
-         * appending an element to a sequence with the given content type.
+         * prepending an element to a sequence with the given content type.
          */
-        llvm::Function *getUSpecSeqAppend(llvm::Type *type);
+        llvm::Function *getUSpecSeqPrepend(llvm::Type *type);
+        
+        /**
+         * Returns a pointer to the unified specification-function for
+         * the equality-operator for sequences with the given content type.
+         */
+        llvm::Function *getUSpecSeqEquals(llvm::Type *type);
 
         /**
          * Returns pointer to the type that is used to represent fractions
@@ -239,6 +257,8 @@ namespace sourcespec2ir
          */
         llvm::Function *specImply = nullptr;
 
+        llvm::Function *specSepConj;
+
         llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
@@ -261,7 +281,9 @@ namespace sourcespec2ir
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqAppend;
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
 
         llvm::DenseMap<llvm::Type *, llvm::StructType *> specSeqTypes;
 

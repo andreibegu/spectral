@@ -85,6 +85,13 @@ namespace sourcespec2ir
         return llvm::CallInst::Create(getUSpecImply(), newArgs);
     }
 
+    llvm::CallInst *CppSpecUnifier::transformSepConj(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecSepConj(), newArgs);
+    }
+
     llvm::CallInst *CppSpecUnifier::transformOld(llvm::CallInst &oldCall)
     {
         auto type = utils::getReturnType(*oldCall.getCalledFunction());
@@ -235,23 +242,39 @@ namespace sourcespec2ir
         }
     }
 
-    llvm::CallInst *CppSpecUnifier::transformSeqAppend(llvm::CallInst &oldCall)
+    llvm::CallInst *CppSpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
     {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
         auto seqType = getUSpecSeqType(cType);
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+        llvm::SmallVector<llvm::Value *> newArgs = {
             oldCall.getArgOperand(0),
             oldCall.getArgOperand(1),
             oldCall.getArgOperand(2),
         };
-        auto newCall = llvm::CallInst::Create(getUSpecSeqAppend(cType), newArgs);
+        auto newCall = llvm::CallInst::Create(getUSpecSeqPrepend(cType), newArgs);
         newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, seqType));
         newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
-        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-        // If the seq contains structs, the last arg is a by-value pointer.
+        // If the seq contains structs, the element is passed as a by-value pointer.
         if (llvm::isa<llvm::StructType>(cType))
-            newCall->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, cType));
+            newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, cType));
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, seqType));
+        return newCall;
+    }
+
+    llvm::CallInst *CppSpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
+    {
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqEquals(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, seqType));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
         return newCall;
     }
 

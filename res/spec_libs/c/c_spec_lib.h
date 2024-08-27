@@ -77,6 +77,9 @@ bool Perm(void *loc, frac p);
 // Logical implication (b1 ==> b2)
 bool imply(bool b1, bool b2);
 
+// Separating conjunction (b1 ** b2)
+bool sep(bool b1, bool b2);
+
 // Define a fraction as a division of two integers
 // Only valid for positive parameters with 0 < (numerator \ denominator ) <= 1.
 frac fracOf(int numerator, int denominator);
@@ -94,13 +97,17 @@ frac fracOf(int numerator, int denominator);
 #define SEQ_AT(type) PALLAS_SEQ_AT___ ## type
 #define DEF_SEQ_AT(type) type SEQ_AT(type) ( SEQ(type) s, size_t idx )
 
-// Macros to define appending a value to a sequence of type sequence<type>.
-#define SEQ_APPEND(type) PALLAS_SEQ_APPEND___ ## type
-#define DEF_SEQ_APPEND(type) SEQ(type) SEQ_APPEND(type) ( SEQ(type) s, type e )
+// Macros to define prepending a value to a sequence of type sequence<type>.
+#define SEQ_PREPEND(type) PALLAS_SEQ_PREPEND___ ## type
+#define DEF_SEQ_PREPEND(type) SEQ(type) SEQ_PREPEND(type) ( type e, SEQ(type) s)
 
 // Macros to define sequence-creation
 #define SEQ_NEW(type) PALLAS_SEQ_NEW___ ## type
 #define DEF_SEQ_NEW(type) SEQ(type) SEQ_NEW(type) ()
+
+// Macro to define sequence-equality
+#define SEQ_EQ(type) PALLAS_SEQ_EQ___ ## type
+#define DEF_SEQ_EQ(type) bool SEQ_EQ(type) (SEQ(type) s1, SEQ(type) s2)
 
 
 /*********************************************
@@ -115,6 +122,7 @@ frac fracOf(int numerator, int denominator);
 DEF_SEQ_T(type) ; \
 DEF_SEQ_SIZE(type) ; \
 DEF_SEQ_AT(type) ; \
-DEF_SEQ_APPEND(type); \
-DEF_SEQ_NEW(type); 
+DEF_SEQ_PREPEND(type); \
+DEF_SEQ_NEW(type); \
+DEF_SEQ_EQ(type);
 

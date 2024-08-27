@@ -27,6 +27,7 @@ namespace sourcespec2ir
             {"forallP", ForallSep},
             {"fracOf", FracOf},
             {"Perm", Perm},
+            {"sep", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"PALLAS_OLD___", Old},
@@ -35,7 +36,8 @@ namespace sourcespec2ir
             {"PALLAS_SEQ_NEW___", SeqNew},
             {"PALLAS_SEQ_SIZE___", SeqSize},
             {"PALLAS_SEQ_AT___", SeqGet},
-            {"PALLAS_SEQ_APPEND___", SeqAppend},
+            {"PALLAS_SEQ_PREPEND___", SeqPrepend},
+            {"PALLAS_SEQ_EQ___", SeqEquals},
         };
 
         const std::string C_SPEC_FRAC_TYPE = "struct.frac";
@@ -54,6 +56,8 @@ namespace sourcespec2ir
         llvm::Type *getSrcLibFracType() override;
 
         llvm::CallInst *transformImply(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSepConj(llvm::CallInst &oldCall) override;
 
         llvm::CallInst *transformOld(llvm::CallInst &oldCall) override;
 
@@ -77,7 +81,9 @@ namespace sourcespec2ir
 
         llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
 
-        llvm::CallInst *transformSeqAppend(llvm::CallInst &oldCall) override;
+        llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall) override;
 
     };
 

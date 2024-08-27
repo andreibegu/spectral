@@ -31,8 +31,10 @@ namespace pallasSpec
     /***************************************************
      *                    Operators                    *
      ***************************************************/
-
+    
     bool imply(bool b1, bool b2);
+
+    bool sep(bool b1, bool b2);
 
     /***************************************************
      *                Special expressions              *
@@ -77,8 +79,10 @@ namespace pallasSpec
     T seqGet(seq<T> s, std::size_t idx);
 
     template<typename T>
-    seq<T> seqAppend(seq<T> s, T e);
+    seq<T> seqPrepend(T e, seq<T> s);
 
+    template<typename T>
+    bool seqEquals(seq<T> s1, seq<T> s2);
 }
 
 
