@@ -43,7 +43,8 @@ namespace sourcespec2ir
             SeqNew,    // New sequence
             SeqSize,   // Size of sequence
             SeqGet,    // Get element from sequence
-            SeqPrepend // Prepend element to sequence
+            SeqPrepend,// Prepend element to sequence
+            SeqEquals  // Equality of two sequences
         };
 
         SpecUnifier(const bool printDebugInfo);
@@ -123,6 +124,8 @@ namespace sourcespec2ir
         virtual llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) = 0;
 
         virtual llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall);
 
         /*
          *  General helper functions for subclasses
@@ -221,6 +224,12 @@ namespace sourcespec2ir
          * prepending an element to a sequence with the given content type.
          */
         llvm::Function *getUSpecSeqPrepend(llvm::Type *type);
+        
+        /**
+         * Returns a pointer to the unified specification-function for
+         * the equality-operator for sequences with the given content type.
+         */
+        llvm::Function *getUSpecSeqEquals(llvm::Type *type);
 
         /**
          * Returns pointer to the type that is used to represent fractions
@@ -273,6 +282,8 @@ namespace sourcespec2ir
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
 
         llvm::DenseMap<llvm::Type *, llvm::StructType *> specSeqTypes;
 

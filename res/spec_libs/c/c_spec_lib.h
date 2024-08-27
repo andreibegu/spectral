@@ -105,6 +105,10 @@ frac fracOf(int numerator, int denominator);
 #define SEQ_NEW(type) PALLAS_SEQ_NEW___ ## type
 #define DEF_SEQ_NEW(type) SEQ(type) SEQ_NEW(type) ()
 
+// Macro to define sequence-equality
+#define SEQ_EQ(type) PALLAS_SEQ_EQ___ ## type
+#define DEF_SEQ_EQ(type) bool SEQ_EQ(type) (SEQ(type) s1, SEQ(type) s2)
+
 
 /*********************************************
  *     Convenience macros for ADTs           *
@@ -119,5 +123,6 @@ DEF_SEQ_T(type) ; \
 DEF_SEQ_SIZE(type) ; \
 DEF_SEQ_AT(type) ; \
 DEF_SEQ_PREPEND(type); \
-DEF_SEQ_NEW(type); 
+DEF_SEQ_NEW(type); \
+DEF_SEQ_EQ(type);
 

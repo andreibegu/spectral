@@ -81,6 +81,8 @@ namespace pallasSpec
     template<typename T>
     seq<T> seqPrepend(T e, seq<T> s);
 
+    template<typename T>
+    bool seqEquals(seq<T> s1, seq<T> s2);
 }
 
 

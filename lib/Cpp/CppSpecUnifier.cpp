@@ -262,4 +262,20 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *CppSpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
+    {
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqEquals(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, seqType));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
+        return newCall;
+    }
+
 } // namespace sourcespec2ir

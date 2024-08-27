@@ -72,6 +72,12 @@ namespace sourcespec2ir
             "Prepending to sequences is not supported by this frontend.");
     }
 
+    llvm::CallInst *SpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
+    {
+        throw utils::PallasException(
+            "The equality-operator for sequences is not supported by this frontend.");
+    }
+
     llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)
     {
         // Get the content-type of the ADT from the first element of the struct
@@ -177,6 +183,8 @@ namespace sourcespec2ir
             return transformSeqGet(oldCall);
         case SeqPrepend:
             return transformSeqPrepend(oldCall);
+        case SeqEquals:
+            return transformSeqEquals(oldCall);
         default:
             throw utils::PallasException("Encountered an unsupported type of specification-call.");
         }
@@ -555,8 +563,7 @@ namespace sourcespec2ir
             const bool isStructT = llvm::isa<llvm::StructType>(type);
 
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(*irContext, 0)
-            };
+                llvm::PointerType::get(*irContext, 0)};
             // If the content-type is a struct, the element is passed as a pointer.
             if (isStructT)
                 argList.push_back(llvm::PointerType::get(*irContext, 0));
@@ -576,6 +583,31 @@ namespace sourcespec2ir
         }
 
         return specSeqPrepend[type];
+    }
+
+    llvm::Function *SpecUnifier::getUSpecSeqEquals(llvm::Type *type)
+    {
+        if (specSeqEquals.find(type) == specSeqEquals.end())
+        {
+            auto cnt = specSeqEquals.size();
+            auto name = PALLAS_SPEC_SEQ_EQUALS_BASE + "." + std::to_string(cnt);
+
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(*irContext, 0),
+                llvm::PointerType::get(*irContext, 0)};
+
+            auto specFun = createSpecLibFunction(
+                name, getBoolTy(), argList, PALLAS_SPEC_SEQ_EQUALS_BASE);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(0, llvm::Attribute::getWithByValType(
+                                         *irContext, getUSpecSeqType(type)));
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(1, llvm::Attribute::getWithByValType(
+                                         *irContext, getUSpecSeqType(type)));
+
+            specSeqEquals[type] = specFun;
+        }
+        return specSeqEquals[type];
     }
 
     llvm::Function *SpecUnifier::createSpecLibFunction(

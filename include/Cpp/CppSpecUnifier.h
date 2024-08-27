@@ -41,8 +41,9 @@ namespace sourcespec2ir
             {"seqNew<", SeqNew},
             {"seqSize<", SeqSize},
             {"seqGet<", SeqGet},
-            {"seqPrepend<", SeqPrepend}, 
-            {"Perm<", Perm}
+            {"seqPrepend<", SeqPrepend},
+            {"seqEquals<", SeqEquals}, 
+            {"Perm<", Perm}, 
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";
@@ -87,6 +88,8 @@ namespace sourcespec2ir
         llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
 
         llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall) override;
     };
 
 }
