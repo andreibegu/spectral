@@ -66,6 +66,12 @@ namespace sourcespec2ir
             "The separating conjunction is not supported by this frontend.");
     }
 
+    llvm::CallInst *SpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
+    {
+        throw utils::PallasException(
+            "Prepending to sequences is not supported by this frontend.");
+    }
+
     llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)
     {
         // Get the content-type of the ADT from the first element of the struct
@@ -169,8 +175,8 @@ namespace sourcespec2ir
             return transformSeqSize(oldCall);
         case SeqGet:
             return transformSeqGet(oldCall);
-        case SeqAppend:
-            return transformSeqAppend(oldCall);
+        case SeqPrepend:
+            return transformSeqPrepend(oldCall);
         default:
             throw utils::PallasException("Encountered an unsupported type of specification-call.");
         }
@@ -540,35 +546,36 @@ namespace sourcespec2ir
         return specSeqGet[type];
     }
 
-    llvm::Function *SpecUnifier::getUSpecSeqAppend(llvm::Type *type)
+    llvm::Function *SpecUnifier::getUSpecSeqPrepend(llvm::Type *type)
     {
-        if (specSeqAppend.find(type) == specSeqAppend.end())
+        if (specSeqPrepend.find(type) == specSeqPrepend.end())
         {
-            auto cnt = specSeqAppend.size();
-            auto name = PALLAS_SPEC_SEQ_APPEND_BASE + "." + std::to_string(cnt);
+            auto cnt = specSeqPrepend.size();
+            auto name = PALLAS_SPEC_SEQ_PREPEND_BASE + "." + std::to_string(cnt);
             const bool isStructT = llvm::isa<llvm::StructType>(type);
 
             llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(*irContext, 0),
-                llvm::PointerType::get(*irContext, 0)};
-            // If the content-type is a struct, the last argument is a pointer.
+                llvm::PointerType::get(*irContext, 0)
+            };
+            // If the content-type is a struct, the element is passed as a pointer.
             if (isStructT)
                 argList.push_back(llvm::PointerType::get(*irContext, 0));
             else
                 argList.push_back(type);
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
 
             auto specFun = createSpecLibFunction(
-                name, getVoidTy(), argList, PALLAS_SPEC_SEQ_APPEND_BASE);
+                name, getVoidTy(), argList, PALLAS_SPEC_SEQ_PREPEND_BASE);
             specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
             specFun->addParamAttr(1, llvm::Attribute::NoUndef);
-            specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
-            specFun->addParamAttr(2, llvm::Attribute::NoUndef);
             if (isStructT)
-                specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, type));
-            specSeqAppend[type] = specFun;
+                specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, type));
+            specFun->addParamAttr(2, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+            specSeqPrepend[type] = specFun;
         }
 
-        return specSeqAppend[type];
+        return specSeqPrepend[type];
     }
 
     llvm::Function *SpecUnifier::createSpecLibFunction(

@@ -60,7 +60,7 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_SEQ_GET_BASE = "pallas.seq.get";
 
-    const std::string PALLAS_SPEC_SEQ_APPEND_BASE = "pallas.seq.append";
+    const std::string PALLAS_SPEC_SEQ_PREPEND_BASE = "pallas.seq.prepend";
 
 
     /* Constants used to name specification-types */

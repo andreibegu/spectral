@@ -97,9 +97,9 @@ frac fracOf(int numerator, int denominator);
 #define SEQ_AT(type) PALLAS_SEQ_AT___ ## type
 #define DEF_SEQ_AT(type) type SEQ_AT(type) ( SEQ(type) s, size_t idx )
 
-// Macros to define appending a value to a sequence of type sequence<type>.
-#define SEQ_APPEND(type) PALLAS_SEQ_APPEND___ ## type
-#define DEF_SEQ_APPEND(type) SEQ(type) SEQ_APPEND(type) ( SEQ(type) s, type e )
+// Macros to define prepending a value to a sequence of type sequence<type>.
+#define SEQ_PREPEND(type) PALLAS_SEQ_PREPEND___ ## type
+#define DEF_SEQ_PREPEND(type) SEQ(type) SEQ_PREPEND(type) ( type e, SEQ(type) s)
 
 // Macros to define sequence-creation
 #define SEQ_NEW(type) PALLAS_SEQ_NEW___ ## type
@@ -118,6 +118,6 @@ frac fracOf(int numerator, int denominator);
 DEF_SEQ_T(type) ; \
 DEF_SEQ_SIZE(type) ; \
 DEF_SEQ_AT(type) ; \
-DEF_SEQ_APPEND(type); \
+DEF_SEQ_PREPEND(type); \
 DEF_SEQ_NEW(type); 
 

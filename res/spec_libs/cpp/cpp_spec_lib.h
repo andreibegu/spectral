@@ -79,7 +79,7 @@ namespace pallasSpec
     T seqGet(seq<T> s, std::size_t idx);
 
     template<typename T>
-    seq<T> seqAppend(seq<T> s, T e);
+    seq<T> seqPrepend(T e, seq<T> s);
 
 }
 

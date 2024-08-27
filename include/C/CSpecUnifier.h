@@ -36,7 +36,7 @@ namespace sourcespec2ir
             {"PALLAS_SEQ_NEW___", SeqNew},
             {"PALLAS_SEQ_SIZE___", SeqSize},
             {"PALLAS_SEQ_AT___", SeqGet},
-            {"PALLAS_SEQ_APPEND___", SeqAppend},
+            {"PALLAS_SEQ_PREPEND___", SeqPrepend},
         };
 
         const std::string C_SPEC_FRAC_TYPE = "struct.frac";
@@ -80,7 +80,7 @@ namespace sourcespec2ir
 
         llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
 
-        llvm::CallInst *transformSeqAppend(llvm::CallInst &oldCall) override;
+        llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall) override;
 
     };
 

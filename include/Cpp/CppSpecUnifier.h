@@ -41,7 +41,7 @@ namespace sourcespec2ir
             {"seqNew<", SeqNew},
             {"seqSize<", SeqSize},
             {"seqGet<", SeqGet},
-            {"seqAppend<", SeqAppend}, 
+            {"seqPrepend<", SeqPrepend}, 
             {"Perm<", Perm}
         };
 
@@ -86,7 +86,7 @@ namespace sourcespec2ir
 
         llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
 
-        llvm::CallInst *transformSeqAppend(llvm::CallInst &oldCall) override;
+        llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall) override;
     };
 
 }
