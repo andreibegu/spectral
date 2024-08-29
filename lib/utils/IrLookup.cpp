@@ -12,7 +12,7 @@ namespace sourcespec2ir
 {
     namespace utils
     {
-        std::unique_ptr<std::set<llvm::DILocalVariable *>>
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
         getSrcVariablesForFunction(const llvm::Function &fun)
         {
             if (fun.isDeclaration())
@@ -22,7 +22,9 @@ namespace sourcespec2ir
                     "Function declarations are not supported.");
             }
 
-            auto srcVarSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
+            // A SetVector is used to maintain the insertion-order and prevent 
+            // duplicate entries.  
+            auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
 
             // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
             for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
@@ -34,19 +36,17 @@ namespace sourcespec2ir
                     auto *srcVar = intrinsic->getVariable();
                     // Filter on function arguments
                     if (srcVar->getArg() != 0)
-                    {
-                        srcVarSet->insert(srcVar);
-                    }
+                        varSet->insert(srcVar);
                 }
             }
 
-            return srcVarSet;
+            return varSet;
         }
 
-        std::unique_ptr<std::set<llvm::DILocalVariable *>> getVarsForLoopInv(
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> getVarsForLoopInv(
             llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader)
         {
-            auto varSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
+            auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
             const llvm::DominatorTree domTree(*parentFunc);
 
             // Get all llvm.dbg.-intrinsics that dominate the loop
@@ -66,8 +66,8 @@ namespace sourcespec2ir
             return varSet;
         }
 
-        std::unique_ptr<std::set<llvm::DILocalVariable *>> getVarsForStatement(
-            llvm::Instruction *inst)
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> 
+        getVarsForStatement(llvm::Instruction *inst)
         {
             // Get the parent-function of the instruction
             if (inst == nullptr ||
@@ -81,7 +81,7 @@ namespace sourcespec2ir
 
             // Collect all variables from the llvm.dbg.-intrinsics that 
             // dominate the instruction
-            auto varSet = std::make_unique<std::set<llvm::DILocalVariable *>>();
+            auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
             const llvm::DominatorTree domTree(*parentFunc);
             for (auto i = llvm::inst_begin(parentFunc),
                       end = llvm::inst_end(parentFunc);

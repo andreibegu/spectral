@@ -182,10 +182,7 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
-        auto srcVars = utils::getSrcVariablesForFunction(*parentFunction);
-        // Turn arg-list into sequential container for explicit ordering
-        llvm::SmallVector<llvm::DILocalVariable *> argList(
-            srcVars->begin(), srcVars->end());
+        auto argList = utils::getSrcVariablesForFunction(*parentFunction);
         // Get insert-position for wrapper-functions
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
 
@@ -194,9 +191,9 @@ namespace sourcespec2ir
         {
             auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
             auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList, stmnt->expr, wrapperName);
+                argList->getArrayRef(), stmnt->expr, wrapperName);
             fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList, insertPos);
+                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }
     }
 
@@ -205,12 +202,8 @@ namespace sourcespec2ir
         const MatchedLoopInvariantBlock &invBlock)
     {
         // Determine the variables that can be referenced in the invariant
-        auto availableVars = utils::getVarsForLoopInv(
+        auto argList = utils::getVarsForLoopInv(
             invBlock.parentFunction, invBlock.loopHeader);
-        // Turn arg-list into sequential collection for consistent ordering
-        llvm::SmallVector<llvm::DILocalVariable *> argList(
-            availableVars->begin(), availableVars->end());
-        // Get insert-pos for wrapper-function
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(invBlock);
 
         // Generate wrappers for the individual invariants
@@ -218,9 +211,9 @@ namespace sourcespec2ir
         {
             auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
             auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList, inv->expr, wrapperName);
+                argList->getArrayRef(), inv->expr, wrapperName);
             loopInvWrappers[inv.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList, insertPos);
+                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }
     }
 
@@ -228,11 +221,7 @@ namespace sourcespec2ir
         const MatchedSpecStatementBlock &stmntBlock)
     {
         // Determine the variables that can be referenced in the statement
-        auto availableVars = utils::getVarsForStatement(stmntBlock.inst);
-        // Turn arg-list into sequential collection for consistent ordering
-        llvm::SmallVector<llvm::DILocalVariable *> argList(
-            availableVars->begin(), availableVars->end());
-
+        auto argList = utils::getVarsForStatement(stmntBlock.inst);
         // Get insert-location for wrapper-function
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(stmntBlock);
 
@@ -241,9 +230,9 @@ namespace sourcespec2ir
         {
             auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
             auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList, stmnt->expr, wrapperName);
+                argList->getArrayRef(), stmnt->expr, wrapperName);
             statementWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList, insertPos);
+                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }
     }
 
