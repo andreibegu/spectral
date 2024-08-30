@@ -2,6 +2,7 @@
 #include "CSpecUnifier.h"
 #include "CCompilerDriver.h"
 #include "CppSpecTransformer.h"
+#include "SwiftSpecTransformer.h"
 #include "utils/OutputConfig.h"
 #include "utils/PallasException.h"
 
@@ -20,11 +21,12 @@ enum ClSourceLang
 {
     C,
     Cpp,
+    Swift,
     Infer
 };
 
 std::map<ClSourceLang, std::string> langNames = {
-    {C, "C"}, {Cpp, "C++"}, {Infer, "Auto"}};
+    {C, "C"}, {Cpp, "C++"}, {Swift, "Swift"}, {Infer, "Auto"}};
 
 static llvm::cl::OptionCategory SpecTransformCat(
     "Specification transformation");
@@ -63,6 +65,7 @@ static llvm::cl::opt<ClSourceLang> clLang(
     llvm::cl::values(
         clEnumVal(C, "C"),
         clEnumVal(Cpp, "C++"),
+        clEnumVal(Swift, "Swift"),
         clEnumVal(Infer, "Infer source-language from file-extension")),
     llvm::cl::cat(SpecTransformCat));
 
@@ -98,6 +101,8 @@ int main(int argc, char **argv)
             lang = C;
         else if (inFileExt == ".cpp")
             lang = Cpp;
+        else if (inFileExt == ".swift")
+            lang = Swift;
         else
         {
             throw sourcespec2ir::utils::PallasException(
@@ -131,6 +136,12 @@ int main(int argc, char **argv)
                 clLibPath, clInFile, clOutFile, config, clWorkDir, clMem2Reg);
             transformer.transformModule();
         }
+        else if (lang == Swift)
+        {
+            sourcespec2ir::SwiftSpecTransformer transformer(
+                clLibPath, clInFile, clOutFile, config, clWorkDir, clMem2Reg);
+            transformer.transformModule();
+        } 
     }
     catch (const sourcespec2ir::utils::PallasException &e)
     {

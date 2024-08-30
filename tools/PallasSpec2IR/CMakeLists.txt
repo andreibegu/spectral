@@ -12,4 +12,5 @@ target_link_libraries(pallasSpec2ir
         spec2ir_core
         spec2ir_C
         spec2ir_Cpp
+        spec2ir_Swift
 )
