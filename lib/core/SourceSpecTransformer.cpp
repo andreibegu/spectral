@@ -25,6 +25,7 @@
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
+#include "passes/LoopIDPass.h"
 #include "wrapper/SpecParserWrapper.h"
 
 namespace sourcespec2ir
@@ -60,10 +61,12 @@ namespace sourcespec2ir
         // Compile the source-file into IR
         irModule = srcCompilerDriver->compileSource(srcInPath, *irContext);
 
-        // Simplify loops
+        // Simplify loops & add the !llvm.loop-node to all of them
         llvm::ModulePassManager mpm;
         mpm.addPass(
             llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
+        mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
+                llvm::createFunctionToLoopPassAdaptor(LoopIDPass())));
         mpm.run(*irModule, mam);
 
         // Run mem2reg only if cl-option was set.

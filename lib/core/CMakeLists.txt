@@ -24,6 +24,7 @@ add_library(spec2ir_core STATIC
 )
 
 add_subdirectory(wrapper)
+add_subdirectory(passes)
          
 target_include_directories(spec2ir_core PUBLIC
     # TODO: Be more specific
