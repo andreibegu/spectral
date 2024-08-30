@@ -113,8 +113,10 @@ namespace sourcespec2ir
 
     IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(
         SpecParser::FileContext *specParseTree, llvm::Module *irModule,
+        const std::string &srcFilePath,
         llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo)
         : SourceSpecMatcher(specParseTree, irModule),
+          srcFilePath(srcFilePath),
           printMatchingInfo(printMatchingInfo), fam(fam)
     {
     }
@@ -160,11 +162,16 @@ namespace sourcespec2ir
             }
             else
             {
-                // Check if the function is an intrinsic. If so, this is fine. Otherwise fail?!
-                if (!f.isIntrinsic())
+                // If we cannot determine the line for a function, we issue
+                // a warning. This is not directly an error but could lead to
+                // incorrectly matched contracts if the line-info for a relevant
+                // function is missing
+                if (!f.isIntrinsic() && printMatchingInfo)
                 {
                     auto fName = f.getName().str();
-                    throw utils::PallasException("Unable to determine line-info for function " + fName);
+                    llvm::outs()
+                        << "WARNING: Unable to determine line for function "
+                        << fName << "\n";
                 }
             }
         }
@@ -233,7 +240,7 @@ namespace sourcespec2ir
         return utils::getSrcNameOfFunction(*closestFunction);
     }
 
-    std::pair<llvm::Function *, llvm::Loop *> 
+    std::pair<llvm::Function *, llvm::Loop *>
     IRBasedSourceSpecMatcher::matchLoopInvBlock(SrcRange loc)
     {
         // Find the first function above the loop-invariant
@@ -368,23 +375,32 @@ namespace sourcespec2ir
         const llvm::DISubprogram &sProg)
     {
         // Check that the file that is referenced from the DISubprogram
-        // of the given function matched the source-file from the loaded module.
-        const auto modulePath = makeAbsPath(irModule->getSourceFileName());
+        // of the given function matches the source-file from which the
+        // specifications were extracted.
+        const auto specFilePath = makeAbsPath(srcFilePath);
 
-        // Build a path for the scope of the function by joining directory and
-        // filename. Sometimes, a leading ./ occurs, which we remove.
-        const auto funcFile = llvm::sys::path::remove_leading_dotslash(
-            sProg.getFilename());
-        const auto funcDir = llvm::sys::path::remove_leading_dotslash(
-            sProg.getDirectory());
-        const auto funcFullPath = funcDir + llvm::sys::path::get_separator() +
-                                  funcFile;
+        // Build a scope for the source-file from which the function originates.
+        // Some compilers put an absolute-path into the filename-field, while
+        // others split the path between the filename- and the directory-field.
+        auto fPath = sProg.getFilename().str();
+        if (!llvm::sys::path::is_absolute(fPath))
+        {
+            // Build the path for the scope of the function by joining directory
+            // and filename. Sometimes, a leading ./ occurs, which we remove.
+            const auto fFile = llvm::sys::path::remove_leading_dotslash(
+                sProg.getFilename());
+            const auto fDir = llvm::sys::path::remove_leading_dotslash(
+                sProg.getDirectory());
+            const auto fFullPath = fDir +
+                                   llvm::sys::path::get_separator() + fFile;
+            fPath = fFullPath.str();
+        }
 
         // llvm::errs() << "=================================\n";
         // llvm::errs() << "Function: " << sProg.getName().str() << "\n";
-        // llvm::errs() << "Module-file:   " << modulePath << "\n";
-        // llvm::errs() << "Function-file: " << funcFullPath << "\n";
+        // llvm::errs() << "Spec-file:   " << specFilePath << "\n";
+        // llvm::errs() << "Function-file: " << fPath << "\n";
 
-        return funcFullPath.str() == modulePath;
+        return fPath == specFilePath;
     }
 }

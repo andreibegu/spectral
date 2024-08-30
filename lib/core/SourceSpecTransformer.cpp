@@ -34,7 +34,7 @@ namespace sourcespec2ir
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
         const utils::OutputConfig &outputConfig,
-        const std::string &workingDir, 
+        const std::string &workingDir,
         bool runMem2Reg)
         : srcInPath(srcInPath),
           outPath(outPath),
@@ -67,7 +67,7 @@ namespace sourcespec2ir
         mpm.run(*irModule, mam);
 
         // Run mem2reg only if cl-option was set.
-        if (runMem2Reg) 
+        if (runMem2Reg)
             promoteMemToReg(*irModule);
 
         /*
@@ -94,7 +94,8 @@ namespace sourcespec2ir
         auto specDeclarations = declCollector.collectDeclarations();
 
         // Match the specifications to the IR
-        auto specMatcher = createSpecMatcher(srcParseTree, irModule.get());
+        auto specMatcher = createSpecMatcher(srcParseTree, irModule.get(),
+                                             srcInPath);
         auto matchedSpecs = specMatcher->matchSpecs();
 
         // Release the parser and input-streams
@@ -510,7 +511,7 @@ namespace sourcespec2ir
                 continue;
 
             // If the debug-location refers to one of the wrapper function's
-            // arguments or a return-instruction, it would go out of scope. 
+            // arguments or a return-instruction, it would go out of scope.
             // In these cases, we drop the location
             if (exprStartLoc.line + oldInstrLoc.getLine() < oldFLine + lineOffset ||
                 (oldInstrLoc.getLine() - oldFLine - lineOffset == 0 && oldInstrLoc.getCol() < colOffset))
@@ -661,8 +662,7 @@ namespace sourcespec2ir
             llvm::ConstantAsMetadata::get(
                 llvm::ConstantInt::get(nTy, srcLoc.endLoc.line)),
             llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column))
-        };
+                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column))};
 
         return llvm::MDTuple::get(*irContext, mdElems);
     }
@@ -695,9 +695,11 @@ namespace sourcespec2ir
      * Factory methods
      */
     std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(
-        SpecParser::FileContext *specParseTree, llvm::Module *irModule)
+        SpecParser::FileContext *specParseTree, llvm::Module *irModule,
+        std::string srcFilePath)
     {
         return std::make_unique<IRBasedSourceSpecMatcher>(
-            specParseTree, irModule, &fam, outputConfig.printMatchingInfo);
+            specParseTree, irModule, srcFilePath, &fam,
+            outputConfig.printMatchingInfo);
     }
 }

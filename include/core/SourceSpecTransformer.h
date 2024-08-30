@@ -51,9 +51,13 @@ namespace sourcespec2ir
         /**
          * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
          * Can be overwritten by subclasses to use a different matching strategy.
+         * 
+         * The given path refers to the original source-file from which the 
+         * parse-tree of the specifications was created. 
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
-            SpecParser::FileContext *specParseTree, llvm::Module *irModule);
+            SpecParser::FileContext *specParseTree, llvm::Module *irModule, 
+            std::string srcFilePath);
 
     private:
         std::string srcInPath;
