@@ -39,10 +39,10 @@ namespace
     }
 
     void printInvMatchingInfo(size_t specSLine, size_t specELine,
-                              size_t loopSLine, size_t loopELine)
+                              size_t loopSLine)
     {
         auto specLocStr = getLocationString(specSLine, specELine);
-        auto loopLocStr = getLocationString(loopSLine, loopELine);
+        auto loopLocStr = std::to_string(loopSLine);
         llvm::outs() << "Matched invariant at " << specLocStr
                      << " to loop at " << loopLocStr << "\n";
     }
@@ -63,29 +63,16 @@ namespace
      */
     std::pair<unsigned int, unsigned int> getLines(const llvm::Loop &loop)
     {
-        auto mdTuple = llvm::dyn_cast_or_null<llvm::MDTuple>(loop.getLoopID());
-        if (!mdTuple || mdTuple->getNumOperands() < 3)
-        {
-            // TODO: Implement fallback-solution by iterating over instructions
-            throw sourcespec2ir::utils::PallasException("Failed to get llvm.loop MD-node.");
-        }
 
-        // Get the line-info from the llvm.loop md-node.
-        auto &startMd = mdTuple->getOperand(1);
-        auto &endMd = mdTuple->getOperand(2);
+        auto &startLoc = loop.getLocRange().getStart();
+        auto &endLoc = loop.getLocRange().getEnd();
 
-        if (startMd == nullptr || endMd == nullptr)
-            throw sourcespec2ir::utils::PallasException("Failed to get dbg location for invariant");
+        if (!startLoc || !endLoc)
+            throw sourcespec2ir::utils::PallasException(
+                "Failed to get line-info for invariant");
 
-        auto startLoc = llvm::dyn_cast_or_null<llvm::DILocation>(startMd.get());
-        auto endLoc = llvm::dyn_cast_or_null<llvm::DILocation>(endMd.get());
-
-        if (startLoc == nullptr || endLoc == nullptr)
-            throw sourcespec2ir::utils::PallasException("Failed to get line-info for invariant");
-
-        auto minLine = startLoc->getLine();
-        auto maxLine = endLoc->getLine();
-
+        auto minLine = startLoc.getLine();
+        auto maxLine = endLoc.getLine();
         return std::make_pair(minLine, maxLine);
     }
 
@@ -259,8 +246,6 @@ namespace sourcespec2ir
         llvm::LoopInfo &li = fam->getResult<llvm::LoopAnalysis>(*parentFunction);
         llvm::Loop *closestLoop = nullptr;
         unsigned int closestLoopStart = 0;
-        unsigned int closestLoopEnd = 0;
-        // for (auto *loop : li)
         for (auto *loop : li.getLoopsInPreorder())
         {
             auto [loopStart, loopEnd] = getLines(*loop);
@@ -272,7 +257,6 @@ namespace sourcespec2ir
                 // The current loop is below the current closest loop.
                 closestLoop = loop;
                 closestLoopStart = loopStart;
-                closestLoopEnd = loopEnd;
             }
         }
 
@@ -282,7 +266,7 @@ namespace sourcespec2ir
         if (printMatchingInfo)
         {
             printInvMatchingInfo(startLine, loc.getEndLine(),
-                                 closestLoopStart, closestLoopEnd);
+                                 closestLoopStart);
         }
 
         return std::make_pair(parentFunction, closestLoop);
