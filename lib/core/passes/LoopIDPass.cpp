@@ -30,7 +30,7 @@ namespace sourcespec2ir
       mdElems.push_back(l.getLocRange().getEnd().get()); 
 
     auto &irContext = l.getHeader()->getContext();
-    auto loopId = llvm::MDNode::get(irContext, mdElems);
+    auto loopId = llvm::MDNode::getDistinct(irContext, mdElems);
     // Build the self-reference
     loopId->replaceOperandWith(0, loopId);
 
