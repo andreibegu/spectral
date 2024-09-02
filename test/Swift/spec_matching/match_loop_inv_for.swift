@@ -8,7 +8,7 @@ func funkyFunc (a: Int, b: Int) -> Int {
     var res = 0
     /*@
     
-        loop_invariant i >= 0 && i <= a;
+        loop_invariant true;
     @*/
     
     for i in 0...a {

@@ -45,9 +45,9 @@ namespace sourcespec2ir
         call << " -emit-ir ";
         call << " -g -Onone ";
         // call << " -g -O ";
-        // call << " -Xfrontend -disable-debugger-shadow-copies ";
         // call << " -Xfrontend -disable-llvm-optzns ";
-        // call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
+        call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
+        call << " -Xfrontend -disable-debugger-shadow-copies ";
         call << srcFilePath;
         call << " -o " + irOutStr;
         call << " -I " << specLibPath << "/ ";

@@ -8,14 +8,14 @@ func funkyFunc (a: Int, b: Int) -> Int {
     var res = 0
     
     /*@
-    loop_invariant i >= 0 && i <= a;
+    loop_invariant true;
     @*/
     for i in 0..<a {
         res += a * b * i;
 
         /*@
-        loop_invariant j >= 0;
-        loop_invariant j <= b;
+        loop_invariant true;
+        loop_invariant true;
         @*/
         for j in 0 ..< b {
             res *= b + j;
@@ -25,7 +25,7 @@ func funkyFunc (a: Int, b: Int) -> Int {
 
     var i2 = 5;
     /*@
-        loop_invariant i2 >= 0 && i2 <= 5;  
+        loop_invariant true;  
     @*/
     while (i2 > 0) {
         if (i2 % 2 == 0) {

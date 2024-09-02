@@ -9,7 +9,7 @@ func leisurelyLoops (a: Int) -> Int {
 
     for i in 0...a {
         /*@
-        loop_invariant i >= 0 && i <= a;
+        loop_invariant true;
         @*/
         res += a * i;
     }

@@ -25,7 +25,6 @@ namespace sourcespec2ir
             // A SetVector is used to maintain the insertion-order and prevent 
             // duplicate entries.  
             auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
-
             // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
             for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
             {
@@ -46,7 +45,11 @@ namespace sourcespec2ir
         std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> getVarsForLoopInv(
             llvm::Function *parentFunc, const llvm::BasicBlock *loopHeader)
         {
-            auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+            // Since some compilers place the debug-intrinsics for the function-arguments 
+            // later in the code, we add them explicitly.
+            // TODO: This breaks the wrapper-generation, if there is shadowing!
+            auto varSet = getSrcVariablesForFunction(*parentFunc);
+            // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
             const llvm::DominatorTree domTree(*parentFunc);
 
             // Get all llvm.dbg.-intrinsics that dominate the loop
@@ -79,9 +82,14 @@ namespace sourcespec2ir
             }
             auto parentFunc = inst->getParent()->getParent();
 
+            // Since some compilers place the debug-intrinsics for the function-arguments 
+            // later in the code, we add them explicitly.
+            // TODO: This breaks the wrapper-generation, if there is shadowing!
+            auto varSet = getSrcVariablesForFunction(*parentFunc);
+
             // Collect all variables from the llvm.dbg.-intrinsics that 
             // dominate the instruction
-            auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+            // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
             const llvm::DominatorTree domTree(*parentFunc);
             for (auto i = llvm::inst_begin(parentFunc),
                       end = llvm::inst_end(parentFunc);

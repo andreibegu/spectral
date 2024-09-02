@@ -126,6 +126,11 @@ namespace sourcespec2ir
                 if (!isFromMainFile(*diSubprog))
                     continue;
 
+                // If the function is an artificially generated one, skip it.
+                // This is e.g. the case for the default-arguments in swift. 
+                if (isArtificial(diSubprog))
+                    continue;
+
                 // Check that all function are declared on distinct lines.
                 // (Otherwise this approach does not work)
                 auto line = diSubprog->getLine();
@@ -180,6 +185,11 @@ namespace sourcespec2ir
         auto fLine = closestFunction->getSubprogram()->getLine();
         for (auto &f : irModule->getFunctionList())
         {
+            // Skip artificial functions
+            auto sProg = f.getSubprogram();
+            if (sProg != nullptr && isArtificial(sProg))
+                continue;
+
             for (auto it = inst_begin(f), end = inst_end(f); it != end; ++it)
             {
                 auto dbgLoc = it->getDebugLoc();

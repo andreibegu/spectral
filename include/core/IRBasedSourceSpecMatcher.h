@@ -57,6 +57,10 @@ namespace sourcespec2ir
          * Only functions from the main-file are considered
          */
         llvm::Function *getFirstFunctionAbove(const size_t line);
+
+        inline bool isArtificial(const llvm::DISubprogram *sProg) {
+            return sProg->getFlags() & llvm::DINode::FlagArtificial;
+        }
     };
 
 }
