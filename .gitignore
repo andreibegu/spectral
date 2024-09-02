@@ -9,3 +9,4 @@ grammar/demo/.antlr/
 examples/cpp_test.cpp
 examples/cpp_test.h
 examples/c_test.c
+examples/swift_test.swift

@@ -37,9 +37,11 @@ namespace sourcespec2ir
         std::stringstream call;
         call << " swiftc ";
         call << " -emit-ir ";
-        call << " -g -O ";
-        call << " -Xfrontend -disable-debugger-shadow-copies ";
-        call << " -Xfrontend -disable-llvm-optzns ";
+        call << " -g -Onone ";
+        // call << " -g -O ";
+        // call << " -Xfrontend -disable-debugger-shadow-copies ";
+        // call << " -Xfrontend -disable-llvm-optzns ";
+        // call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
         call << srcFilePath;
         call << " -o " + irOutStr;
         call << " -I " << specLibPath << "/ ";
