@@ -4,8 +4,10 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <system_error>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/Support/FileSystem.h>
 
 namespace sourcespec2ir
 {
@@ -128,7 +130,7 @@ namespace sourcespec2ir
         auto parentFunc = instr->getParent()->getParent();
         if (parentFunc->getSubprogram() == nullptr)
             throw utils::PallasException("Cannot get line-info for function");
-            
+
         return parentFunc->getSubprogram()->getLine();
     }
 
@@ -214,6 +216,13 @@ namespace sourcespec2ir
     void SourceWrapperGenerator::writeSrcFile(const std::string &filePath,
                                               const std::vector<SrcLine> &lines)
     {
+        // If the file already exists, delete it to avoid a situation where
+        // writing fails, but an old, existing file is read.
+        auto rmSucc = llvm::sys::fs::remove(filePath);
+        if (rmSucc)
+            throw utils::PallasException(
+                "Failed to remove existing wrapper-file.");
+
         std::ofstream outStream(filePath);
         if (!outStream.is_open())
             throw utils::PallasException("Failed to write source with wrappers to file.");

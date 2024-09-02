@@ -6,6 +6,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Path.h>
 #include <llvm/Support/SourceMgr.h>
 
@@ -32,13 +33,20 @@ namespace sourcespec2ir
         llvm::sys::path::append(irOutPath, irFileName);
         auto irOutStr = irOutPath.str().str();
 
-        // Run compiler to generate the IR
+        // If the target-file already exists, delete it
+        auto rmSucc = llvm::sys::fs::remove(irOutStr);
+        if (rmSucc)
+            throw utils::PallasException("Failed to remove existing ir-file.");
 
+        // Run compiler to generate the IR
         std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + srcFilePath +
                                 " -o " + irOutStr +
                                 " -Xclang -disable-O0-optnone" +
                                 " -I " + specLibPath + "/";
-        std::system(clangCall.c_str());
+        auto eCode = std::system(clangCall.c_str());
+        if (eCode != 0)
+            throw utils::PallasException(
+                "An error occured while compiling the source-file.");
 
         // Parse the resulting file as an LLVM-IR module
         llvm::SMDiagnostic irSMDiag;
