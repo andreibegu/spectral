@@ -274,10 +274,7 @@ namespace sourcespec2ir
             throw utils::PallasException("Failed to match the loop-invariant");
 
         if (printMatchingInfo)
-        {
-            printInvMatchingInfo(startLine, loc.getEndLine(),
-                                 closestLoopStart);
-        }
+            printInvMatchingInfo(startLine, loc.getEndLine(), closestLoopStart);
 
         return std::make_pair(parentFunction, closestLoop);
     }
@@ -293,10 +290,8 @@ namespace sourcespec2ir
         auto parentFunc = getFirstFunctionAbove(startLine);
 
         if (parentFunc == nullptr)
-        {
             throw utils::PallasException(
                 "Failed to get enclosing function for statement-block");
-        }
 
         // Traverse instructions from beginning to the end and find the first
         // instruction that is located after the end of the specification-block.
@@ -315,8 +310,8 @@ namespace sourcespec2ir
             if (iLine < endLine || (iLine == endLine && iCol <= endCol))
                 continue;
             // Skip debug-intrinsics
-            // if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
-            //    continue;
+            if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
+                continue;
 
             closestInst = &*it;
             break;

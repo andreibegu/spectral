@@ -16,6 +16,6 @@ func funkyFunc (a: Int, b: Int) -> Int {
 }
 
 // COM: Check that the statement-blocks are matched
-// CHECK: Matched statement-block at 6-9 to instruction at 10::9
+// CHECK: Matched statement-block at 6-9 to instruction at 10::15
 // CHECK: Matched statement-block at 11-11 to instruction at 12::14
 // CHECK: Matched statement-block at 13-13 to instruction at 14::15

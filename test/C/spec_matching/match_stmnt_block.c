@@ -17,7 +17,7 @@ int bar (int a, int b) {
     return a + b /*@ assert c > 0; @*/ + c ;
 }
 
-// CHECK-DAG: Matched statement-block at 6-9 to instruction at 10::9
+// CHECK-DAG: Matched statement-block at 6-9 to instruction at 10::13
 // CHECK-DAG: Matched statement-block at 11-13 to instruction at 14::7
 // CHECK-DAG: Matched statement-block at 15-15 to instruction at 16::7
 // CHECK-DAG: Matched statement-block at 17-17 to instruction at 17::42
