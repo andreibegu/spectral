@@ -95,30 +95,15 @@ namespace sourcespec2ir
         {
             if (&*i == inst)
                 continue;
-            if (!domTree.dominates(&*i, inst))
-                continue;
 
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
-                // The instruction istself is a debg-intrinsic
+                // The instruction is a debug-intrinsic
+                if (!domTree.dominates(&*i, inst))
+                    continue;
                 auto *srcVar = intr->getVariable();
                 varSet->insert(srcVar);
             }
-            /*
-            else
-            {
-                // Iterate over all users of the instruction, and check if
-                // they contain a debug-intrinsic
-                for (auto user : i->users())
-                {
-                    if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(user))
-                    {
-                        auto *srcVar = intr->getVariable();
-                        varSet->insert(srcVar);
-                    }
-                }
-            }
-            */
         }
         return varSet;
     }
