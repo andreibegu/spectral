@@ -4,11 +4,11 @@
 Function-contracts are encoded by attaching a metadata-node to the corresponding function. 
 The node is labeled as `!pallas.fcontract` and consists of a MD-tuple that consists of:
 - a reference to a MD-tuple that encodes the location in the source-file
+- a boolean value that specifies if the contract is marked as pure
 - followed by a list of the clauses of the contract. 
 
 The individual clauses of the contract are encoded as metadata-tuples that consist of 
 - a MD-String that identifies the type of the statement ( `!"pallas.requires"` or `!"pallas.ensures"` )
-- a boolean value that specifies if the contract is marked as pure
 - a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the clause 
 - a list of references to the `!DILocalVariable`s that represent the variables that are available in the expression. The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
