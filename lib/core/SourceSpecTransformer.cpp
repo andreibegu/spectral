@@ -21,7 +21,6 @@
 #include "SourceSpecTransformer.h"
 #include "SpecDeclarationCollector.h"
 #include "IrSpecConstants.h"
-#include "IrLookup.h"
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
@@ -66,7 +65,7 @@ namespace sourcespec2ir
         mpm.addPass(
             llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
         mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
-                llvm::createFunctionToLoopPassAdaptor(LoopIDPass())));
+            llvm::createFunctionToLoopPassAdaptor(LoopIDPass())));
         mpm.run(*irModule, mam);
 
         // Run mem2reg only if cl-option was set.
@@ -186,7 +185,7 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
-        auto argList = utils::getSrcVariablesForFunction(*parentFunction);
+        auto argList = wrapperGenerator->getSrcVariablesForFunction(*parentFunction);
         // Get insert-position for wrapper-functions
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
 
@@ -206,7 +205,7 @@ namespace sourcespec2ir
         const MatchedLoopInvariantBlock &invBlock)
     {
         // Determine the variables that can be referenced in the invariant
-        auto argList = utils::getVarsForLoopInv(
+        auto argList = wrapperGenerator->getVarsForLoopInv(
             invBlock.parentFunction, invBlock.loopHeader);
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(invBlock);
 
@@ -225,7 +224,7 @@ namespace sourcespec2ir
         const MatchedSpecStatementBlock &stmntBlock)
     {
         // Determine the variables that can be referenced in the statement
-        auto argList = utils::getVarsForStatement(stmntBlock.inst);
+        auto argList = wrapperGenerator->getVarsForStatement(stmntBlock.inst);
         // Get insert-location for wrapper-function
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(stmntBlock);
 

@@ -7,10 +7,121 @@
 #include <system_error>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/Dominators.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/IntrinsicInst.h>
 #include <llvm/Support/FileSystem.h>
 
 namespace sourcespec2ir
 {
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
+    {
+        if (fun.isDeclaration())
+            throw utils::PallasException("Cannot variables for for declaration.");
+
+        // SetVector is used to keep insertion-order and prevent duplicates
+        auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
+        for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
+        {
+            const llvm::Instruction *instr = &*i;
+            // Only consider calls to llvm intrinsics
+            if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
+            {
+                auto *srcVar = intrinsic->getVariable();
+                // Filter on function arguments
+                if (srcVar->getArg() != 0)
+                    varSet->insert(srcVar);
+            }
+        }
+
+        return varSet;
+    }
+
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getVarsForLoopInv(llvm::Function *parentFunc,
+                                              const llvm::BasicBlock *loopHeader)
+    {
+        // Since some compilers place the debug-intrinsics for the function-arguments
+        // later in the code, we add them explicitly.
+        // TODO: This might break wrapper-generation, if there is shadowing!
+        auto varSet = getSrcVariablesForFunction(*parentFunc);
+        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        const llvm::DominatorTree domTree(*parentFunc);
+
+        // Get all llvm.dbg.-intrinsics that dominate the loop
+        for (auto i = llvm::inst_begin(parentFunc),
+                  end = llvm::inst_end(parentFunc);
+             i != end; ++i)
+        {
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+            {
+                if (!domTree.dominates(intr, loopHeader))
+                    continue;
+                auto *srcVar = intr->getVariable();
+                varSet->insert(srcVar);
+            }
+        }
+
+        return varSet;
+    }
+
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getVarsForStatement(llvm::Instruction *inst)
+    {
+        // Get the parent-function of the instruction
+        if (inst == nullptr ||
+            inst->getParent() == nullptr ||
+            inst->getParent()->getParent() == nullptr)
+        {
+            throw utils::PallasException(
+                "Encountered instruction without parent");
+        }
+        auto parentFunc = inst->getParent()->getParent();
+
+        // Some compilers place the debug-intrinsics for the function-arguments
+        // later in the code, we add them explicitly.
+        // TODO: This might break wrapper-generation, if there is shadowing!
+        auto varSet = getSrcVariablesForFunction(*parentFunc);
+
+        // Collect all variables from the llvm.dbg.-intrinsics that
+        // dominate the instruction
+        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        const llvm::DominatorTree domTree(*parentFunc);
+        for (auto i = llvm::inst_begin(parentFunc),
+                  end = llvm::inst_end(parentFunc);
+             i != end; ++i)
+        {
+            if (&*i == inst)
+                continue;
+            if (!domTree.dominates(&*i, inst))
+                continue;
+
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+            {
+                // The instruction istself is a debg-intrinsic
+                auto *srcVar = intr->getVariable();
+                varSet->insert(srcVar);
+            }
+            /*
+            else
+            {
+                // Iterate over all users of the instruction, and check if
+                // they contain a debug-intrinsic
+                for (auto user : i->users())
+                {
+                    if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(user))
+                    {
+                        auto *srcVar = intr->getVariable();
+                        varSet->insert(srcVar);
+                    }
+                }
+            }
+            */
+        }
+        return varSet;
+    }
 
     std::string SourceWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
     {
