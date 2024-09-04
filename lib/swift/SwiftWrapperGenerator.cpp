@@ -59,7 +59,7 @@ namespace sourcespec2ir
     std::string SwiftWrapperGenerator::addTypedef(
         const std::string &baseType, const std::string &typedefName)
     {
-        throw utils::PallasException("Typedefs are not yet supported");
+        return baseType;
     }
 
     std::string SwiftWrapperGenerator::addNamespace(
