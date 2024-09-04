@@ -17,6 +17,7 @@
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
+#include <llvm/Transforms/Scalar/LoopRotation.h>
 
 #include "IRBasedSourceSpecMatcher.h"
 #include "SourceSpecTransformer.h"
@@ -67,6 +68,9 @@ namespace sourcespec2ir
             llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
         mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
             llvm::createFunctionToLoopPassAdaptor(LoopIDPass())));
+        // mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
+        //     llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass())));
+
         mpm.run(*irModule, mam);
 
         // Run mem2reg only if cl-option was set.
@@ -451,18 +455,20 @@ namespace sourcespec2ir
         {
             auto cu = getCUForFunc(contr->function);
             auto scopeFile = getFileForFunc(contr->function);
+            auto scope = getScopeForFunc(contr->function);
             for (auto &stmnt : contr->statements)
                 rewriteWrapperLocations(*fContractWrappers[stmnt.get()],
-                                        stmnt->exprLoc, cu, scopeFile);
+                                        stmnt->exprLoc, cu, scopeFile, scope);
         }
         // Handle loop-invariants
         for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
         {
             auto cu = getCUForFunc(invBlock->parentFunction);
             auto scopeFile = getFileForFunc(invBlock->parentFunction);
+            auto scope = getScopeForFunc(invBlock->parentFunction);
             for (auto &inv : invBlock->invariants)
                 rewriteWrapperLocations(*loopInvWrappers[inv.get()],
-                                        inv->exprLoc, cu, scopeFile);
+                                        inv->exprLoc, cu, scopeFile, scope);
         }
         // Handle specification statements
         for (auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
@@ -471,15 +477,17 @@ namespace sourcespec2ir
             auto parentFunc = instr->getParent()->getParent();
             auto cu = getCUForFunc(parentFunc);
             auto scopeFile = getFileForFunc(parentFunc);
+            auto scope = getScopeForFunc(parentFunc);
             for (auto &stmnt : stmntBlock->statements)
                 rewriteWrapperLocations(*statementWrappers[stmnt.get()],
-                                        stmnt->exprLoc, cu, scopeFile);
+                                        stmnt->exprLoc, cu, scopeFile, scope);
         }
     }
 
     void SourceSpecTransformer::rewriteWrapperLocations(
         const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
-        llvm::DICompileUnit *cu, llvm::DIFile *scopeFile)
+        llvm::DICompileUnit *cu, llvm::DIFile *scopeFile,
+        llvm::DIScope *scope)
     {
         // Get the wrapper-function
         auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
@@ -494,7 +502,7 @@ namespace sourcespec2ir
         // The line-info cannot be modified manually, so we replace the full
         // DISubprogram of the wrapper-function.
         auto newSProg = diBuilder.createFunction(
-            scopeFile, // New scope
+            scope, // New scope
             oldSProg->getName(),
             oldSProg->getLinkageName(),
             scopeFile,         // New file
@@ -518,11 +526,17 @@ namespace sourcespec2ir
             if (!oldInstrLoc)
                 continue;
 
-            // If the debug-location refers to one of the wrapper function's
-            // arguments or a return-instruction, it would go out of scope.
-            // In these cases, we drop the location
-            if (exprStartLoc.line + oldInstrLoc.getLine() < oldFLine + lineOffset ||
-                (oldInstrLoc.getLine() - oldFLine - lineOffset == 0 && oldInstrLoc.getCol() < colOffset))
+            // Check if the instruction points to the header of the wrapper-function
+            const bool pointsToHeader = oldInstrLoc.getLine() < oldFLine + lineOffset;
+            // Check if the new-column would point to an invalid location
+            // I.e. is the instr on the first line of the expr and 
+            // is the col smaller than the offset
+            const bool newColInvalid =
+                oldInstrLoc.getLine() - oldFLine - lineOffset == 0 &&
+                oldInstrLoc.getCol() < colOffset; // 
+
+            // If the new location would be invalid, drop it
+            if (pointsToHeader || newColInvalid)
             {
                 // Drop the dbg-location
                 it->dropLocation();
@@ -699,6 +713,16 @@ namespace sourcespec2ir
         if (file == nullptr)
             throw utils::PallasException("Encountered a function without a file.");
         return file;
+    }
+
+    llvm::DIScope *SourceSpecTransformer::getScopeForFunc(llvm::Function *f)
+    {
+        if (f == nullptr)
+            throw utils::PallasException("Passed function is nullptr.");
+        if (f->getSubprogram() == nullptr)
+            throw utils::PallasException("Encountered a function without a subprogram");
+        auto *scope = f->getSubprogram()->getScope();
+        return scope;
     }
 
     llvm::DICompileUnit *SourceSpecTransformer::getCUForFunc(llvm::Function *f)

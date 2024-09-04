@@ -188,10 +188,10 @@ namespace sourcespec2ir
          * The passed compilation-unit and scope-file are used as the 
          * cu and scope of the wrapper-function.
          */
-        void rewriteWrapperLocations(const SrcWrapperFunction &wFun,
-                                     const SrcLocation &exprStartLoc,
-                                     llvm::DICompileUnit *cu,  
-                                     llvm::DIFile *scopeFile);
+        void rewriteWrapperLocations(
+            const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+            llvm::DICompileUnit *cu, llvm::DIFile *scopeFile, 
+            llvm::DIScope *scope);
 
         /**
          * Write the IR-representation of the given module into
@@ -226,6 +226,12 @@ namespace sourcespec2ir
          * nullpointers. 
          */
         llvm::DIFile *getFileForFunc(llvm::Function *f);
+
+        /**
+         * Helper that returns the DIScope for a given function and checks for 
+         * nullpointers. 
+         */
+        llvm::DIScope *getScopeForFunc(llvm::Function *f);
 
         /**
          * Helper that returns the cimpilation-unit for a given function and 
