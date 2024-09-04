@@ -210,6 +210,13 @@ namespace sourcespec2ir
                                         llvm::Module &moduleWithWrappers);
 
         /**
+         * Adds the functions that belong to the given set of wrapper-functions 
+         * to the module's llvm.used-list.
+         */
+        void markWrapperFunctionsAsUsed(llvm::Module &module,
+            llvm::ArrayRef<SrcWrapperFunction *> wrappers);
+
+        /**
          * Generates a MDTuple that encodes a source-location.
          */
         llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);

@@ -15,6 +15,7 @@
 #include <llvm/Support/Path.h>
 #include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
+#include <llvm/Transforms/Utils/ModuleUtils.h>
 #include <llvm/Transforms/Utils/LoopSimplify.h>
 
 #include "IRBasedSourceSpecMatcher.h"
@@ -137,11 +138,16 @@ namespace sourcespec2ir
         // after the wrapping stage and add reference to wrapper-function later.
         removeDuplicateDefinitions(*irModule, *moduleWithWrappers);
 
+        // Add all generated wrapper to the llvm.used-list of the module
+        // to ensurer they are copied over during linkage.
+        markWrapperFunctionsAsUsed(*moduleWithWrappers, wrappers);
+
         // Apply mem2reg to new module
         promoteMemToReg(*moduleWithWrappers);
 
         auto linker = llvm::Linker(*irModule);
-        linker.linkInModule(std::move(moduleWithWrappers));
+        linker.linkInModule(std::move(moduleWithWrappers),
+                            llvm::Linker::Flags::LinkOnlyNeeded);
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
@@ -198,7 +204,7 @@ namespace sourcespec2ir
             fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
                 wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }
-    }
+    };
 
     // TODO: Move this into the wrapper-generator
     void SourceSpecTransformer::wrapLoopInvariantBlock(
@@ -638,6 +644,20 @@ namespace sourcespec2ir
             llvm::convertToDeclaration(g);
             // llvm::outs() << "Turned " << g.getName().str() << " into declaration.\n";
         }
+    }
+
+    void SourceSpecTransformer::markWrapperFunctionsAsUsed(
+        llvm::Module &module, llvm::ArrayRef<SrcWrapperFunction *> wrappers)
+    {
+        llvm::SmallVector<llvm::GlobalValue *> irWrappers;
+        for (auto &wrapper : wrappers)
+        {
+            auto wrapperF = utils::getFunctionBySrcName(module, wrapper->name);
+            if (wrapperF == nullptr)
+                throw utils::PallasException("Failed to get wrapper-function");
+            irWrappers.push_back(wrapperF);
+        }
+        llvm::appendToUsed(module, irWrappers);
     }
 
     std::string SourceSpecTransformer::getPathForSourceWithWrappers()
