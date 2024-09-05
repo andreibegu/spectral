@@ -46,8 +46,13 @@ namespace sourcespec2ir
         call << " -g -Onone ";
         // call << " -g -O ";
         // call << " -Xfrontend -disable-llvm-optzns ";
-        call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
+        // call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
         call << " -Xfrontend -disable-debugger-shadow-copies ";
+
+        // call << " -load-plugin-executable " << specLibPath << "/#PallasSpec,PallasSpecLibMacros ";
+        // call << " -load-plugin-library " << specLibPath << "/#PallasSpec,PallasSpecLibMacros ";
+        // call << " -plugin-path " << specLibPath << "/ ";
+
         call << srcFilePath;
         call << " -o " + irOutStr;
         call << " -I " << specLibPath << "/ ";

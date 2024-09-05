@@ -26,3 +26,4 @@ public func result<T>() -> T {
     // it is sufficient if it just compiles without errors.
     return unsafeBitCast(0, to: T.self)
 }
+
