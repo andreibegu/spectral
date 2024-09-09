@@ -30,6 +30,10 @@ namespace sourcespec2ir
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
+
+    private:
+        std::string generateSpecLibFunctions(
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars);
     };
 
 }

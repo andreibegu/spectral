@@ -13,10 +13,6 @@ let package = Package(
             targets: ["PallasSpec"]),
     ],
 
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-syntax", from: "510.0.0")
-    ],
-
     targets: [
         
         // Specification-library

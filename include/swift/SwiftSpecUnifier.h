@@ -28,12 +28,16 @@ namespace sourcespec2ir
             {"3sepyS2b_SbtF", SepConj},
         };
 
-        const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
-            // {"old<", Old},
-            // {"result<", Result},
+        // Map to identify the spec-lib functions that are generated inside 
+        // of the wrapper-function. 
+        // Because we use the DUSubprogram, we can use the unmangled names.
+        const llvm::StringMap<SpecLibElement> GENERATED_NAME_MAP = {
+            {"_old", Old},
         };
+        
 
         const std::string SWIFT_SPEC_MODULE_PREFIX = "$s10PallasSpec";
+        const std::string SWIFT_WRAPPER_PREFIX = "PALLAS_SPEC_";
 
         SwiftSpecUnifier(const bool printDebugInfo);
 

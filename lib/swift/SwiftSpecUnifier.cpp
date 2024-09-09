@@ -19,25 +19,26 @@ namespace sourcespec2ir
     {
         auto fName = f.getName().str();
 
-        // Check if the name starts with the the prefix of the spec module
-        if (!llvm::StringRef(fName).startswith(SWIFT_SPEC_MODULE_PREFIX)) 
-            return std::nullopt;
-
-        auto nameWithoutPrefix = fName.substr(SWIFT_SPEC_MODULE_PREFIX.size());
-
-        // Check exact matches
-        auto exactMatch = EXACT_MATCH_NAME_MAP.find(nameWithoutPrefix);
-        if (exactMatch != EXACT_MATCH_NAME_MAP.end())
-            return std::make_optional<SpecLibElement>(exactMatch->getValue());
-
-        // Check prefix-matches
-        for (auto key : PREFIX_MATCH_NAME_MAP.keys())
+        if (llvm::StringRef(fName).startswith(SWIFT_SPEC_MODULE_PREFIX))
         {
-            if (llvm::StringRef(nameWithoutPrefix).startswith(key))
-            {
-                auto value = PREFIX_MATCH_NAME_MAP.lookup(key);
-                return std::make_optional<SpecLibElement>(value);
-            }
+            // The name starts with the prefix of the spec-module
+            auto nameWithoutPrefix = fName.substr(SWIFT_SPEC_MODULE_PREFIX.size());
+            // Check name-matches
+            auto match = EXACT_MATCH_NAME_MAP.find(nameWithoutPrefix);
+            if (match != EXACT_MATCH_NAME_MAP.end())
+                return std::make_optional<SpecLibElement>(match->getValue());
+        }
+
+        // Check if it is a generated spec-function inside of the wrapper
+        if (auto sProg = f.getSubprogram())
+        {
+            if (sProg->getScope() == nullptr ||
+                !sProg->getScope()->getName().startswith(SWIFT_WRAPPER_PREFIX))
+                return std::nullopt;
+
+            auto match = GENERATED_NAME_MAP.find(sProg->getName());
+            if (match != GENERATED_NAME_MAP.end())
+                return std::make_optional<SpecLibElement>(match->getValue());
         }
 
         return std::nullopt;
@@ -76,7 +77,20 @@ namespace sourcespec2ir
 
     llvm::CallInst *SwiftSpecUnifier::transformOld(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            // Struct-type
+            auto newCall = llvm::CallInst::Create(
+                getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            return newCall;
+        }
+        else
+        {
+            return llvm::CallInst::Create(
+                getUSpecOld(type), {oldCall.getArgOperand(0)});
+        }
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformResult(llvm::CallInst &oldCall)

@@ -4,6 +4,9 @@
 
 #include <sstream>
 
+#include <llvm/ADT/SmallSet.h>
+#include <llvm/IR/Type.h>
+
 namespace sourcespec2ir
 {
     std::string SwiftWrapperGenerator::getWrapperFunctionString(
@@ -11,6 +14,10 @@ namespace sourcespec2ir
         const std::string &expr,
         const std::string &functionName)
     {
+
+        // Generate the required functions for the specification-library
+        const auto specFuncs = generateSpecLibFunctions(srcVars);
+
         std::stringstream stream;
         stream << "func " << functionName << "(";
 
@@ -28,7 +35,10 @@ namespace sourcespec2ir
         // Construct body
         stream << "{ \n";
         stream << "return " << expr << "; \n";
+        stream << "\n";
+        stream << specFuncs;
         stream << "} \n";
+        stream << "\n";
 
         return stream.str();
     }
@@ -74,6 +84,31 @@ namespace sourcespec2ir
         // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("import PallasSpec", 0));
+    }
+
+    std::string SwiftWrapperGenerator::generateSpecLibFunctions(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars)
+    {
+        // Build a set of the argument-types
+        llvm::SmallSet<std::string, 8> types;
+        for (auto var : srcVars) 
+            types.insert(getSrcReprOfType(var->getType()));
+
+        std::stringstream stream;
+        stream << "// START - SpecLib-Functions \n";
+        for (auto type : types)
+        {
+            // Generate function for old
+            stream << "@inline(never) \n";
+            stream << "func _old(_ v: " << type << ") -> " << type << " { return v; } \n";
+
+            // Generate function for result
+            // TODO: We need the return-type here
+
+        }
+        stream << "// END - SpecLib-Functions \n";
+
+        return stream.str();
     }
 
 }
