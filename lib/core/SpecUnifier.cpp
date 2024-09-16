@@ -337,12 +337,13 @@ namespace sourcespec2ir
                                                 PALLAS_SPEC_OLD_BASE);
                 specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
                                              *irContext, type));
+                specFun->addParamAttr(1, llvm::Attribute::getWithByValType(
+                                             *irContext, type));
             }
             else
             {
                 // Non-struct-type
-                llvm::SmallVector<llvm::Type *> specArgs(
-                    {llvm::PointerType::get(*irContext, 0)});
+                llvm::SmallVector<llvm::Type *> specArgs({type});
                 specFun = createSpecLibFunction(specName, type, specArgs,
                                                 PALLAS_SPEC_OLD_BASE);
             }
@@ -650,5 +651,12 @@ namespace sourcespec2ir
     {
         call->addParamAttr(
             argNo, llvm::Attribute::getWithStructRetType(*irContext, rType));
+    }
+
+    void SpecUnifier::addByVal(
+        llvm::CallInst *call, unsigned int argNo, llvm::Type *type)
+    {
+        call->addParamAttr(
+            argNo, llvm::Attribute::getWithByValType(*irContext, type));
     }
 }

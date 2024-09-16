@@ -100,6 +100,7 @@ namespace sourcespec2ir
         {
             // Generate function for old
             stream << "@inline(never) \n";
+            // stream << "@_optimize(none) \n";
             stream << "func _old(_ v: " << type << ") -> " << type << " { return v; } \n";
 
             // Generate function for result

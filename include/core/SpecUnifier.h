@@ -250,6 +250,13 @@ namespace sourcespec2ir
         void addSret(
             llvm::CallInst* call, unsigned int argNo, llvm::Type *rType);
 
+        /**
+         * Helper that adds the byfal attribute to the argument with the given 
+         * index of the given function. 
+         */
+        void addByVal(
+            llvm::CallInst* call, unsigned int argNo, llvm::Type *type);
+
     private:
         /**
          * Pointers to the unified specification functions within irModule.
