@@ -43,7 +43,9 @@ namespace sourcespec2ir
         std::stringstream call;
         call << " swiftc ";
         call << " -emit-ir ";
-        call << " -g -Onone ";
+        call << " -g ";
+        // call << " -gdwarf-types ";
+        call << " -Onone ";
         // call << " -g -O ";
         // call << " -Xfrontend -disable-llvm-optzns ";
         // call << " -Xfrontend -disable-requirement-machine-loop-normalization ";

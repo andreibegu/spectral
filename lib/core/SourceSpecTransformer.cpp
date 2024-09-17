@@ -195,6 +195,13 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         const auto parentFunction = contract.function;
+        llvm::DIType *parentRetType = nullptr;
+        if (parentFunction->getSubprogram() != nullptr && 
+            parentFunction->getSubprogram()->getType() != nullptr)
+        {
+            parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
+        }
+
         auto argList = wrapperGenerator->getSrcVariablesForFunction(*parentFunction);
         // Get insert-position for wrapper-functions
         auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
@@ -204,7 +211,7 @@ namespace sourcespec2ir
         {
             auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
             auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName);
+                argList->getArrayRef(), stmnt->expr, wrapperName, parentRetType);
             fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
                 wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }

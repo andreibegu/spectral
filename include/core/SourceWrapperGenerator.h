@@ -35,11 +35,15 @@ namespace sourcespec2ir
          * expression.
          * The generated wrapping-function MUST use the same ordering of it's
          * arguments as is defined by parameter srcVars.
+         * In case that the wrapper-function is attached to a function 
+         * (i.e. in the case of a function contract), the returnType-parameter
+         * specifices the return-type of this function. 
          */
         virtual std::string getWrapperFunctionString(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const std::string &expr,
-            const std::string &functionName) = 0;
+            const std::string &functionName, 
+            const llvm::DIType *returnType = nullptr) = 0;
 
         /**
          * For a given SrcWrapperFunction, return the line- and column-offset
@@ -111,7 +115,7 @@ namespace sourcespec2ir
          * types representation on the source-level.
          * If the string-representation cannot be generated, an error is raised.
          */
-        std::string getSrcReprOfType(const llvm::DIType *type);
+        virtual std::string getSrcReprOfType(const llvm::DIType *type);
 
         /**
          * Collects the DILocalVariable-nodes that refer to variables

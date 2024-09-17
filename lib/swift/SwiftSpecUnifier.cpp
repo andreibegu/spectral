@@ -96,7 +96,19 @@ namespace sourcespec2ir
 
     llvm::CallInst *SwiftSpecUnifier::transformResult(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            auto newCall = llvm::CallInst::Create(
+                getUSpecResult(type), {oldCall.getArgOperand(0)});
+            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            return newCall;
+        }
+        else
+        {
+            llvm::SmallVector<llvm::Value *, 1> newArgs;
+            return llvm::CallInst::Create(getUSpecResult(type), newArgs);
+        }
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformBoundVar(llvm::CallInst &oldCall)

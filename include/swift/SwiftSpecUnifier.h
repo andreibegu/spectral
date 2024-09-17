@@ -30,12 +30,12 @@ namespace sourcespec2ir
 
         // Map to identify the spec-lib functions that are generated inside 
         // of the wrapper-function. 
-        // Because we use the DUSubprogram, we can use the unmangled names.
+        // Because we use the DISubprogram, we can use the unmangled names.
         const llvm::StringMap<SpecLibElement> GENERATED_NAME_MAP = {
             {"_old", Old},
+            {"_result", Result}
         };
         
-
         const std::string SWIFT_SPEC_MODULE_PREFIX = "$s10PallasSpec";
         const std::string SWIFT_WRAPPER_PREFIX = "PALLAS_SPEC_";
 
