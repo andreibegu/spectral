@@ -6,8 +6,10 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <map>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
@@ -113,8 +115,8 @@ namespace sourcespec2ir
         const llvm::Function *closestFunction = nullptr;
         auto endLine = loc.getEnd()->getLine();
 
-        // Set for checking that all functions are declared on distinct lines.
-        llvm::SmallSet<unsigned int, 16> lineNumberSet;
+        // Map of line-numbers to functions to check for ambiguous matching
+        std::map<unsigned int, llvm::SmallPtrSet<llvm::Function *, 4>> lineToFunc;
 
         // Get first function under the contract
         for (auto &f : irModule->getFunctionList())
@@ -125,22 +127,17 @@ namespace sourcespec2ir
             {
                 if (!isFromMainFile(*diSubprog))
                     continue;
-
                 // If the function is an artificially generated one, skip it.
-                // This is e.g. the case for the default-arguments in swift. 
+                // This is e.g. the case for the default-arguments in swift.
                 if (isArtificial(diSubprog))
                     continue;
 
-                // Check that all function are declared on distinct lines.
-                // (Otherwise this approach does not work)
                 auto line = diSubprog->getLine();
-                if (lineNumberSet.contains(line))
-                {
-                    auto lineStr = std::to_string(line);
-                    throw utils::PallasException(
-                        "Encountered multiple functions with the same line-information (" + lineStr + ")");
-                }
-                lineNumberSet.insert(line);
+                // Bookkeeping of which functions occur on this line
+                if (lineToFunc.find(line) != lineToFunc.end())
+                    lineToFunc[line].insert(&f);
+                else
+                    lineToFunc.insert({line, {&f}});
 
                 // Check if function occurs after contract and is closer than current closest function.
                 if (line > endLine &&
@@ -160,17 +157,15 @@ namespace sourcespec2ir
                 // function is missing
                 if (!f.isIntrinsic() && printMatchingInfo)
                 {
-                    auto fName = f.getName().str();
                     llvm::outs()
                         << "WARNING: Unable to determine line for function "
-                        << fName << "\n";
+                        << f.getName().str() << "\n";
                 }
             }
         }
 
         if (closestFunction == nullptr)
         {
-
             auto locStr = std::to_string(loc.getStartLine()) + ":" +
                           std::to_string(loc.getStartCol()) + "-" +
                           std::to_string(loc.getEndLine()) + ":" +
@@ -179,9 +174,21 @@ namespace sourcespec2ir
                 "Unable to match contract (" + locStr + ") to function");
         }
 
-        // Check that no instructions are between the specification and the function declaration.
-        // TODO: Is this strictly nessessary? Based on the above algorithm, there should never be an
-        //       instruction between contract and matched function.
+        // Check that the closest function does not occur on the same line as 
+        // other functions. In this case, the matching would be ambiguous
+        auto closestLine = closestFunction->getSubprogram()->getLine();
+        if (lineToFunc[closestLine].size() > 1)
+        {
+            throw utils::PallasException(
+                "Matching failed: Multiple functions occur on the same line (" +
+                std::to_string(closestLine) + ")");
+        }
+
+        // Check that no instructions occur between the specification and the 
+        // function declaration.
+        // TODO: Is this strictly nessessary? Based on the above algorithm, 
+        // there should never be an instruction between contract and matched 
+        // function.
         auto fLine = closestFunction->getSubprogram()->getLine();
         for (auto &f : irModule->getFunctionList())
         {
@@ -210,7 +217,8 @@ namespace sourcespec2ir
                 }
             }
         }
-        // Check that no global variables are between the specification and the function declaration.
+        // Check that no global variables are between the specification and 
+        // the function declaration.
         for (auto &g : irModule->getGlobalList())
         {
             llvm::SmallVector<llvm::DIGlobalVariableExpression *> dbgExpressions;
