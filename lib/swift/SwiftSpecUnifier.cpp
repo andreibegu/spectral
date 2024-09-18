@@ -57,8 +57,7 @@ namespace sourcespec2ir
 
     llvm::Type *SwiftSpecUnifier::getSrcLibFracType()
     {
-        // TODO: Implment properly
-        return nullptr;
+        return llvm::StructType::getTypeByName(*irContext, SWIFT_SPEC_FRAC_TYPE);
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformImply(llvm::CallInst &oldCall)
@@ -133,12 +132,28 @@ namespace sourcespec2ir
 
     llvm::CallInst *SwiftSpecUnifier::transformFracOf(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        // throw utils::PallasException("Unsupported specification construct");
+        llvm::SmallVector<llvm::Value *, 4> newArgs = {
+            oldCall.getArgOperand(0), oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2)};
+        auto newCall = llvm::CallInst::Create(getUSpecFracOf(), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecFracType()));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformPerm(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
+        auto newCall = llvm::CallInst::Create(getUSpecPerm(), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        // TODO: Remove the byval attribute and update the documentation of the spec-lib. 
+        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(
+                                     *irContext, getUSpecFracType()));
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqNew(llvm::CallInst &oldCall)

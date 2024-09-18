@@ -26,6 +26,7 @@ namespace sourcespec2ir
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
             {"5implyyS2b_SbtF", Imply},
             {"3sepyS2b_SbtF", SepConj},
+            {"4FracVyACs5Int32V_AEtcfC", FracOf}
         };
 
         // Map to identify the spec-lib functions that are generated inside 
@@ -33,11 +34,16 @@ namespace sourcespec2ir
         // Because we use the DISubprogram, we can use the unmangled names.
         const llvm::StringMap<SpecLibElement> GENERATED_NAME_MAP = {
             {"_old", Old},
-            {"_result", Result}
+            {"_result", Result}, 
+            {"_perm", Perm}
         };
         
+        // Prefix of spec-function in the specification-library
         const std::string SWIFT_SPEC_MODULE_PREFIX = "$s10PallasSpec";
+        // Prefix of generated wrapper-functions
         const std::string SWIFT_WRAPPER_PREFIX = "PALLAS_SPEC_";
+        // Name of the swift placeholder-type for fractions
+        const std::string SWIFT_SPEC_FRAC_TYPE = "T10PallasSpec4FracV";
 
         SwiftSpecUnifier(const bool printDebugInfo);
 

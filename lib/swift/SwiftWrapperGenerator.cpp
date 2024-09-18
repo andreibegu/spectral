@@ -51,8 +51,6 @@ namespace sourcespec2ir
         const auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
         // Manually handle some cases where the type is not correctly resolved.
-        if (srcType == "$sSbD")
-            return "Bool";
         if (srcType == "$sytD")
             return "Void";
 
@@ -117,9 +115,12 @@ namespace sourcespec2ir
             stream << "@inline(never) \n";
             stream << "func _old(_ v: " << type << ") -> " << type
                    << " { return v; } \n";
+            // Generate function for Perm
+            stream << "@inline(never) \n";
+            stream << "func _perm(_ loc: " << type << ", _ f: Frac) -> Bool "
+                   << "{ return true; } \n";
         }
         stream << "// END - SpecLib-Functions \n";
-
         return stream.str();
     }
 
