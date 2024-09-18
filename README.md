@@ -23,6 +23,7 @@ The structure of the repository is based on
 - Ensure that the following packages are installed:
     - cmake
     - zlib1g-dev
+    - libzstd-dev
     - ninja-build
     - llvm-15-dev
     - clang-15
