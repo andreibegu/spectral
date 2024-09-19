@@ -67,4 +67,8 @@ The lit-setup is based on:
 - [VCLLVM](https://github.com/Drevanoorschot/VCLLVM/tree/main/test)
 
 
+## Building the Swift specification-library
+To build the specification-library for Swift, run `ninja BuildSwiftLib` in the build-directory of the project. 
+The library is build in `res/swift/PallasSpec/.build/debug/`.
+
 	

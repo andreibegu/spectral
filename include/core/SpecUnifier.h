@@ -264,7 +264,7 @@ namespace sourcespec2ir
          */
         llvm::Function *specImply = nullptr;
 
-        llvm::Function *specSepConj;
+        llvm::Function *specSepConj = nullptr;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
 

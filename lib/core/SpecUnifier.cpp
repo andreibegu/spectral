@@ -111,6 +111,13 @@ namespace sourcespec2ir
                 throw utils::PallasException(
                     "Encountered a use of a specification-function that is not a call.");
             }
+            auto parentF = oldCall->getParent()->getParent();
+            // Calls to spec-functions are only allowed from within wrapper-functions
+            if (!utils::isGeneratedSpecFunction(*parentF))
+            {
+                throw utils::PallasException(
+                    "Encountered a call to a specification-function from a non-wrapper function.");
+            }
 
             auto newCall = transformSpecCall(*oldCall);
             if (!newCall)

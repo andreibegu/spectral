@@ -1,14 +1,26 @@
 /// Logical implication (i.e. b1 ==> b2)
 @inline(never)
-public func imply(_ b1: Bool, _ b2: Bool) -> Bool {
+public func _imply(_ b1: Bool, _ b2: Bool) -> Bool {
     return (!b1) || b2 ;
 }
 
 /// Separating conjunction (i.e. b1 ** b2)
 @inline(never)
-public func sep(_ b1: Bool, _ b2: Bool) -> Bool {
+public func _sep(_ b1: Bool, _ b2: Bool) -> Bool {
     return b1 && b2 ;
 }
+
+/// Universal quantifier
+@inline(never)
+public func _forall(_ range: Bool, _ expr: Bool) -> Bool { fatalError() }
+
+/// Separating universal quantifier
+@inline(never)
+public func _forallSep(_ range: Bool, _ expr: Bool) -> Bool { fatalError() }
+
+/// Existential quantifier
+@inline(never)
+public func _exists(_ range: Bool, _ expr: Bool) -> Bool { fatalError() }
 
 // Placeholder-struct that represents fractions
 public struct Frac {
