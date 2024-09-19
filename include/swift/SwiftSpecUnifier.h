@@ -37,13 +37,6 @@ namespace sourcespec2ir
             {"_result", Result}, 
             {"_perm", Perm}
         };
-        
-        // Prefix of spec-function in the specification-library
-        const std::string SWIFT_SPEC_MODULE_PREFIX = "$s10PallasSpec";
-        // Prefix of generated wrapper-functions
-        const std::string SWIFT_WRAPPER_PREFIX = "PALLAS_SPEC_";
-        // Name of the swift placeholder-type for fractions
-        const std::string SWIFT_SPEC_FRAC_TYPE = "T10PallasSpec4FracV";
 
         SwiftSpecUnifier(const bool printDebugInfo);
 

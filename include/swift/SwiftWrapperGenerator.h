@@ -37,7 +37,8 @@ namespace sourcespec2ir
     private:
         std::string generateSpecLibFunctions(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars, 
-            const llvm::DIType *returnType);
+            const llvm::DIType *returnType, 
+            const std::string &expr);
     };
 
 }

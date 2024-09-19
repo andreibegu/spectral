@@ -1,6 +1,7 @@
 #include "SwiftSpecUnifier.h"
 #include "IrLookup.h"
 #include "PallasException.h"
+#include "SwiftNameConstants.h"
 
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Demangle/Demangle.h>

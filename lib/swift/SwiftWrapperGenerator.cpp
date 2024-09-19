@@ -1,10 +1,13 @@
 #include "SwiftWrapperGenerator.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
+#include "SwiftNameConstants.h"
 
 #include <sstream>
+#include <regex>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Type.h>
 
 namespace sourcespec2ir
@@ -17,7 +20,8 @@ namespace sourcespec2ir
     {
 
         // Generate the required functions for the specification-library
-        const auto specFuncs = generateSpecLibFunctions(srcVars, returnType);
+        const auto specFuncs = generateSpecLibFunctions(srcVars, returnType,
+                                                        expr);
 
         std::stringstream stream;
         stream << "func " << functionName << "(";
@@ -85,7 +89,7 @@ namespace sourcespec2ir
 
     std::string SwiftWrapperGenerator::generateSpecLibFunctions(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const llvm::DIType *returnType)
+        const llvm::DIType *returnType, const std::string &expr)
     {
         std::stringstream stream;
         stream << "// START - SpecLib-Functions \n";
@@ -99,9 +103,8 @@ namespace sourcespec2ir
             if (retTypeStr != "Void")
             {
                 stream << "@inline(never) \n";
-                stream << "func _result() -> " << retTypeStr << " { "
-                       << "fatalError(\"Spec-placeholder may not be executed.\"); "
-                       << "} \n";
+                stream << "func _result() -> " << retTypeStr
+                       << "{ fatalError() } \n";
             }
         }
 
@@ -114,12 +117,34 @@ namespace sourcespec2ir
             // Generate function for old
             stream << "@inline(never) \n";
             stream << "func _old(_ v: " << type << ") -> " << type
-                   << " { return v; } \n";
+                   << " { fatalError() } \n";
             // Generate function for Perm
             stream << "@inline(never) \n";
             stream << "func _perm(_ loc: " << type << ", _ f: Frac) -> Bool "
-                   << "{ return true; } \n";
+                   << "{ fatalError() } \n";
         }
+
+        // Determine for which types the _bv-functions have to be generated.
+        llvm::SmallSet<std::string, 4> bvTypes;
+        std::regex re(SWIFT_SPEC_BOUND_VAR_PREFIX + "([^\\(]+)\\(");
+        std::smatch bvMatches;
+        auto exprStr = expr;
+        while (std::regex_search(exprStr, bvMatches, re))
+        {
+            if (bvMatches.size() < 2)
+                throw utils::PallasException("Failed extract type of bound variable");
+            bvTypes.insert(bvMatches[1].str());
+            exprStr = bvMatches.suffix().str();
+        }
+        // Generate spec-functions for bound variables:
+        for (auto bvType : bvTypes)
+        {
+            stream << "@inline(never) \n";
+            stream << "func _bv" << bvType << "(_ id: String) -> " << bvType
+                   << " { fatalError() } \n";
+        }
+
+
         stream << "// END - SpecLib-Functions \n";
         return stream.str();
     }
