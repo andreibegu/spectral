@@ -2,6 +2,7 @@
 #define PALLAS_SWIFTSPECUNIFIER_H
 
 #include "SpecUnifier.h"
+#include "SwiftNameConstants.h"
 
 #include <llvm/ADT/StringMap.h>
 
@@ -40,6 +41,17 @@ namespace sourcespec2ir
             {"_result", Result}, 
             {"_perm", Perm}
         };
+
+        // Map to identify the spec-lib functions that are generated inside 
+        // of the wrapper-function based on their prefix. 
+        const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {
+            {SWIFT_SPEC_BOUND_VAR_PREFIX, BoundVar},
+            {SWIFT_SPEC_SEQ_NEW_PREFIX, SeqNew},
+            {SWIFT_SPEC_SEQ_SIZE_PREFIX, SeqSize},
+            {SWIFT_SPEC_SEQ_GET_PREFIX, SeqGet},
+            {SWIFT_SPEC_SEQ_PREPEND_PREFIX, SeqPrepend},
+            {SWIFT_SPEC_SEQ_EQUALS_PREFIX, SeqEquals}
+        }; 
 
         SwiftSpecUnifier(const bool printDebugInfo);
 

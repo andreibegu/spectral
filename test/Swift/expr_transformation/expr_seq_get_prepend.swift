@@ -1,0 +1,25 @@
+// clang-format off
+// Test that the get- and prepend-functions for sequences are encoded correctly.
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+
+// COM: Check that old sequence-type is no longer present
+// CHECK-NOT: F8SeqFloatL_V = type <{
+
+// COM: Check that declarations are present
+// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] float @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0), i64 noundef)
+// CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0), float noundef, ptr noundef byval(%pallas.seq.0))
+
+// COM: Check that the metadata-annotations are present
+// CHECK-DAG: [[getMD]] = !{!"pallas.seq.get"}
+// CHECK-DAG: [[preMD]] = !{!"pallas.seq.prepend"}
+
+// COM: Check that the spec-functions are called
+// CHECK-DAG: call void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0) %{{[0-9]+}}, float noundef 0.000000e+00, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}) 
+// CHECK-DAG: call float @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
+
+/*@
+ requires _seqGetFloat(_seqPrependFloat(0.0, _seqNewFloat()), 0) == 0;
+ @*/
+func someFunctionWithoutMeaning(_ a: Int, _ b: Int) -> Int {
+    return a + b
+}

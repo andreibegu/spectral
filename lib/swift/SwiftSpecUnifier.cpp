@@ -45,8 +45,18 @@ namespace sourcespec2ir
                 return std::make_optional<SpecLibElement>(match->getValue());
 
             // Check for prefix-matches
-            if (fName.startswith(SWIFT_SPEC_BOUND_VAR_PREFIX))
-                return std::make_optional<SpecLibElement>(BoundVar);
+            // if (fName.startswith(SWIFT_SPEC_BOUND_VAR_PREFIX))
+            //    return std::make_optional<SpecLibElement>(BoundVar);
+
+            // Check prefix-matches
+            for (auto key : GENERATED_PREFIX_MAP.keys())
+            {
+                if (llvm::StringRef(fName).startswith(key))
+                {
+                    auto value = GENERATED_PREFIX_MAP.lookup(key);
+                    return std::make_optional<SpecLibElement>(value);
+                }
+            }
         }
 
         return std::nullopt;
@@ -54,13 +64,32 @@ namespace sourcespec2ir
 
     llvm::Type *SwiftSpecUnifier::getContentTypeOfADTTy(const llvm::Type &t)
     {
-        throw utils::PallasException("Not implemented yet");
+        if (auto *adtType = llvm::dyn_cast<llvm::StructType>(&t))
+        {
+            auto cType = adtType->getElementType(0);
+            if (llvm::isa<llvm::PointerType>(cType))
+                throw utils::PallasException(
+                    "ADTs that contain reference-types are not supported yet");
+            // In Swift, types like float are sometimes wrapped in a
+            // packed struct (<{ float }>) with only one value.
+            if (auto cTyStruct = llvm::dyn_cast<llvm::StructType>(cType))
+            {
+                if (cTyStruct->getNumElements() == 1 && cTyStruct->isPacked())
+                    return cType = cTyStruct->getElementType(0);
+                return cType;
+            }
+            return cType;
+        }
+        throw utils::PallasException(
+            "Failed to extract the content-type of the ADT. Expected a struct.");
     }
 
     bool SwiftSpecUnifier::isSrcSeqType(const llvm::StructType &t)
     {
-        // TODO: Implment properly
-        return false;
+        const auto tName = t.getName();
+        const bool containsWrapperPrefix = tName.contains(SWIFT_WRAPPER_PREFIX);
+        const bool containsSeqPrefix = tName.contains(SWIFT_SPEC_SEQ_TY_PREFIX);
+        return containsWrapperPrefix && containsSeqPrefix;
     }
 
     llvm::Type *SwiftSpecUnifier::getSrcLibFracType()
@@ -226,27 +255,93 @@ namespace sourcespec2ir
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqNew(cType), newArgs);
+        addSret(newCall, 0, getUSpecSeqType(cType));
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqSize(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqSize(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        addByVal(newCall, 0, getUSpecSeqType(cType));
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        // Check the signature of the old call to determine if a
+        // struct-type is returned.
+        bool containsStruct = oldCall.getCalledFunction()->getReturnType() ==
+                              llvm::Type::getVoidTy(*irContext);
+        if (containsStruct)
+        {
+            // Content-type is struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1),
+                oldCall.getArgOperand(2)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            addSret(newCall, 0, cType);
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            addByVal(newCall, 1, getUSpecSeqType(cType));
+            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+            return newCall;
+        }
+        else
+        {
+            // Content-type is a non-struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            addByVal(newCall, 0, getUSpecSeqType(cType));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            return newCall;
+        }
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqPrepend(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, seqType));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        // If the seq contains structs, the element is passed as a by-value pointer.
+        if (llvm::isa<llvm::StructType>(cType))
+            newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, cType));
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, seqType));
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException("Unsupported specification construct");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqEquals(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, seqType));
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
+        return newCall;
     }
 
 } // namespace sourcespec2ir
