@@ -7,6 +7,7 @@
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/SetVector.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Instruction.h>
 
@@ -34,39 +35,33 @@ namespace sourcespec2ir
          * expression.
          * The generated wrapping-function MUST use the same ordering of it's
          * arguments as is defined by parameter srcVars.
+         * In case that the wrapper-function is attached to a function 
+         * (i.e. in the case of a function contract), the returnType-parameter
+         * specifices the return-type of this function. 
          */
         virtual std::string getWrapperFunctionString(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const std::string &expr,
-            const std::string &functionName) = 0;
+            const std::string &functionName, 
+            const llvm::DIType *returnType = nullptr) = 0;
 
         /**
-         * For a given SrcWrapperFunction, return the line- and column-offset 
-         * from the start of the wrapper-function to the beginning of the 
+         * For a given SrcWrapperFunction, return the line- and column-offset
+         * from the start of the wrapper-function to the beginning of the
          * wrapped expression in the source.
-         * This method is used to generate accurate debug-locations for 
-         * instructions within wrapper-functions. 
-         * 
+         * This method is used to generate accurate debug-locations for
+         * instructions within wrapper-functions.
+         *
          * E.g. for a wrapper-function
          * bool w(int a, int b) {
          *     return a >= b;
          * }
-         *  
+         *
          * the result should be <1, 11> because the wrapped expression (a >= b)
-         * starts one line and eleven columns from the beginning of the function. 
+         * starts one line and eleven columns from the beginning of the function.
          */
         virtual std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) = 0;
-
-        /**
-         * Given a wrapper-function and its line-number, returns a location
-         * that points to the beginning of the wrapped expression in the original
-         * source-file. 
-         * 
-         * Has to be overwritten by the lanuage-specific wrapper generator. 
-         */
-        //virtual SrcLocation getExprStartLocForWrapper(size_t wFunLine, 
-        //    const SrcWrapperFunction &wFun) = 0;
 
         /**
          * Return the line-number where the wrapper-functions for the
@@ -86,7 +81,7 @@ namespace sourcespec2ir
 
         /**
          * Return the line-number where the wrapper-function for a given
-         * specification-statement should be inserted. 
+         * specification-statement should be inserted.
          * The default-implementation returns the line of the parent-function.
          */
         size_t getWrapperInsertLoc(const MatchedSpecStatementBlock &stmntBlock);
@@ -120,7 +115,31 @@ namespace sourcespec2ir
          * types representation on the source-level.
          * If the string-representation cannot be generated, an error is raised.
          */
-        std::string getSrcReprOfType(const llvm::DIType *type);
+        virtual std::string getSrcReprOfType(const llvm::DIType *type);
+
+        /**
+         * Collects the DILocalVariable-nodes that refer to variables
+         * that are accessible from the contract of the given function.
+         * Global variables are currently not considered.
+         */
+        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        getSrcVariablesForFunction(const llvm::Function &fun);
+
+        /**
+         * Collects the DILocalVariable-nodes that refer to variables that are
+         * accessible in the loop-invariant of the given loop.
+         */
+        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        getVarsForLoopInv(llvm::Function *parentFunc,
+                          const llvm::BasicBlock *loopHeader);
+
+        /**
+         * Collects the DILocalVariable-nodes that refer to variables that can
+         * be referenced in a block of specification-statements that is
+         * attached to the given instruction
+         */
+        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        getVarsForStatement(llvm::Instruction *inst);
 
     protected:
         /**
@@ -172,13 +191,13 @@ namespace sourcespec2ir
                                        const std::string &typedefName);
 
         /**
-         * This function is called when a different type-tag is encountered that 
-         * is not handled by the default addXXX-methods. 
-         * The default-implementation just throws an error. 
-         * Subclasses can overwrite this to support other type-tags. 
+         * This function is called when a different type-tag is encountered that
+         * is not handled by the default addXXX-methods.
+         * The default-implementation just throws an error.
+         * Subclasses can overwrite this to support other type-tags.
          */
-        virtual std::string addOtherQualifier(const std::string &baseType, 
-            const llvm::DIDerivedType & type);
+        virtual std::string addOtherQualifier(const std::string &baseType,
+                                              const llvm::DIDerivedType &type);
 
         /**
          * Function is called after the wrapper-functions and declarations

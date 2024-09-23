@@ -51,9 +51,13 @@ namespace sourcespec2ir
         /**
          * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
          * Can be overwritten by subclasses to use a different matching strategy.
+         * 
+         * The given path refers to the original source-file from which the 
+         * parse-tree of the specifications was created. 
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
-            SpecParser::FileContext *specParseTree, llvm::Module *irModule);
+            SpecParser::FileContext *specParseTree, llvm::Module *irModule, 
+            std::string srcFilePath);
 
     private:
         std::string srcInPath;
@@ -184,10 +188,10 @@ namespace sourcespec2ir
          * The passed compilation-unit and scope-file are used as the 
          * cu and scope of the wrapper-function.
          */
-        void rewriteWrapperLocations(const SrcWrapperFunction &wFun,
-                                     const SrcLocation &exprStartLoc,
-                                     llvm::DICompileUnit *cu,  
-                                     llvm::DIFile *scopeFile);
+        void rewriteWrapperLocations(
+            const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+            llvm::DICompileUnit *cu, llvm::DIFile *scopeFile, 
+            llvm::DIScope *scope);
 
         /**
          * Write the IR-representation of the given module into
@@ -206,6 +210,13 @@ namespace sourcespec2ir
                                         llvm::Module &moduleWithWrappers);
 
         /**
+         * Adds the functions that belong to the given set of wrapper-functions 
+         * to the module's llvm.used-list.
+         */
+        void markWrapperFunctionsAsUsed(llvm::Module &module,
+            llvm::ArrayRef<SrcWrapperFunction *> wrappers);
+
+        /**
          * Generates a MDTuple that encodes a source-location.
          */
         llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
@@ -215,6 +226,12 @@ namespace sourcespec2ir
          * nullpointers. 
          */
         llvm::DIFile *getFileForFunc(llvm::Function *f);
+
+        /**
+         * Helper that returns the DIScope for a given function and checks for 
+         * nullpointers. 
+         */
+        llvm::DIScope *getScopeForFunc(llvm::Function *f);
 
         /**
          * Helper that returns the cimpilation-unit for a given function and 

@@ -100,7 +100,8 @@ namespace sourcespec2ir
             // Struct-type
             auto newCall = llvm::CallInst::Create(
                 getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
-            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
+            addSret(newCall, 0, type);
+            addByVal(newCall, 1, type);
             return newCall;
         }
         else

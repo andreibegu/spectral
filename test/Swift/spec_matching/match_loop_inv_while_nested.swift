@@ -1,0 +1,30 @@
+// clang-format off
+// Test that a loop-invariant-block is correctly matched to a while-loop
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+
+
+func bar (a: Int, b: Int) -> Int {
+    var i = 0
+    /*@
+    loop_invariant i >= 0;
+    @*/
+    while i < a {
+        i += b;
+
+        var j = i;
+        /*@
+        loop_invariant j >= 0;
+        @*/
+        while j < a {
+            j = j + a * b;
+        } 
+
+    } 
+    return i
+}
+
+
+
+// COM: Check that the invariant has been matched correctly
+// CHECK: Matched invariant at 8-10 to loop at 11
+// CHECK: Matched invariant at 15-17 to loop at 18

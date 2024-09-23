@@ -30,6 +30,6 @@ int foo (int x, int y, int z) {
     return x + y + z; 
 }
 
-// CHECK: Matched invariant at 7-10 to loop at 11-28
-// CHECK: Matched invariant at 14-16 to loop at 17-19
-// CHECK: Matched invariant at 21-23 to loop at 24-26
+// CHECK: Matched invariant at 7-10 to loop at 11
+// CHECK: Matched invariant at 14-16 to loop at 17
+// CHECK: Matched invariant at 21-23 to loop at 24

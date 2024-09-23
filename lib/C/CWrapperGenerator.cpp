@@ -9,7 +9,8 @@ namespace sourcespec2ir
     std::string CWrapperGenerator::getWrapperFunctionString(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const std::string &expr,
-        const std::string &functionName)
+        const std::string &functionName,
+        const llvm::DIType *returnType)
     {
         std::stringstream stream;
 

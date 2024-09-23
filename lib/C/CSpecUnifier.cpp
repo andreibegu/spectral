@@ -79,6 +79,7 @@ namespace sourcespec2ir
             auto newCall = llvm::CallInst::Create(
                 getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
             addSret(newCall, 0, type);
+            addByVal(newCall, 1, type);
             return newCall;
         }
         else

@@ -23,6 +23,7 @@ The structure of the repository is based on
 - Ensure that the following packages are installed:
     - cmake
     - zlib1g-dev
+    - libzstd-dev
     - ninja-build
     - llvm-15-dev
     - clang-15
@@ -52,8 +53,12 @@ The structure of the repository is based on
 ## Testing:
 For running regression tests we use the [lit tool](https://llvm.org/docs/CommandGuide/lit.html) of the LLVM project. This requires a python version >= 3.8 to be installed. 
 Lit can be installed as a [python-package](https://pypi.org/project/lit/) using `pip install lit==18.1.8` or as part of an LLVM build. 
+In newer versions, installing the lit-package into the default python environment 
+does not work. In this case, a python-venv with lit can be created 
+by running `ninja makeLitVenv` in the build-directory.
 
 To run the tests, run `ninja check` in the build-directory.
+If a virtual environment is used for lit (using `ninja makeLitVenv`), run `ninja checkV` instead.
 If the terminal in VSCode is used to run the tests in WSL and lit cannot be found 
 right after installing it, it can be nessessary to reboot the system once. 
 
@@ -61,5 +66,9 @@ The lit-setup is based on:
 - https://github.com/llvm/llvm-project/tree/main/mlir/examples/standalone/test
 - [VCLLVM](https://github.com/Drevanoorschot/VCLLVM/tree/main/test)
 
+
+## Building the Swift specification-library
+To build the specification-library for Swift, run `ninja BuildSwiftLib` in the build-directory of the project. 
+The library is build in `res/swift/PallasSpec/.build/debug/`.
 
 	

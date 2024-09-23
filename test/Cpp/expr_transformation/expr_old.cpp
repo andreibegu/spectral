@@ -2,18 +2,18 @@
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
 
 // COM: Declarations are created
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float [[oldF:@pallas.old.[0-9]+]](ptr)
-// CHECK-DAG: declare !pallas.specLib [[oldMD]] double [[oldD:@pallas.old.[0-9]+]](ptr)
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float [[oldF:@pallas.old.[0-9]+]](float)
+// CHECK-DAG: declare !pallas.specLib [[oldMD]] double [[oldD:@pallas.old.[0-9]+]](double)
 
 // COM: Declarations have MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-functions are called
-// CHECK-DAG: = call float [[oldF]](ptr 
-// CHECK-DAG: = call double [[oldD]](ptr 
+// CHECK-DAG: = call float [[oldF]](float 
+// CHECK-DAG: = call double [[oldD]](double 
 
 /*@
-ensures pallasSpec::old(&a) == a;
-ensures pallasSpec::old(&b) == b;
+ensures pallasSpec::old(a) == a;
+ensures pallasSpec::old(b) == b;
 @*/
 void fun (double a, float b) {
     double c = a + b;

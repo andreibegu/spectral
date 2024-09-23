@@ -97,9 +97,8 @@ namespace sourcespec2ir
 
         auto loopID = llvm::dyn_cast_or_null<llvm::MDTuple>(loop->getLoopID());
         if (loopID == nullptr)
-        {
             throw utils::PallasException("Failed to get llvm.loop md-node");
-        }
+
         auto loopHeader = loop->getHeader();
         auto invBlock = std::make_unique<MatchedLoopInvariantBlock>(
             parentFunc, loopID, loopHeader, loc);

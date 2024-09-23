@@ -4,11 +4,109 @@
 #include <fstream>
 #include <map>
 #include <sstream>
+#include <system_error>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/Dominators.h>
+#include <llvm/IR/InstIterator.h>
+#include <llvm/IR/IntrinsicInst.h>
+#include <llvm/Support/FileSystem.h>
 
 namespace sourcespec2ir
 {
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
+    {
+        if (fun.isDeclaration())
+            throw utils::PallasException("Cannot variables for for declaration.");
+
+        // SetVector is used to keep insertion-order and prevent duplicates
+        auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
+        for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
+        {
+            const llvm::Instruction *instr = &*i;
+            // Only consider calls to llvm intrinsics
+            if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
+            {
+                auto *srcVar = intrinsic->getVariable();
+                // Filter on function arguments
+                if (srcVar->getArg() != 0)
+                    varSet->insert(srcVar);
+            }
+        }
+
+        return varSet;
+    }
+
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getVarsForLoopInv(llvm::Function *parentFunc,
+                                              const llvm::BasicBlock *loopHeader)
+    {
+        // Since some compilers place the debug-intrinsics for the function-arguments
+        // later in the code, we add them explicitly.
+        // TODO: This might break wrapper-generation, if there is shadowing!
+        auto varSet = getSrcVariablesForFunction(*parentFunc);
+        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        const llvm::DominatorTree domTree(*parentFunc);
+
+        // Get all llvm.dbg.-intrinsics that dominate the loop
+        for (auto i = llvm::inst_begin(parentFunc),
+                  end = llvm::inst_end(parentFunc);
+             i != end; ++i)
+        {
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+            {
+                if (!domTree.dominates(intr, loopHeader))
+                    continue;
+                auto *srcVar = intr->getVariable();
+                varSet->insert(srcVar);
+            }
+        }
+
+        return varSet;
+    }
+
+    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    SourceWrapperGenerator::getVarsForStatement(llvm::Instruction *inst)
+    {
+        // Get the parent-function of the instruction
+        if (inst == nullptr ||
+            inst->getParent() == nullptr ||
+            inst->getParent()->getParent() == nullptr)
+        {
+            throw utils::PallasException(
+                "Encountered instruction without parent");
+        }
+        auto parentFunc = inst->getParent()->getParent();
+
+        // Some compilers place the debug-intrinsics for the function-arguments
+        // later in the code, we add them explicitly.
+        // TODO: This might break wrapper-generation, if there is shadowing!
+        auto varSet = getSrcVariablesForFunction(*parentFunc);
+
+        // Collect all variables from the llvm.dbg.-intrinsics that
+        // dominate the instruction
+        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        const llvm::DominatorTree domTree(*parentFunc);
+        for (auto i = llvm::inst_begin(parentFunc),
+                  end = llvm::inst_end(parentFunc);
+             i != end; ++i)
+        {
+            if (&*i == inst)
+                continue;
+
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+            {
+                // The instruction is a debug-intrinsic
+                if (!domTree.dominates(&*i, inst))
+                    continue;
+                auto *srcVar = intr->getVariable();
+                varSet->insert(srcVar);
+            }
+        }
+        return varSet;
+    }
 
     std::string SourceWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
     {
@@ -128,7 +226,7 @@ namespace sourcespec2ir
         auto parentFunc = instr->getParent()->getParent();
         if (parentFunc->getSubprogram() == nullptr)
             throw utils::PallasException("Cannot get line-info for function");
-            
+
         return parentFunc->getSubprogram()->getLine();
     }
 
@@ -214,6 +312,13 @@ namespace sourcespec2ir
     void SourceWrapperGenerator::writeSrcFile(const std::string &filePath,
                                               const std::vector<SrcLine> &lines)
     {
+        // If the file already exists, delete it to avoid a situation where
+        // writing fails, but an old, existing file is read.
+        auto rmSucc = llvm::sys::fs::remove(filePath);
+        if (rmSucc)
+            throw utils::PallasException(
+                "Failed to remove existing wrapper-file.");
+
         std::ofstream outStream(filePath);
         if (!outStream.is_open())
             throw utils::PallasException("Failed to write source with wrappers to file.");
