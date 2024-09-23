@@ -60,36 +60,6 @@ namespace sourcespec2ir
         llvm::Type *getContentTypeOfADTTy(const llvm::Type &t) override;
 
         llvm::Type *getSrcLibFracType() override;
-
-        llvm::CallInst *transformImply(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSepConj(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformOld(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformResult(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformExists(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformForall(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformForallSep(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformFracOf(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformPerm(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSeqSize(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall) override;
-
-        llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall) override;
     };
 
 }

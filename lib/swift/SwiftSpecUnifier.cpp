@@ -6,6 +6,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Demangle/Demangle.h>
 #include <llvm/IR/GlobalVariable.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace sourcespec2ir
@@ -97,56 +98,6 @@ namespace sourcespec2ir
         return llvm::StructType::getTypeByName(*irContext, SWIFT_SPEC_FRAC_TYPE);
     }
 
-    llvm::CallInst *SwiftSpecUnifier::transformImply(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {
-            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        return llvm::CallInst::Create(getUSpecImply(), newArgs);
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSepConj(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {
-            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        return llvm::CallInst::Create(getUSpecSepConj(), newArgs);
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformOld(llvm::CallInst &oldCall)
-    {
-        auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        if (llvm::isa<llvm::StructType>(type))
-        {
-            // Struct-type
-            auto newCall = llvm::CallInst::Create(
-                getUSpecOld(type), {oldCall.getArgOperand(0), oldCall.getArgOperand(1)});
-            addSret(newCall, 0, type);
-            addByVal(newCall, 1, type);
-            return newCall;
-        }
-        else
-        {
-            return llvm::CallInst::Create(
-                getUSpecOld(type), {oldCall.getArgOperand(0)});
-        }
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformResult(llvm::CallInst &oldCall)
-    {
-        auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        if (llvm::isa<llvm::StructType>(type))
-        {
-            auto newCall = llvm::CallInst::Create(
-                getUSpecResult(type), {oldCall.getArgOperand(0)});
-            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
-            return newCall;
-        }
-        else
-        {
-            llvm::SmallVector<llvm::Value *, 1> newArgs;
-            return llvm::CallInst::Create(getUSpecResult(type), newArgs);
-        }
-    }
-
     llvm::CallInst *SwiftSpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
     {
         /*
@@ -207,141 +158,6 @@ namespace sourcespec2ir
         {
             return llvm::CallInst::Create(getUSpecBoundVar(type), {literalPtr});
         }
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformExists(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        return llvm::CallInst::Create(getUSpecExists(), newArgs);
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformForall(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        return llvm::CallInst::Create(getUSpecForall(), newArgs);
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformForallSep(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        return llvm::CallInst::Create(getUSpecForallSep(), newArgs);
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformFracOf(llvm::CallInst &oldCall)
-    {
-        // throw utils::PallasException("Unsupported specification construct");
-        llvm::SmallVector<llvm::Value *, 4> newArgs = {
-            oldCall.getArgOperand(0), oldCall.getArgOperand(1),
-            oldCall.getArgOperand(2)};
-        auto newCall = llvm::CallInst::Create(getUSpecFracOf(), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecFracType()));
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-        return newCall;
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformPerm(llvm::CallInst &oldCall)
-    {
-        llvm::SmallVector<llvm::Value *, 2> newArgs = {
-            oldCall.getArgOperand(0), oldCall.getArgOperand(1)};
-        auto newCall = llvm::CallInst::Create(getUSpecPerm(), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        // TODO: Remove the byval attribute and update the documentation of the spec-lib.
-        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(
-                                     *irContext, getUSpecFracType()));
-        return newCall;
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
-    {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
-        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
-        auto newCall = llvm::CallInst::Create(getUSpecSeqNew(cType), newArgs);
-        addSret(newCall, 0, getUSpecSeqType(cType));
-        return newCall;
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSeqSize(llvm::CallInst &oldCall)
-    {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
-        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
-        auto newCall = llvm::CallInst::Create(getUSpecSeqSize(cType), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-        addByVal(newCall, 0, getUSpecSeqType(cType));
-        return newCall;
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
-    {
-        // Check the signature of the old call to determine if a
-        // struct-type is returned.
-        bool containsStruct = oldCall.getCalledFunction()->getReturnType() ==
-                              llvm::Type::getVoidTy(*irContext);
-        if (containsStruct)
-        {
-            // Content-type is struct-type
-            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
-            llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(0),
-                oldCall.getArgOperand(1),
-                oldCall.getArgOperand(2)};
-            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
-            addSret(newCall, 0, cType);
-            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-            addByVal(newCall, 1, getUSpecSeqType(cType));
-            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-            return newCall;
-        }
-        else
-        {
-            // Content-type is a non-struct-type
-            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
-            llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(0),
-                oldCall.getArgOperand(1)};
-            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
-            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-            addByVal(newCall, 0, getUSpecSeqType(cType));
-            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-            return newCall;
-        }
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
-    {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
-        auto seqType = getUSpecSeqType(cType);
-        llvm::SmallVector<llvm::Value *> newArgs = {
-            oldCall.getArgOperand(0),
-            oldCall.getArgOperand(1),
-            oldCall.getArgOperand(2),
-        };
-        auto newCall = llvm::CallInst::Create(getUSpecSeqPrepend(cType), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, seqType));
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        // If the seq contains structs, the element is passed as a by-value pointer.
-        if (llvm::isa<llvm::StructType>(cType))
-            newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, cType));
-        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, seqType));
-        return newCall;
-    }
-
-    llvm::CallInst *SwiftSpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
-    {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
-        auto seqType = getUSpecSeqType(cType);
-        llvm::SmallVector<llvm::Value *> newArgs = {
-            oldCall.getArgOperand(0),
-            oldCall.getArgOperand(1),
-        };
-        auto newCall = llvm::CallInst::Create(getUSpecSeqEquals(cType), newArgs);
-        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, seqType));
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        newCall->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, seqType));
-        return newCall;
     }
 
 } // namespace sourcespec2ir
