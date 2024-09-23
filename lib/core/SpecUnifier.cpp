@@ -2,6 +2,7 @@
 #include "IrSpecConstants.h"
 #include "MetadataUtils.h"
 #include "PallasException.h"
+#include "IrLookup.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -22,7 +23,8 @@ namespace sourcespec2ir
     {
     }
 
-    void SpecUnifier::unifySpecifications(llvm::Module *irModule, llvm::LLVMContext *irContext)
+    void SpecUnifier::unifySpecifications(llvm::Module *irModule,
+                                          llvm::LLVMContext *irContext)
     {
         // TODO: Move the arguments to the constructor
         this->irModule = irModule;
@@ -52,7 +54,10 @@ namespace sourcespec2ir
             if (!srcSpecFun->users().empty())
             {
                 auto srcSpecFunName = srcSpecFun->getName().str();
-                throw utils::PallasException("Failed to remove specification function (" + srcSpecFunName + "). Remaining users exist.");
+                throw utils::PallasException(
+                    "Failed to remove specification function (" +
+                    srcSpecFunName +
+                    "). Remaining users exist.");
             }
 
             // Remove the function from the module
@@ -60,22 +65,217 @@ namespace sourcespec2ir
         }
     }
 
+    llvm::CallInst *SpecUnifier::transformImply(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecImply(), newArgs);
+    }
+
     llvm::CallInst *SpecUnifier::transformSepConj(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException(
-            "The separating conjunction is not supported by this frontend.");
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecSepConj(), newArgs);
+    }
+
+    llvm::CallInst *SpecUnifier::transformOld(llvm::CallInst &oldCall)
+    {
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            // Struct-type
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecOld(type), newArgs);
+            addSret(newCall, 0, type);
+            addByVal(newCall, 1, type);
+            return newCall;
+        }
+        else
+        {
+            return llvm::CallInst::Create(getUSpecOld(type),
+                                          {oldCall.getArgOperand(0)});
+        }
+    }
+
+    llvm::CallInst *SpecUnifier::transformResult(llvm::CallInst &oldCall)
+    {
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            auto newCall = llvm::CallInst::Create(
+                getUSpecResult(type), {oldCall.getArgOperand(0)});
+            addSret(newCall, 0, type);
+            return newCall;
+        }
+        else
+        {
+            llvm::SmallVector<llvm::Value *, 1> newArgs;
+            return llvm::CallInst::Create(getUSpecResult(type), newArgs);
+        }
+    }
+
+    llvm::CallInst *SpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
+    {
+        auto type = utils::getReturnType(*oldCall.getCalledFunction());
+        if (llvm::isa<llvm::StructType>(type))
+        {
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
+            addSret(newCall, 0, type);
+            return newCall;
+        }
+        else
+        {
+            return llvm::CallInst::Create(
+                getUSpecBoundVar(type), {oldCall.getArgOperand(0)});
+        }
+    }
+
+    llvm::CallInst *SpecUnifier::transformExists(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecExists(), newArgs);
+    }
+
+    llvm::CallInst *SpecUnifier::transformForall(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecForall(), newArgs);
+    }
+
+    llvm::CallInst *SpecUnifier::transformForallSep(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecForallSep(), newArgs);
+    }
+
+    llvm::CallInst *SpecUnifier::transformFracOf(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 4> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2)};
+        auto newCall = llvm::CallInst::Create(getUSpecFracOf(), newArgs);
+        addSret(newCall, 0, getUSpecFracType());
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformPerm(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        auto newCall = llvm::CallInst::Create(getUSpecPerm(), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        addByVal(newCall, 1, getUSpecFracType());
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
+    {
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqNew(cType), newArgs);
+        addSret(newCall, 0, getUSpecSeqType(cType));
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformSeqSize(llvm::CallInst &oldCall)
+    {
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        llvm::SmallVector<llvm::Value *, 1> newArgs = {oldCall.getArgOperand(0)};
+        auto newCall = llvm::CallInst::Create(getUSpecSeqSize(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        addByVal(newCall, 0, getUSpecSeqType(cType));
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
+    {
+        // Check the signature of the old call to determine if a
+        // struct-type is returned.
+        bool containsStruct = oldCall.getCalledFunction()->getReturnType() ==
+                              llvm::Type::getVoidTy(*irContext);
+        if (containsStruct)
+        {
+            // Content-type is struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+            llvm::SmallVector<llvm::Value *, 4> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1),
+                oldCall.getArgOperand(2)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            addSret(newCall, 0, cType);
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            addByVal(newCall, 1, getUSpecSeqType(cType));
+            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+            return newCall;
+        }
+        else
+        {
+            // Content-type is a non-struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            addByVal(newCall, 0, getUSpecSeqType(cType));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            return newCall;
+        }
     }
 
     llvm::CallInst *SpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException(
-            "Prepending to sequences is not supported by this frontend.");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqPrepend(cType), newArgs);
+        addSret(newCall, 0, seqType);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        // If the seq contains structs, the element is passed as a by-value pointer.
+        if (llvm::isa<llvm::StructType>(cType))
+            addByVal(newCall, 1, cType);
+        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+        addByVal(newCall, 2, seqType);
+        return newCall;
     }
 
     llvm::CallInst *SpecUnifier::transformSeqEquals(llvm::CallInst &oldCall)
     {
-        throw utils::PallasException(
-            "The equality-operator for sequences is not supported by this frontend.");
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqEquals(cType), newArgs);
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        addByVal(newCall, 0, seqType);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        addByVal(newCall, 1, seqType);
+        return newCall;
     }
 
     llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)

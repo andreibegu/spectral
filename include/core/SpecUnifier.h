@@ -94,34 +94,43 @@ namespace sourcespec2ir
         /*
          * Functions that are used to transform a specific call to the source
          * specification-library into a call to the unified specification library.
-         * These functions should be implemented by the source-language specific
-         * specialization of the SpecUnifier.
+         * 
+         * The default implementation of these functions performs a 1:1 mapping 
+         * of the source-language specific call to a call to the unified 
+         * specification function (i.e. the called function is replaced and the 
+         * arguments of the old call are used as arguments for the new call 
+         * (in the same order) and the attributes that are required by the 
+         * unified sepc-ob are added).
+         * 
+         * In cases where a more elaborate transformation is required, the 
+         * source-language specific specialization of the SpecUnifier can 
+         * override these functions to implement a custom unification-startegy,
          */
-        virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformSepConj(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformExists(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformExists(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformForall(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformForall(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformForallSep(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformForallSep(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformFracOf(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformFracOf(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformPerm(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformPerm(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformSeqSize(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformSeqSize(llvm::CallInst &oldCall);
 
-        virtual llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) = 0;
+        virtual llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall);
 
