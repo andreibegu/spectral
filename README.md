@@ -1,6 +1,9 @@
 # Pallas_Spec2IR
 Transformation from source-level specifications to specifications on IR-level.
 
+
+**TODO: Add instructions on how to use the tool standalone and on how to build the swift specification-library.**
+
 ## Requirements:
 - Installation of antlr4 Cpp-target
 https://github.com/antlr/antlr4/tree/master/runtime/Cpp
@@ -29,6 +32,7 @@ The structure of the repository is based on
     - clang-17
     - build-essential
     - gdb
+- If you want to use the swift-frontend, make sure that Swift 6.0 is installed and available on your PATH.
 - Install the C/C++ Extension Pack for VSCode
 - Clone repo
 - Open repo-folder in VSCode

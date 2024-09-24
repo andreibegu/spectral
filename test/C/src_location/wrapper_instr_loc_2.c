@@ -29,8 +29,7 @@ float bar (float x, float y) {
 // CHECK: 4:
 // CHECK-NEXT: %5 = fadd float %1, 1.000000e+00, !dbg [[addMD:![0-9]+]]
 // CHECK-NEXT: %6 = fcmp ogt float %5, 1.000000e+00, !dbg [[cmp2MD:![0-9]+]]
-// CHECK: ret i1 %8
-// CHECK-NOT: !dbg
+// CHECK: ret i1 %8, !dbg [[dbgValMD]]
 // CHECK: }
 
 // COM: Check that the locations are set correctly:

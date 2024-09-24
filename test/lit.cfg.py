@@ -40,4 +40,4 @@ config.substitutions.append(('%CppSpecLib',
 
 # Substitution to get path of Swift specification library
 config.substitutions.append(('%SwiftSpecLib', 
-                             os.path.join(config.spec2ir_src_root, 'res/spec_libs/swift/PallasSpec/.build/debug')))
+                             os.path.join(config.spec2ir_src_root, 'res/spec_libs/swift/PallasSpec/.build/debug/Modules')))

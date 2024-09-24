@@ -4,7 +4,6 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/IR/Constants.h>
-#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
@@ -153,9 +152,15 @@ namespace sourcespec2ir
         linker.linkInModule(std::move(moduleWithWrappers),
                             llvm::Linker::Flags::LinkOnlyNeeded);
 
+        // Check wellformedness of module
+        verifyModule(*irModule, "After linking in wrappers");
+
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
         rewriteWrapperLocations(*matchedSpecs);
+
+        // Check wellformedness of module
+        verifyModule(*irModule, "After location rewrite");
 
         if (outputConfig.printDebugInfo)
         {
@@ -196,7 +201,7 @@ namespace sourcespec2ir
     {
         const auto parentFunction = contract.function;
         llvm::DIType *parentRetType = nullptr;
-        if (parentFunction->getSubprogram() != nullptr && 
+        if (parentFunction->getSubprogram() != nullptr &&
             parentFunction->getSubprogram()->getType() != nullptr)
         {
             parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
@@ -536,17 +541,37 @@ namespace sourcespec2ir
             // Check if the instruction points to the header of the wrapper-function
             const bool pointsToHeader = oldInstrLoc.getLine() < oldFLine + lineOffset;
             // Check if the new-column would point to an invalid location
-            // I.e. is the instr on the first line of the expr and 
+            // I.e. is the instr on the first line of the expr and
             // is the col smaller than the offset
             const bool newColInvalid =
                 oldInstrLoc.getLine() - oldFLine - lineOffset == 0 &&
-                oldInstrLoc.getCol() < colOffset; // 
+                oldInstrLoc.getCol() < colOffset; //
 
-            // If the new location would be invalid, drop it
+            auto newScope = oldInstrLoc.getScope();
+            //  Replace references to old DISubprogram in the scope of the location
+            if (auto lScope = llvm::dyn_cast<llvm::DIScope>(newScope)) 
+                newScope = replaceSubprogInScope(lScope, oldSProg, newSProg, diBuilder);
+
+            // TODO: UPDATE COMMENTS
+            // If the new location would be invalid, set line- and column to 0
+            // Dropping the location altogether does not work for debug-intrinsics
+            // as it causes the verify-pass to fail.
             if (pointsToHeader || newColInvalid)
             {
-                // Drop the dbg-location
-                it->dropLocation();
+                // TODO: Two options: 
+                //  Option one: Drop the debug-locations for everything that is not a debug intrinsic
+                //  Option two: If the Debug-location is an inlined-debug-location, modify the inlined-at field --> Currently implemented, and works for now. 
+                //      HOWEVER OPTION ONE WOULD BE CLEANER
+                if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it)) 
+                {
+                    auto newDebugLoc = llvm::DILocation::get(
+                        *irContext, 0, 0, newScope);
+                    it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
+                }
+                else
+                { 
+                    it->dropLocation();
+                }
             }
             else
             {
@@ -560,11 +585,6 @@ namespace sourcespec2ir
                     newCol += exprStartLoc.column;
                     newCol -= colOffset;
                 }
-
-                auto newScope = oldInstrLoc.getScope();
-                // Replace references to old DISubprogram
-                if (newScope == oldSProg)
-                    newScope = newSProg;
 
                 // TODO: handle inlined at, and implicit code
                 auto newDebugLoc = llvm::DILocation::get(
@@ -608,6 +628,68 @@ namespace sourcespec2ir
         }
 
         diBuilder.finalize();
+    }
+
+    llvm::DIScope *SourceSpecTransformer::replaceSubprogInScope(
+        llvm::DIScope *scope, const llvm::DISubprogram *oldSubprog,
+        llvm::DISubprogram *newSubprog, llvm::DIBuilder &diBuilder)
+    {
+        // Only consider cases, where the passed scope is a local scope.
+        auto oldScope = llvm::dyn_cast_if_present<llvm::DILocalScope>(scope);
+        if (oldScope == nullptr)
+            return scope;
+
+        // If the passed scope is the old subprogram, return new subprogram
+        if (oldScope == oldSubprog)
+            return newSubprog;
+
+        // Recursively handle the parent-scope
+        auto oldParentScope = oldScope->getScope();
+        auto newParentScope = replaceSubprogInScope(
+            oldParentScope, oldSubprog, newSubprog, diBuilder);
+
+        // If no changes to the parent-scope were made, return
+        if (newParentScope == oldParentScope)
+            return oldScope;
+
+        // Return a copy of the old-scope where the parent-scope has been replaced
+        if (auto sProg = llvm::dyn_cast<llvm::DISubprogram>(oldScope))
+        {
+            return diBuilder.createFunction(
+                newParentScope, // New scope
+                sProg->getName(),
+                sProg->getLinkageName(),
+                sProg->getFile(),
+                sProg->getLine(),
+                sProg->getType(),
+                sProg->getScopeLine(),
+                sProg->getFlags(),
+                sProg->getSPFlags(),
+                sProg->getTemplateParams(),
+                sProg->getDeclaration(),
+                sProg->getThrownTypes(),
+                sProg->getAnnotations(),
+                sProg->getTargetFuncName());
+        }
+        else if (auto lBlock = llvm::dyn_cast<llvm::DILexicalBlock>(oldScope))
+        {
+            return diBuilder.createLexicalBlock(
+                newParentScope, 
+                lBlock->getFile(),
+                lBlock->getLine(),
+                lBlock->getColumn()
+            );
+        }
+        else if (auto lbFile = llvm::dyn_cast<llvm::DILexicalBlockFile>(oldScope))
+        {
+            return diBuilder.createLexicalBlockFile(
+                newParentScope, 
+                lbFile->getFile(),
+                lbFile->getDiscriminator()
+            );
+        } 
+
+        throw utils::PallasException("Failed to rewrite scopes in debug-info.");
     }
 
     void SourceSpecTransformer::writeToFile(
