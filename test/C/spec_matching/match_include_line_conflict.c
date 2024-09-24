@@ -2,7 +2,7 @@
 // the matching-process. 
 // In the test functions are defined on the same line in the header- and 
 // in the source-file. 
-// RUN: rm -rf %t && split-file-15 %s %t && cd %t
+// RUN: rm -rf %t && %split-file %s %t && cd %t
 
 //--- line_conflict.h
 
@@ -32,5 +32,5 @@ int foo (int x) {
 }
 
 
-// RUN: %Spec2IR line_conflict.c -lib %CSpecLib -m -lang C | FileCheck-15 %s
+// RUN: %Spec2IR line_conflict.c -lib %CSpecLib -m -lang C | %FileCheck %s
 // CHECK: Matched contract at 3-5 to foo

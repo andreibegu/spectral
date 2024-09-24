@@ -1,6 +1,6 @@
 // clang-format off
 // Test that the result-construct is transformed correctly when used with structs.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declaration is created
 // CHECK-DAG: declare !pallas.specLib [[resMD:![0-9]+]] void @pallas.result.0(ptr sret([[sT:%[^)]+]]))

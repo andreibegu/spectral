@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the line-numbers and scope of DILocalVariable-nodes are 
 // correctly modified. 
-// RUN: %Spec2IR %s -lib %CSpecLib -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 
 /*@
 requires x + 1 > y;

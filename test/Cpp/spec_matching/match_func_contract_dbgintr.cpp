@@ -1,7 +1,7 @@
 // Test the case where a debug-intrinsic is directly attached to a function-
 // argument. This casues the intrinsic to be on the same line as the function. 
 // The matching should still succeed.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 #include <vector>
 
 /*@

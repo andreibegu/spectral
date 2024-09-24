@@ -1,6 +1,6 @@
 // clang-format off
 // Test that statement-blocks are correctly matched to instructions. 
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 func funkyFunc (a: Int, b: Int) -> Int {
     /*@

@@ -1,5 +1,5 @@
 // Test that the result-construct is transformed correctly
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 // COM: Declaration is created
 // CHECK-DAG: declare !pallas.specLib [[resMD:![0-9]+]] double [[res:@pallas.result.[0-9]+]]()
 // CHECK-DAG: [[resMD]] = !{!"pallas.result"}

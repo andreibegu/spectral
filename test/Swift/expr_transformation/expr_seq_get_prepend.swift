@@ -1,6 +1,6 @@
 // clang-format off
 // Test that the get- and prepend-functions for sequences are encoded correctly.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Check that old sequence-type is no longer present
 // CHECK-NOT: F8SeqFloatL_V = type <{

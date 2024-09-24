@@ -1,6 +1,6 @@
 // Test two sequences with distinct content-types are encoded as different types
 // (i.e. they should not be comparable)
-// RUN: not-15 %Spec2IR %s -lib %CSpecLib -m
+// RUN: %not %Spec2IR %s -lib %CSpecLib -m
 
 /*@
  declare DEF_SEQ(double);

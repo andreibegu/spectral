@@ -1,7 +1,7 @@
 // clang-format off
 // Test that a loop-invariant-block is not matched to a loop if it incorrectly
 // placed within the loop.
-// RUN: not-15 %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
+// RUN: %not %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
 
 
 func leisurelyLoops (a: Int) -> Int {

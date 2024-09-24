@@ -2,7 +2,7 @@
 // Test that the locations of instructions within the generated wrapper-functions
 // are translated correctly. 
 // Test where the wrapper contains multiple basic blocks and branching.
-// RUN: %Spec2IR %s -lib %CSpecLib -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 
 /*@
 requires  

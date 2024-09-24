@@ -1,5 +1,5 @@
 // Test that ensures-clause is correctly encoded as an MD-Node
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Contract is attached to function
 // CHECK: float @bar(

@@ -1,6 +1,6 @@
 // clang-format off
 // Test that source-locations are correctly added to specification statements.
-// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | %FileCheck %s
 
 int bar (int x) {
     /*@ assume x > 0;

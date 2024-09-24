@@ -1,6 +1,6 @@
 // Execution is expected to fail because a variable from within the function is 
 // accesssed
-// RUN: not-15 %Spec2IR %s -lib %CppSpecLib -m -lang Cpp
+// RUN: %not %Spec2IR %s -lib %CppSpecLib -m -lang Cpp
 
 /*@
 requires x >= 0 && cnt >= 1;

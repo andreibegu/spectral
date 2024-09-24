@@ -1,6 +1,6 @@
 // clang-format off
 // Test that loop-invariants are correctly encoded in metadata
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // CHECK: void @_Z8test_funf(
 // CHECK-SAME: [[arg:%[0-9]+]]

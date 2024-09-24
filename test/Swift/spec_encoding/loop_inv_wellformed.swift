@@ -1,6 +1,6 @@
 // clang-format off
 // Test that a block of loop-invariants is encoded correctly
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 func bar (a: Double) -> Double {
     var r = 0.0;

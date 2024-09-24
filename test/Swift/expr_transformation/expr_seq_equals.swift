@@ -1,6 +1,6 @@
 // clang-format off
 // Test that the equality operator for sequences is encoded correctly
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Check that declaration is present
 // CHECK-DAG: declare !pallas.specLib [[eqMD:![0-9]+]] i1 @pallas.seq.equals.0(ptr noundef byval(%pallas.seq.0), ptr noundef byval(%pallas.seq.0))

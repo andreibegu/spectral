@@ -1,7 +1,7 @@
 // clang-format off
 // Test expressions that use typealiased-types can be translated. 
 // The typealias should be substituted with its definition.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // Check the argument-types in the type of the wrapper-function refer to the 
 // un-aliased type.

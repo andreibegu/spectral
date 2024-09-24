@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the sequence-types are encoded correctly when multiple different
 // types are used. 
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Check that only two types are generated (i.e. the float-type is not generated twice)
 // CHECK-NOT: %pallas.seq.2

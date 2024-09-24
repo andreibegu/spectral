@@ -1,5 +1,5 @@
 // Check that expressions with pointers get transformed
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // CHECK: @PALLAS_SPEC_0(ptr noundef [[p1:%[0-9]+]], ptr noundef [[p2:%[0-9]+]])
 // CHECK: [[tmp:%[0-9]+]] = load ptr, ptr [[p2]]

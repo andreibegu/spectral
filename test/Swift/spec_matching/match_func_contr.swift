@@ -1,6 +1,6 @@
 // clang-format off
 // Test that a function-contact is correctly detected and matched.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 func foo(i: Int) -> Int {
     return i + 1;

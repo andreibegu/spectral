@@ -1,5 +1,5 @@
 // Test that expressions that include implications are transformed correctly
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Declaration of implication is present and labeled
 // CHECK-DAG: declare !pallas.specLib [[mdNode:![0-9]+]] i1 @pallas.imply(i1, i1)

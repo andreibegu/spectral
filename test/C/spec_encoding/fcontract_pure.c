@@ -1,5 +1,5 @@
 // Test that a contract marked as pure is correctly encoded.
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // CHECK: double @foo(
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]

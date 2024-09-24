@@ -1,6 +1,6 @@
 // clang-format off
 // Test matching of statement-blocks.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 class CoolClass {
     public:

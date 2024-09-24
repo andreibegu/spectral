@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the locations of the wrapper-funcction's DISubprogram and its 
 // scope are translated correctly. 
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 /*@
 requires x + 1.0 > 0.0;

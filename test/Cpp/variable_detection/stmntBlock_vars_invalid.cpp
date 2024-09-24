@@ -1,10 +1,10 @@
 // clang-format off
 // Check that only valid variables can be referenced from 
 // specification-statement-blocks.
-// RUN: rm -rf %t && split-file-15 %s %t && cd %t
+// RUN: rm -rf %t && %split-file %s %t && cd %t
 
 //--- vars_invalid_1.cpp
-// RUN: not-15 %Spec2IR vars_invalid_1.cpp -lib %CppSpecLib -lang Cpp
+// RUN: %not %Spec2IR vars_invalid_1.cpp -lib %CppSpecLib -lang Cpp
 
 int foo (int x, int y) {
     /*@ assert cnt >= 0; @*/
@@ -14,7 +14,7 @@ int foo (int x, int y) {
 }
 
 //--- vars_invalid_2.cpp
-// RUN: not-15 %Spec2IR vars_invalid_2.cpp -lib %CppSpecLib -lang Cpp
+// RUN: %not %Spec2IR vars_invalid_2.cpp -lib %CppSpecLib -lang Cpp
 
 int bar (int a, double b) {
     int tmp = 0;
@@ -33,7 +33,7 @@ int bar (int a, double b) {
 }
 
 //--- vars_invalid_3.cpp
-// RUN: not-15 %Spec2IR vars_invalid_3.cpp -lib %CppSpecLib -lang Cpp
+// RUN: %not %Spec2IR vars_invalid_3.cpp -lib %CppSpecLib -lang Cpp
 
 int bar (int a, double b) {
     if (a > 5) {
@@ -49,7 +49,7 @@ int bar (int a, double b) {
 }
 
 //--- vars_invalid_4.cpp
-// RUN: not-15 %Spec2IR vars_invalid_4.cpp -lib %CppSpecLib -lang Cpp
+// RUN: %not %Spec2IR vars_invalid_4.cpp -lib %CppSpecLib -lang Cpp
 
 int bar (int a, double b) {
     if (a > 5) {
@@ -66,7 +66,7 @@ int bar (int a, double b) {
 }
 
 //--- vars_invalid_5.cpp
-// RUN: not-15 %Spec2IR vars_invalid_5.cpp -lib %CppSpecLib -lang Cpp
+// RUN: %not %Spec2IR vars_invalid_5.cpp -lib %CppSpecLib -lang Cpp
 
 int foo (int x, int y) {
     int cnt = 0;

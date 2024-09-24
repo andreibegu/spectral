@@ -1,5 +1,5 @@
 // Test that bound variables are transformed correctly when used with structs.
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 // COM: Old declarations not present
 // CHECK-NOT: PALLAS_BOUND_VAR___
 

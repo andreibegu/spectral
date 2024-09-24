@@ -1,6 +1,6 @@
 // clang-format off
 // Check that the location that is attached to a specification-statements is correct.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 func anAmazingFunction(b1: Bool, b2: Bool) -> Bool {
     let b3 = b2 || !b1;

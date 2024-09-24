@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the locations of instructions within the generated wrapper-functions
 // are translated correctly. 
-// RUN: %Spec2IR %s -lib %CSpecLib -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 
 /*@
 requires x + 1 > 0;

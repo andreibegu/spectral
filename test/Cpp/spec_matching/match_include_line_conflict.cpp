@@ -2,7 +2,7 @@
 // the matching-process. 
 // In the test, max is declared on line 6 in the header-file, and foo on line 
 // 10 of the cpp-file. This should not cause an error.
-// RUN: rm -rf %t && split-file-15 %s %t && cd %t
+// RUN: rm -rf %t && %split-file %s %t && cd %t
 
 //--- line_conflict.h
 
@@ -32,5 +32,5 @@ int foo (int x) {
 }
 
 
-// RUN: %Spec2IR line_conflict.cpp -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR line_conflict.cpp -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 // CHECK: Matched contract at 3-5 to foo

@@ -1,6 +1,6 @@
 // clang-format off
 // Test that source-locations are correctly added to function-contracts
-// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | %FileCheck %s
 
 /*@
     requires x > 0;
