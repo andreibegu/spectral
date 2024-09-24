@@ -9,7 +9,7 @@ https://github.com/antlr/antlr4/tree/master/runtime/Cpp
 - CMake build based on the [LLVM-CMake guide](https://llvm.org/docs/CMake.html#embedding-llvm-in-your-project) and [VCLLVM](https://github.com/Drevanoorschot/VCLLVM/blob/main/CMakeLists.txt)
 - Antlr4-build is based on the [CMake-template for the cpp-target](https://github.com/antlr/antlr4/tree/master/runtime/Cpp/cmake)
 - Build using cmake:
-> cmake -G "Unix Makefiles" -B .build -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15    
+> cmake -G "Unix Makefiles" -B .build -DCMAKE_C_COMPILER=/usr/bin/clang-17 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-17    
 > cmake --build .build --target pallasSpec2ir
 
 ## Structure
@@ -25,8 +25,8 @@ The structure of the repository is based on
     - zlib1g-dev
     - libzstd-dev
     - ninja-build
-    - llvm-15-dev
-    - clang-15
+    - llvm-17-dev
+    - clang-17
     - build-essential
     - gdb
 - Install the C/C++ Extension Pack for VSCode

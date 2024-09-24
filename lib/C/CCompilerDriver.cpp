@@ -39,7 +39,7 @@ namespace sourcespec2ir
             throw utils::PallasException("Failed to remove existing ir-file.");
 
         // Run compiler to generate the IR
-        std::string clangCall = "clang-15 -emit-llvm -S -g -O0 " + srcFilePath +
+        std::string clangCall = "clang-17 -emit-llvm -S -g -O0 " + srcFilePath +
                                 " -o " + irOutStr +
                                 " -Xclang -disable-O0-optnone" +
                                 " -I " + specLibPath + "/";

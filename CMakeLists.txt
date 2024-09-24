@@ -36,7 +36,7 @@ find_package(ANTLR REQUIRED)
 #   LLVM include based on https://llvm.org/docs/CMake.html#embedding-llvm-in-your-project   #
 #############################################################################################
 
-find_package(LLVM 15 REQUIRED CONFIG)
+find_package(LLVM 17 REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
