@@ -63,6 +63,9 @@ add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 
+message("Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+message("Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
+
 # Add the subdirectories
 add_subdirectory(lib)
 add_subdirectory(tools)

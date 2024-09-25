@@ -23,6 +23,8 @@ namespace sourcespec2ir
          */
         SourceCompilerDriver(const std::string &workingDir);
 
+        virtual ~SourceCompilerDriver() = default;
+
         /**
          * Compiles the provided source-file into an IR-representation. 
          * Returns a pointer to the IR representation and transfers ownership 
