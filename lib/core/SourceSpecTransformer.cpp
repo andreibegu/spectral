@@ -534,50 +534,40 @@ namespace sourcespec2ir
         auto [lineOffset, colOffset] = wrapperGenerator->getOffsetToExprStart(wFun);
         for (auto it = inst_begin(irWrapperF), end = inst_end(irWrapperF); it != end; ++it)
         {
-            auto &oldInstrLoc = it->getDebugLoc();
-            if (!oldInstrLoc)
+            if (!it->getDebugLoc())
                 continue;
 
+            // If the DILocation is inlined, we need to consider the
+            // location that is pointed to by inlinedAt.
+            auto inlinedLoc = it->getDebugLoc().getInlinedAt();
+            auto oldLine = inlinedLoc != nullptr ? inlinedLoc->getLine() : it->getDebugLoc().getLine();
+            auto oldCol = inlinedLoc != nullptr ? inlinedLoc->getColumn() : it->getDebugLoc().getCol();
+            auto oldScope = inlinedLoc != nullptr ? inlinedLoc->getScope() : it->getDebugLoc().getScope();
+
             // Check if the instruction points to the header of the wrapper-function
-            const bool pointsToHeader = oldInstrLoc.getLine() < oldFLine + lineOffset;
+            const bool pointsToHeader = oldLine < oldFLine + lineOffset;
             // Check if the new-column would point to an invalid location
             // I.e. is the instr on the first line of the expr and
             // is the col smaller than the offset
             const bool newColInvalid =
-                oldInstrLoc.getLine() - oldFLine - lineOffset == 0 &&
-                oldInstrLoc.getCol() < colOffset; //
+                oldLine - oldFLine - lineOffset == 0 &&
+                oldCol < colOffset; 
 
-            auto newScope = oldInstrLoc.getScope();
             //  Replace references to old DISubprogram in the scope of the location
-            if (auto lScope = llvm::dyn_cast<llvm::DIScope>(newScope)) 
+            auto newScope = oldScope;
+            if (auto lScope = llvm::dyn_cast<llvm::DIScope>(newScope))
                 newScope = replaceSubprogInScope(lScope, oldSProg, newSProg, diBuilder);
 
-            // TODO: UPDATE COMMENTS
-            // If the new location would be invalid, set line- and column to 0
+            // If the new location would be invalid, set line- and column to 0,
+            // otherwise calculate new location.
             // Dropping the location altogether does not work for debug-intrinsics
             // as it causes the verify-pass to fail.
-            if (pointsToHeader || newColInvalid)
+            unsigned int newLine = 0;
+            unsigned int newCol = 0;
+            if (!pointsToHeader && !newColInvalid)
             {
-                // TODO: Two options: 
-                //  Option one: Drop the debug-locations for everything that is not a debug intrinsic
-                //  Option two: If the Debug-location is an inlined-debug-location, modify the inlined-at field --> Currently implemented, and works for now. 
-                //      HOWEVER OPTION ONE WOULD BE CLEANER
-                if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it)) 
-                {
-                    auto newDebugLoc = llvm::DILocation::get(
-                        *irContext, 0, 0, newScope);
-                    it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
-                }
-                else
-                { 
-                    it->dropLocation();
-                }
-            }
-            else
-            {
-                // Update the dbg-location
-                auto newLine = exprStartLoc.line + oldInstrLoc.getLine() - oldFLine - lineOffset;
-                auto newCol = oldInstrLoc.getCol();
+                newLine = exprStartLoc.line + oldLine - oldFLine - lineOffset;
+                newCol = oldCol;
                 // If the instruction is on the first-line, we need to add
                 // the additional column-offset.
                 if (newLine == exprStartLoc.line)
@@ -585,10 +575,40 @@ namespace sourcespec2ir
                     newCol += exprStartLoc.column;
                     newCol -= colOffset;
                 }
+            }
 
-                // TODO: handle inlined at, and implicit code
+            // Construct new debug-location:
+            if (it->getDebugLoc().getInlinedAt() != nullptr)
+            {
+                // DILocation was inlined
+                if (inlinedLoc->getInlinedAt() != nullptr)
+                    throw utils::PallasException(
+                        "Location-rewrite does not support nested inlining.");
+
+                // Build new version of the inlinedAt-location:
+                auto iLoc = llvm::DILocation::get(
+                    *irContext,
+                    newLine,
+                    newCol,
+                    newScope,
+                    inlinedLoc->getInlinedAt(),
+                    inlinedLoc->isImplicitCode());
+                // Build new debug-location
+                auto newLoc = llvm::DILocation::get(
+                    *irContext, 
+                    it->getDebugLoc().getLine(),
+                    it->getDebugLoc().getCol(),
+                    it->getDebugLoc().getScope(),
+                    iLoc,
+                    it->getDebugLoc().isImplicitCode());
+                it->setDebugLoc(llvm::DebugLoc(newLoc));
+            }
+            else
+            {
+                // DILocation was not inlined
+                auto isImplicit = it->getDebugLoc().isImplicitCode();
                 auto newDebugLoc = llvm::DILocation::get(
-                    *irContext, newLine, newCol, newScope);
+                    *irContext, newLine, newCol, newScope, nullptr, isImplicit);
                 it->setDebugLoc(llvm::DebugLoc(newDebugLoc));
             }
 
@@ -674,20 +694,18 @@ namespace sourcespec2ir
         else if (auto lBlock = llvm::dyn_cast<llvm::DILexicalBlock>(oldScope))
         {
             return diBuilder.createLexicalBlock(
-                newParentScope, 
+                newParentScope,
                 lBlock->getFile(),
                 lBlock->getLine(),
-                lBlock->getColumn()
-            );
+                lBlock->getColumn());
         }
         else if (auto lbFile = llvm::dyn_cast<llvm::DILexicalBlockFile>(oldScope))
         {
             return diBuilder.createLexicalBlockFile(
-                newParentScope, 
+                newParentScope,
                 lbFile->getFile(),
-                lbFile->getDiscriminator()
-            );
-        } 
+                lbFile->getDiscriminator());
+        }
 
         throw utils::PallasException("Failed to rewrite scopes in debug-info.");
     }
