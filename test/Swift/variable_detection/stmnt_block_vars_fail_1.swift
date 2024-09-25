@@ -1,7 +1,7 @@
 // clang-format off
 // Check that the the compilations when variables that are not in scope are 
 // are referenced from within a specification-statement. 
-// RUN: not-15 %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
+// RUN: %not %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
 
 func scaryStatements(x: Double, y:Double) -> Double {
     /*@ 

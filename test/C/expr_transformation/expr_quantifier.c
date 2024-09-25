@@ -1,5 +1,5 @@
 // Test that quantifiers are transformed correctly
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 // COM: Old declarations not present
 // CHECK-NOT: PALLAS_BOUND_VAR___
 // CHECK-NOT: exists

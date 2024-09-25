@@ -1,5 +1,5 @@
 // Test that a function-contact is correctly detected and matched.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 void foo(int i) {
     i++;

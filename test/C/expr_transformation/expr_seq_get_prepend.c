@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the get- and prepend-functions for sequences are encoded correctly
 // of a sequence are encoded correctly.
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Check that declarations are present
 // CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] double [[get:@pallas.seq.get.[0-9]+]](ptr noundef byval(%pallas.seq.0), i64 noundef)

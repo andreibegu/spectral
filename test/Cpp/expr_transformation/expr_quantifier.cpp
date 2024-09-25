@@ -1,5 +1,5 @@
 // Test that quantifiers are transformed correctly
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Old declarations not present (Might not work with different name-mangling)
 // CHECK-NOT: @_ZN10pallasSpec4bVarIdEET_PKc(

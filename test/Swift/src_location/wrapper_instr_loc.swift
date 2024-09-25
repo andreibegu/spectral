@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the locations of the wrapper-funcction's instructions are 
 // transformed correctly.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // Some wierdly formatted specification to check the locations of instructions 
 // when the expression covers multiple lines. 

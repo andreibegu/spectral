@@ -1,5 +1,5 @@
 // Test that expressions that include the old-construct are transformed correctly
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Declarations are created
 // CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float [[oldF:@pallas.old.[0-9]+]](float)

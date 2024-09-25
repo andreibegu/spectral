@@ -1,6 +1,6 @@
 // Test that the functions for creating new sequences and for getting the size
 // of a sequence are encoded correctly.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Check that old sequence-type is not referenced
 // CHECK-NOT: struct.pallasSpec::seq

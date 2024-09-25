@@ -1,7 +1,7 @@
 // clang-format off
 // Test that a loop-invariant-block is correctly matched to a simple for-loops
 // that are nested. 
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 
 func funkyFunc (a: Int, b: Int) -> Int {

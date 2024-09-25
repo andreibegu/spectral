@@ -1,6 +1,6 @@
 // clang-format off
 // Check that variables that occur after a loop are not available in its invariant.
-// RUN: not-15 %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
+// RUN: %not %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
 
 func legendaryLoop(a: Int, b: Int) -> Bool{
     var c = a;

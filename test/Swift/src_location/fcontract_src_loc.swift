@@ -1,6 +1,6 @@
 // clang-format off
 // Check that the location that is attached to a function-contract is correct.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 /*@
 requires a > 0 && b > 0;

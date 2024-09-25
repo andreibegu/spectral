@@ -1,6 +1,6 @@
 // clang-format off
 // Test that assume-statements are correctly encoded as MD-nodes. 
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Collect variables that are available in the encoding
 // CHECK: i1 @_Z16fabulousFunctionff(

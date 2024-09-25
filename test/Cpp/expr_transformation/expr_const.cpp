@@ -1,5 +1,5 @@
 // Check that expressions with const-values get transformed
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // Check that a and b are maked as const
 // I.e. the dbg.value intrinsict point to a DILocalVariable that points to a

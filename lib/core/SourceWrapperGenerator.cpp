@@ -187,8 +187,7 @@ namespace sourcespec2ir
     {
         // Override this to support other type-tags that are not
         // supported by the default-implementation.
-        throw utils::PallasException(
-            "Encountered an unsupported type-tag: " + type.getTag());
+        throw utils::PallasException("Encountered an unsupported type-tag");
     }
 
     std::string SourceWrapperGenerator::addNamespace(

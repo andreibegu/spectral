@@ -11,7 +11,6 @@ antlr_target(SpecificationParser ${CMAKE_SOURCE_DIR}/grammar/SpecParser.g4 PARSE
              VISITOR)
 
 add_library(spec2ir_core STATIC
-    DummySpecMatcher.cpp
     IRBasedSourceSpecMatcher.cpp
     SourceCompilerDriver.cpp
     SourceSpecMatcher.cpp

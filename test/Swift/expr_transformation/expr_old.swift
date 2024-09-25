@@ -1,7 +1,7 @@
 
 // clang-format off
 // Test that the old=-construct of the specification-library is correctly translated
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declarations are created
 // CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float [[oldF:@pallas.old.[0-9]+]](float)

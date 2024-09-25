@@ -26,6 +26,9 @@ namespace sourcespec2ir
     class SourceWrapperGenerator
     {
     public:
+
+        virtual ~SourceWrapperGenerator() = default;
+
         /**
          * Takes a string that contains a source-language expression along with
          * a sequence of DILocalVariables that describe the source-variables that

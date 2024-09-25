@@ -1,6 +1,6 @@
 // clang-format off
 // Test matching of statement-blocks. 
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 int bar (int a, int b) {
     /*@

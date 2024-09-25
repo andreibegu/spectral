@@ -1,6 +1,6 @@
 // clang-format off
 // Test that ensures-clause is correctly encoded as an MD-Node
-// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | %FileCheck %s
 
 // COM: Contract is attached to function
 // CHECK: @_Z3barf(

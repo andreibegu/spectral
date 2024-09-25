@@ -1,6 +1,6 @@
 // Test that checking for permissions and creating fractions 
 // is encoded correctly
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Fraction-type is present
 // CHECK-DAG: %pallas.fracT = type { i64, i64, i64, i64 }

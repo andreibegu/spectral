@@ -36,7 +36,7 @@ find_package(ANTLR REQUIRED)
 #   LLVM include based on https://llvm.org/docs/CMake.html#embedding-llvm-in-your-project   #
 #############################################################################################
 
-find_package(LLVM 15 REQUIRED CONFIG)
+find_package(LLVM 17 REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -62,6 +62,9 @@ add_compile_options(-Wall -Wextra -Wpedantic -Wno-unused-parameter)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
+
+message("Compiler ID: ${CMAKE_CXX_COMPILER_ID}")
+message("Compiler Version: ${CMAKE_CXX_COMPILER_VERSION}")
 
 # Add the subdirectories
 add_subdirectory(lib)

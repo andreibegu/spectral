@@ -1,6 +1,6 @@
 // clang-format off
 // Test that a block of specification-statements is correctly encoded.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 
 func bar (a: Double) -> Double {

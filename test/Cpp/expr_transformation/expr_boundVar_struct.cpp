@@ -1,6 +1,6 @@
 // clang-format off
 // Test that bound-variables work properly with struct-types.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Declaration is created and labled with md-node
 // CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @pallas.boundVar.0(ptr sret(%class.ClumsyClass), ptr)

@@ -31,6 +31,8 @@ namespace sourcespec2ir
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
                           llvm::Module *irModule);
 
+        virtual ~SourceSpecMatcher() = default;
+
         // Starts the matching-process
         std::unique_ptr<MatchedSpecifications> matchSpecs();
 

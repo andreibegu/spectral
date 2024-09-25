@@ -1,6 +1,6 @@
 // Test that the functions for creating new sequences and for getting the size
 // of a sequence are encoded correctly.
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Check that declarations are present
 // CHECK-DAG: declare !pallas.specLib [[sizeMD:![0-9]+]] i64 [[size:@pallas.seq.size.[0-9]+]](ptr noundef byval(%pallas.seq.{{[0-9]+}}))

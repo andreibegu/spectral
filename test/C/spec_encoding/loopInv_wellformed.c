@@ -1,6 +1,6 @@
 // clang-format off
 // Test that loop-invariants are correctly encoded in metadata
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // CHECK: void @test_fun(
 // CHECK-SAME: [[arg1:%[0-9]+]]

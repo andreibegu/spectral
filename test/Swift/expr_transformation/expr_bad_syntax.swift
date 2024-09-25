@@ -1,6 +1,6 @@
 // clang-format off
 // Test expressions with incorrect syntax cause an error.
-// RUN: not-15 %Spec2IR %s -lib %SwiftSpecLib -lang Swift
+// RUN: %not %Spec2IR %s -lib %SwiftSpecLib -lang Swift
 
 
 /*@

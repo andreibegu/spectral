@@ -1,5 +1,5 @@
 // Check that expressions with references get transformed
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // Check that the wrapper-function has a reference-type as its argument.
 // CHECK: !{{[0-9]+}} = distinct !DISubprogram(name: "PALLAS_SPEC_0",

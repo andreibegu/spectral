@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the locations of instructions within the generated wrapper-functions
 // are translated correctly. 
-// RUN: %Spec2IR %s -lib %CSpecLib -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 
 /*@
 requires x + 1 > 0;
@@ -19,9 +19,7 @@ int bar (float x) {
 
 // CHECK-NEXT: %2 = fadd float %0, 1.000000e+00, !dbg [[addMD:![0-9]+]]
 // CHECK-NEXT: %3 = fcmp ogt float %2, 0.000000e+00, !dbg [[fcmpMD:![0-9]+]]
-// CHECK-NEXT: ret i1 %3
-// COM: Check that the return-instruction does not have a debug-location
-// CHECK-NOT: !dbg
+// CHECK-NEXT: ret i1 %3, !dbg [[dbgValMD]]
 // CHECK-NEXT: }
 
 // COM: Check that the scope of the variable that is passed as an argument is set correctly

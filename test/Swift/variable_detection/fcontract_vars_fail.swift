@@ -1,6 +1,6 @@
 // clang-format off
 // Check that variables from inside a function cannot be referenced in the contract.
-// RUN: not-15 %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
+// RUN: %not %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift
 
 /*@
 requires c > 0;

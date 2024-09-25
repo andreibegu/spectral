@@ -1,6 +1,9 @@
 # Pallas_Spec2IR
 Transformation from source-level specifications to specifications on IR-level.
 
+
+**TODO: Add instructions on how to use the tool standalone and on how to build the swift specification-library.**
+
 ## Requirements:
 - Installation of antlr4 Cpp-target
 https://github.com/antlr/antlr4/tree/master/runtime/Cpp
@@ -9,7 +12,7 @@ https://github.com/antlr/antlr4/tree/master/runtime/Cpp
 - CMake build based on the [LLVM-CMake guide](https://llvm.org/docs/CMake.html#embedding-llvm-in-your-project) and [VCLLVM](https://github.com/Drevanoorschot/VCLLVM/blob/main/CMakeLists.txt)
 - Antlr4-build is based on the [CMake-template for the cpp-target](https://github.com/antlr/antlr4/tree/master/runtime/Cpp/cmake)
 - Build using cmake:
-> cmake -G "Unix Makefiles" -B .build -DCMAKE_C_COMPILER=/usr/bin/clang-15 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-15    
+> cmake -G "Ninja" -B .build -DCMAKE_C_COMPILER=/usr/bin/clang-17 -DCMAKE_CXX_COMPILER=/usr/bin/clang++-17    
 > cmake --build .build --target pallasSpec2ir
 
 ## Structure
@@ -17,18 +20,17 @@ The structure of the repository is based on
 - [VCLLVM](https://github.com/Drevanoorschot/VCLLVM)
 - [LLVM Source Tree Layout](https://llvm.org/docs/Projects.html#source-tree-layout)
 
-
 ## Project setup in VSCode
-
 - Ensure that the following packages are installed:
     - cmake
     - zlib1g-dev
     - libzstd-dev
     - ninja-build
-    - llvm-15-dev
-    - clang-15
+    - llvm-17-dev
+    - clang-17
     - build-essential
     - gdb
+- If you want to use the swift-frontend, make sure that Swift 6.0 is installed and available on your PATH.
 - Install the C/C++ Extension Pack for VSCode
 - Clone repo
 - Open repo-folder in VSCode

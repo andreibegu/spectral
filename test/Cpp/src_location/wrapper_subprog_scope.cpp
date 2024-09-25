@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the locations of the wrapper-funcctions DISubprogram and its 
 // scope are translated correctly. 
-// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -lang Cpp | %FileCheck %s
 
 /*@
 requires x + 1 > 0;

@@ -1,6 +1,6 @@
 // clang-format off
 // Test that a loop-invariant-block is correctly matched to a while-loop
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 
 func bar (a: Int, b: Int) -> Int {

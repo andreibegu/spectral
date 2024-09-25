@@ -1,6 +1,6 @@
 // clang-format off
 // Test that assert-statements are correctly encoded as MD-nodes. 
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Collect variables that are available in the encoding
 // CHECK: float @bar(

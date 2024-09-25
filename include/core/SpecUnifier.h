@@ -49,6 +49,8 @@ namespace sourcespec2ir
 
         SpecUnifier(const bool printDebugInfo);
 
+        virtual ~SpecUnifier() = default;
+
         /**
          * Invokes the specification-unification on the given module.
          */

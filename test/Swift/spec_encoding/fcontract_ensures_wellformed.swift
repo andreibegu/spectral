@@ -1,6 +1,6 @@
 // clang-format off
 // Test that the MD-node for an ensures-clause is wellformed
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 /*@
  ensures a > 0;

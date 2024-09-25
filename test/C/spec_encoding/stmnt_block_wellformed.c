@@ -1,6 +1,6 @@
 // clang-format off
 // Test that statement/blocks with multiple statements are correctlz encoded. 
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // MD-encoding of block is attached to instruction:
 // CHECK: !pallas.stmntBlock [[blockMD:![0-9]+]]

@@ -1,6 +1,6 @@
 // clang-format off
 // Check that the location that is attached to a loop-invariant is correct.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 
 func foo(pA a: Int, pB b: Int) -> Int {

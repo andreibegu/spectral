@@ -65,9 +65,9 @@ namespace
      */
     std::pair<unsigned int, unsigned int> getLines(const llvm::Loop &loop)
     {
-
-        auto &startLoc = loop.getLocRange().getStart();
-        auto &endLoc = loop.getLocRange().getEnd();
+        auto loopRange = loop.getLocRange();
+        auto &startLoc = loopRange.getStart();
+        auto &endLoc = loopRange.getEnd();
 
         if (!startLoc || !endLoc)
             throw sourcespec2ir::utils::PallasException(
@@ -174,7 +174,7 @@ namespace sourcespec2ir
                 "Unable to match contract (" + locStr + ") to function");
         }
 
-        // Check that the closest function does not occur on the same line as 
+        // Check that the closest function does not occur on the same line as
         // other functions. In this case, the matching would be ambiguous
         auto closestLine = closestFunction->getSubprogram()->getLine();
         if (lineToFunc[closestLine].size() > 1)
@@ -184,10 +184,10 @@ namespace sourcespec2ir
                 std::to_string(closestLine) + ")");
         }
 
-        // Check that no instructions occur between the specification and the 
+        // Check that no instructions occur between the specification and the
         // function declaration.
-        // TODO: Is this strictly nessessary? Based on the above algorithm, 
-        // there should never be an instruction between contract and matched 
+        // TODO: Is this strictly nessessary? Based on the above algorithm,
+        // there should never be an instruction between contract and matched
         // function.
         auto fLine = closestFunction->getSubprogram()->getLine();
         for (auto &f : irModule->getFunctionList())
@@ -217,9 +217,9 @@ namespace sourcespec2ir
                 }
             }
         }
-        // Check that no global variables are between the specification and 
+        // Check that no global variables are between the specification and
         // the function declaration.
-        for (auto &g : irModule->getGlobalList())
+        for (const auto &g : irModule->globals())
         {
             llvm::SmallVector<llvm::DIGlobalVariableExpression *> dbgExpressions;
             g.getDebugInfo(dbgExpressions);

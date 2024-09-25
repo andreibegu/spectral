@@ -1,7 +1,7 @@
 // clang-format off
 // Test that staement-blocks are correctly encoded as MD-nodes.
 // I.e. the order of the statements has to be maintained.  
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // MD-encoding of block is attached to instruction:
 // CHECK: !pallas.stmntBlock [[blockMD:![0-9]+]]

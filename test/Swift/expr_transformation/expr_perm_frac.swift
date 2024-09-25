@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the datatype for fraction, the function for creating fractions and 
 // the Perm-function are encoded correctly. 
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 
 // COM: Old fraction-type is not present

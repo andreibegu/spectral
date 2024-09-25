@@ -1,5 +1,5 @@
 // Test that loop-invariant-blocks are correctly encoded in metadata
-// RUN: %Spec2IR %s -lib %CSpecLib -m | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // CHECK: void @test_fun(
 // COM: Check that the loop-inv node is attached to llvm.loop-node

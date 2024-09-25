@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the get- and prepend-functions for sequences are encoded correctly 
 // when used with structs.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Check that old sequence-type is no longer present
 // CHECK-NOT: struct.pallasSpec::seq

@@ -1,11 +1,11 @@
 // Tests that check that the correct variables are available within a 
 // loop-invariant.
-// RUN: rm -rf %t && split-file-15 %s %t && cd %t
+// RUN: rm -rf %t && %split-file %s %t && cd %t
 
 //--- vars_invalid_in.c
 // Execution is expected to fail because a variable from within the 
 // loop is accessed. 
-// RUN: not-15 %Spec2IR vars_invalid_in.c -lib %CSpecLib -m 
+// RUN: %not %Spec2IR vars_invalid_in.c -lib %CSpecLib -m 
 
 int bar (int x) {
     int cnt = 0;
@@ -23,7 +23,7 @@ int bar (int x) {
 //--- vars_invalid_after.c
 // Execution is expected to fail because a variable that is declared after the 
 // loop is used. 
-// RUN: not-15 %Spec2IR vars_invalid_after.c -lib %CSpecLib -m 
+// RUN: %not %Spec2IR vars_invalid_after.c -lib %CSpecLib -m 
 
 int bar (int x) {
     int cnt = 0;
@@ -39,7 +39,7 @@ int bar (int x) {
 
 //--- vars_invalid_nonex.c
 // Execution is expected to fail because a non-existent variable is used.
-// RUN: not-15 %Spec2IR vars_invalid_nonex.c -lib %CSpecLib -m 
+// RUN: %not %Spec2IR vars_invalid_nonex.c -lib %CSpecLib -m 
 
 int bar (int x) {
     int cnt = 0;
@@ -57,7 +57,7 @@ int bar (int x) {
 //--- vars_invalid_nested.c
 // Execution is expected to fail because a variable is used that 
 // is not in scope.
-// RUN: not-15 %Spec2IR vars_invalid_nonex.c -lib %CSpecLib -m 
+// RUN: %not %Spec2IR vars_invalid_nonex.c -lib %CSpecLib -m 
 int bar (int a) {
     int cnt = 0;
     while (cnt < 10) {

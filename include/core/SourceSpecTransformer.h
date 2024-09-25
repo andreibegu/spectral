@@ -9,6 +9,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
@@ -192,6 +193,14 @@ namespace sourcespec2ir
             const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
             llvm::DICompileUnit *cu, llvm::DIFile *scopeFile, 
             llvm::DIScope *scope);
+
+        /**
+         * Returns a scope where all scope-references to the old subprogram are 
+         * transitively replaced with references to the new subprogram.
+         */
+        llvm::DIScope *replaceSubprogInScope(llvm::DIScope *scope, 
+            const llvm::DISubprogram *oldSubprog, llvm::DISubprogram *newSubprog, 
+            llvm::DIBuilder &diBuilder);
 
         /**
          * Write the IR-representation of the given module into

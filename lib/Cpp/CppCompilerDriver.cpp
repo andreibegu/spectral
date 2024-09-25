@@ -40,7 +40,7 @@ namespace sourcespec2ir
 
         // Run compiler to generate the IR
         std::stringstream call;
-        call << " clang++-15 ";
+        call << " clang++-17 ";
         call << " -emit-llvm -S ";
         call << " -g -O0 ";
         call << " -Xclang -disable-O0-optnone ";

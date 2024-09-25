@@ -1,6 +1,6 @@
 // clang-format off
 // Test that expressions that include the old-construct are transformed correctly
-// RUN: %Spec2IR %s -lib %CSpecLib -m -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -m -lang C | %FileCheck %s
 
 // COM: Declaration is created and has two arguments
 // CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] void @pallas.old.0(ptr sret(%struct.S), ptr byval(%struct.S))

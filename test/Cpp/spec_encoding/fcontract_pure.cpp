@@ -1,5 +1,5 @@
 // Test that the pure-flag of a function-contract is encoded correctly.
-// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // CHECK: double @_Z3food(
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]

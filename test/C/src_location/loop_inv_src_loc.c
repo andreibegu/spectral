@@ -1,6 +1,6 @@
 // clang-format off
 // Test that source-locations are correctly added to loop-invariants.
-// RUN: %Spec2IR %s -lib %CSpecLib -lang C | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 
 int bar (int x) {
     int i = 0;

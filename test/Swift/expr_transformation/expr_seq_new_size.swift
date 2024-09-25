@@ -1,7 +1,7 @@
 // clang-format off
 // Test that the functions for creating new sequences and for getting the size
 // of a sequence are encoded correctly.
-// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | FileCheck-15 %s
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Check that the type in the allocation has been replaced
 // CHECK: {{%[0-9]+}} = alloca %pallas.seq.0
