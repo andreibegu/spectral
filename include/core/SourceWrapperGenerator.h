@@ -4,6 +4,7 @@
 #include "MatchedSourceSpec.h"
 #include "wrapper/SrcLocation.h"
 #include "wrapper/SrcWrapperFunction.h"
+#include "wrapper/MatchedWrapperFunctions.h"
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -28,6 +29,13 @@ namespace sourcespec2ir
     public:
 
         virtual ~SourceWrapperGenerator() = default;
+
+        /**
+         * Generate wrapper-functions for the given specification-constructs.
+         */
+        std::unique_ptr<MatchedWrapperFunctions> generateWrapperFunctions(
+            const MatchedSpecifications &matchedSpecs);
+
 
         /**
          * Takes a string that contains a source-language expression along with
@@ -252,6 +260,27 @@ namespace sourcespec2ir
         void insertLines(
             std::vector<SrcLine> &lines, const std::string &content,
             std::vector<SrcLine>::iterator currentLine);
+
+        /**
+         * Creates a wrapping-function for every statement in the 
+         * given contract-block.
+         */
+        void wrapFunctionContractBlock(const MatchedFunctionContract &contract, 
+            MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the 
+         * given loop-invariant-block.
+         */
+        void wrapLoopInvariantBlock(const MatchedLoopInvariantBlock &invBlock, 
+            MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the 
+         * given statement-block.
+         */
+        void wrapSpecStatementBlock(const MatchedSpecStatementBlock &stmntBlock, 
+            MatchedWrapperFunctions &matchedWrappers);
     };
 
 }

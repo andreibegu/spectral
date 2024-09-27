@@ -27,6 +27,7 @@
 #include "SrcLookup.h"
 #include "passes/LoopIDPass.h"
 #include "wrapper/SpecParserWrapper.h"
+#include "wrapper/MatchedWrapperFunctions.h"
 
 namespace sourcespec2ir
 {
@@ -76,24 +77,11 @@ namespace sourcespec2ir
         if (runMem2Reg)
             promoteMemToReg(*irModule);
 
-        /*
-        if (outputConfig.printDebugInfo)
-        {
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
-            llvm::outs() << "PRE-Transformation\n";
-            writeToFile(*irModule, "");
-            llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
-        }
-        */
-
         // Parse the source-file to extract the specifications
         auto parser = std::make_unique<SpecParserWrapper>(srcInPath);
         auto srcParseTree = parser->getSrcParseTree();
         if (!srcParseTree)
             throw utils::PallasException("Unable to parse the source file.");
-
-        // Set up the WrapperGenerator
-        wrapperGenerator = createWrapperGenerator();
 
         // Collect declarations
         SpecDeclarationCollector declCollector(srcParseTree);
@@ -107,43 +95,28 @@ namespace sourcespec2ir
         // Release the parser and input-streams
         parser.reset();
 
-        // TODO: This should be bundled in the Wrapper generator, and not here
-        // Create wrappers for function-contracts
-        for (const auto &contract : matchedSpecs->matchedFContracts)
-            wrapFunctionContractBlock(*contract);
-        // Create wrappers for loop-invariants
-        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
-            wrapLoopInvariantBlock(*invBlock);
-        // Create wrappers for blocks of specification-statements
-        for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
-            wrapSpecStatementBlock(*stmntBlock);
-
-        // Collect pointers to wrapper-functions
-        llvm::SmallVector<SrcWrapperFunction *> wrappers;
-        for (auto &[contr, wrapper] : fContractWrappers)
-            wrappers.push_back(wrapper.get());
-        for (auto &[inv, wrapper] : loopInvWrappers)
-            wrappers.push_back(wrapper.get());
-        for (auto &[stmnt, wrapper] : statementWrappers)
-            wrappers.push_back(wrapper.get());
+        // Generate the wrapper-functions:
+        wrapperGenerator = createWrapperGenerator();
+        matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
+        auto wrappers = matchedWrappers->getWrappers();
 
         // Insert wrappers into source
+        // TODO: Either move this into the WrapperGenerator, or into a new class
         const auto srcWrapperPath = getPathForSourceWithWrappers();
         wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
-                                               wrappers, *specDeclarations);
+                                               *wrappers, *specDeclarations);
+
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
             srcWrapperPath, *irContext);
 
         // Turn all duplicate global values into declarations to avoid conflicts
         // while linking.
-        // Potential alternative: Add the specification-metadata directly
-        // after the wrapping stage and add reference to wrapper-function later.
         removeDuplicateDefinitions(*irModule, *moduleWithWrappers);
 
         // Add all generated wrapper to the llvm.used-list of the module
-        // to ensurer they are copied over during linkage.
-        markWrapperFunctionsAsUsed(*moduleWithWrappers, wrappers);
+        // to ensure that they are copied over during linking.
+        markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
 
         // Apply mem2reg to new module
         promoteMemToReg(*moduleWithWrappers);
@@ -152,15 +125,15 @@ namespace sourcespec2ir
         linker.linkInModule(std::move(moduleWithWrappers),
                             llvm::Linker::Flags::LinkOnlyNeeded);
 
-        // Check wellformedness of module
-        verifyModule(*irModule, "After linking in wrappers");
+        if (outputConfig.printDebugInfo)
+            verifyModule(*irModule, "After linking in wrappers");
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
         rewriteWrapperLocations(*matchedSpecs);
 
-        // Check wellformedness of module
-        verifyModule(*irModule, "After location rewrite");
+        if (outputConfig.printDebugInfo)
+            verifyModule(*irModule, "After location rewrite");
 
         if (outputConfig.printDebugInfo)
         {
@@ -179,7 +152,8 @@ namespace sourcespec2ir
             encodeStmntBlock(*stmntBlock);
 
         // Check wellformedness of module
-        verifyModule(*irModule, "After transformation");
+        if (outputConfig.printDebugInfo)
+            verifyModule(*irModule, "After transformation");
 
         // Transform the compiled specifications into common format
         // (calls to specification-functions)
@@ -190,75 +164,6 @@ namespace sourcespec2ir
 
         // Dump the generated IR
         writeToFile(*irModule, outPath);
-    }
-
-    // TODO: Move this into the wrapper-generator
-    // i.e. The wrapper generator should construct the wrapping functions and
-    // return them back to the SourceSpecTransfromer for matching after the
-    // compilation.
-    void SourceSpecTransformer::wrapFunctionContractBlock(
-        const MatchedFunctionContract &contract)
-    {
-        const auto parentFunction = contract.function;
-        llvm::DIType *parentRetType = nullptr;
-        if (parentFunction->getSubprogram() != nullptr &&
-            parentFunction->getSubprogram()->getType() != nullptr)
-        {
-            parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
-        }
-
-        auto argList = wrapperGenerator->getSrcVariablesForFunction(*parentFunction);
-        // Get insert-position for wrapper-functions
-        auto insertPos = wrapperGenerator->getWrapperInsertLoc(contract);
-
-        // Wrap specification statements
-        for (auto &stmnt : contract.statements)
-        {
-            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
-            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName, parentRetType);
-            fContractWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
-        }
-    };
-
-    // TODO: Move this into the wrapper-generator
-    void SourceSpecTransformer::wrapLoopInvariantBlock(
-        const MatchedLoopInvariantBlock &invBlock)
-    {
-        // Determine the variables that can be referenced in the invariant
-        auto argList = wrapperGenerator->getVarsForLoopInv(
-            invBlock.parentFunction, invBlock.loopHeader);
-        auto insertPos = wrapperGenerator->getWrapperInsertLoc(invBlock);
-
-        // Generate wrappers for the individual invariants
-        for (auto &inv : invBlock.invariants)
-        {
-            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
-            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList->getArrayRef(), inv->expr, wrapperName);
-            loopInvWrappers[inv.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
-        }
-    }
-
-    void SourceSpecTransformer::wrapSpecStatementBlock(
-        const MatchedSpecStatementBlock &stmntBlock)
-    {
-        // Determine the variables that can be referenced in the statement
-        auto argList = wrapperGenerator->getVarsForStatement(stmntBlock.inst);
-        // Get insert-location for wrapper-function
-        auto insertPos = wrapperGenerator->getWrapperInsertLoc(stmntBlock);
-
-        // Generate wrapper for the individual statements
-        for (auto &stmnt : stmntBlock.statements)
-        {
-            auto wrapperName = wrapperGenerator->getNameForWrapperFunction();
-            auto wrapperStr = wrapperGenerator->getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName);
-            statementWrappers[stmnt.get()] = std::make_unique<SrcWrapperFunction>(
-                wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
-        }
     }
 
     void SourceSpecTransformer::encodeLoopInvBlock(
@@ -294,7 +199,7 @@ namespace sourcespec2ir
         llvm::SmallVector<llvm::Metadata *> &nodes)
     {
         // Get the ir-version of the wrapper-function
-        auto srcWrapperFun = loopInvWrappers.at(&inv).get();
+        auto srcWrapperFun = matchedWrappers->loopInvWrappers.at(&inv).get();
         auto irWrapperFunction = utils::getFunctionBySrcName(
             *irModule, srcWrapperFun->name);
 
@@ -342,7 +247,7 @@ namespace sourcespec2ir
     llvm::MDNode *SourceSpecTransformer::encodeSpecStatement(
         const MatchedSpecStatement &stmnt)
     {
-        auto srcWrapperFun = statementWrappers.at(&stmnt).get();
+        auto srcWrapperFun = matchedWrappers->statementWrappers.at(&stmnt).get();
         auto irWrapperFun = utils::getFunctionBySrcName(
             *irModule, srcWrapperFun->name);
 
@@ -423,7 +328,7 @@ namespace sourcespec2ir
         const MatchedFContractStatement &stmnt)
     {
         // Get the ir-version of the wrapper-function
-        auto srcWrapperFun = fContractWrappers.at(&stmnt).get();
+        auto srcWrapperFun = matchedWrappers->fContractWrappers.at(&stmnt).get();
         auto irWrapperFunction = utils::getFunctionBySrcName(
             *irModule, srcWrapperFun->name);
 
@@ -469,7 +374,7 @@ namespace sourcespec2ir
             auto scopeFile = getFileForFunc(contr->function);
             auto scope = getScopeForFunc(contr->function);
             for (auto &stmnt : contr->statements)
-                rewriteWrapperLocations(*fContractWrappers[stmnt.get()],
+                rewriteWrapperLocations(*matchedWrappers->fContractWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
         // Handle loop-invariants
@@ -479,7 +384,7 @@ namespace sourcespec2ir
             auto scopeFile = getFileForFunc(invBlock->parentFunction);
             auto scope = getScopeForFunc(invBlock->parentFunction);
             for (auto &inv : invBlock->invariants)
-                rewriteWrapperLocations(*loopInvWrappers[inv.get()],
+                rewriteWrapperLocations(*matchedWrappers->loopInvWrappers[inv.get()],
                                         inv->exprLoc, cu, scopeFile, scope);
         }
         // Handle specification statements
@@ -491,7 +396,7 @@ namespace sourcespec2ir
             auto scopeFile = getFileForFunc(parentFunc);
             auto scope = getScopeForFunc(parentFunc);
             for (auto &stmnt : stmntBlock->statements)
-                rewriteWrapperLocations(*statementWrappers[stmnt.get()],
+                rewriteWrapperLocations(*matchedWrappers->statementWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
     }

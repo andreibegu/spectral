@@ -24,6 +24,7 @@
 #include "SpecUnifier.h"
 #include "OutputConfig.h"
 #include "wrapper/SrcWrapperFunction.h"
+#include "wrapper/MatchedWrapperFunctions.h"
 
 namespace sourcespec2ir
 {
@@ -79,6 +80,9 @@ namespace sourcespec2ir
         // Pointer to the loaded llvm-ir module
         std::unique_ptr<llvm::Module> irModule;
 
+        // Pointer to the generated wrapper-functions
+        std::unique_ptr<MatchedWrapperFunctions> matchedWrappers = nullptr;
+
         /**
          * Analysis managers and pass builder that are used to run
          * optimization- and analysis passes on the loaded IR
@@ -91,17 +95,6 @@ namespace sourcespec2ir
         // While we do not use the PassBuilder directly, it is required by the
         // ModuleAnalysisManager. Causes SegmentationFault otherwise.
         llvm::PassBuilder passBuilder;
-
-        /**
-         * Maps that relate the matched specifications to the corresponding
-         * wrapper-functions.
-         */
-        std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
-            fContractWrappers;
-        std::map<const MatchedLoopInvariant *, std::unique_ptr<SrcWrapperFunction>>
-            loopInvWrappers;
-        std::map<const MatchedSpecStatement *, std::unique_ptr<SrcWrapperFunction>>
-            statementWrappers;
 
         /**
          * Runs the mem2reg-pass on the given module.
@@ -152,26 +145,6 @@ namespace sourcespec2ir
          */
         llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
 
-        /**
-         * Uses the wrapper generator to create wrapping-functions for all
-         * statements in the given contract-block.
-         */
-        void wrapFunctionContractBlock(
-            const MatchedFunctionContract &contract);
-
-        /**
-         * Uses the wrapper-generator to create wrapping-functions for all
-         * loop-invariant-blocks.
-         */
-        void wrapLoopInvariantBlock(
-            const MatchedLoopInvariantBlock &invBlock);
-
-        /**
-         * Uses the wrapper-generator to create wrapping-functions for all
-         * blocks of specification-statements.
-         */
-        void wrapSpecStatementBlock(
-            const MatchedSpecStatementBlock &stmntBlock);
 
         /**
          * Modifies the debug-locations of the instructions in the generated
@@ -243,7 +216,7 @@ namespace sourcespec2ir
         llvm::DIScope *getScopeForFunc(llvm::Function *f);
 
         /**
-         * Helper that returns the cimpilation-unit for a given function and 
+         * Helper that returns the compilation-unit for a given function and 
          * checks for nullpointers. 
          */
         llvm::DICompileUnit *getCUForFunc(llvm::Function *f);
