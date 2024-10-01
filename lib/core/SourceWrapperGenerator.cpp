@@ -361,16 +361,6 @@ namespace sourcespec2ir
         // Load file as vector of lines
         auto sourceLines = readSrcFile(inPath);
 
-        // Insert contents of the declaration-block
-        // TODO: Remove this step from the base-implementation and let the
-        //       subclasses handle how the decarations should be used.
-        for (auto &decl : specDeclarations)
-        {
-            auto declStr = decl.content + ";";
-            auto insertPos = findInsertPos(decl.srcFileLine, *sourceLines);
-            insertLines(*sourceLines, declStr, insertPos);
-        }
-
         // Insert the wrapper-functions
         for (auto wrapper : wrapperFunctions)
         {
@@ -380,8 +370,6 @@ namespace sourcespec2ir
         }
 
         // Call entry-point for subclasses to customize the generated source.
-        // TODO: Potentially provide the declarations here, so that the subclass 
-        // can insert them in a global scope if needed. 
         modifySrcWithWrappers(*sourceLines);
 
         // Write modified file
