@@ -28,6 +28,14 @@ namespace sourcespec2ir
     {
     public:
 
+        /**
+         * Generates a new wrapper-generator. 
+         * The provided reference to the specDeclarations must remain valid for
+         * the lifetime of the SourceWrapperGenerator.
+         */
+        SourceWrapperGenerator(
+            const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations);
+
         virtual ~SourceWrapperGenerator() = default;
 
         /**
@@ -118,8 +126,7 @@ namespace sourcespec2ir
          */
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
-            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-            llvm::ArrayRef<SpecDeclaration> specDeclarations);
+            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions);
 
         /**
          * Returns a string representation of the given DIType that matches the
@@ -153,6 +160,9 @@ namespace sourcespec2ir
         getVarsForStatement(llvm::Instruction *inst);
 
     protected:
+
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;
+
         /**
          * Struct that represents a line of the source-file.
          * Keeps track of the textual represenation along with the line-number

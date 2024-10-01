@@ -6,6 +6,13 @@
 
 namespace sourcespec2ir
 {
+
+    CWrapperGenerator::CWrapperGenerator(
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
+        : SourceWrapperGenerator(specDeclarations)
+    {
+    }
+
     std::string CWrapperGenerator::getWrapperFunctionString(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const std::string &expr,

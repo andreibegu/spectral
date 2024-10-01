@@ -48,7 +48,8 @@ namespace sourcespec2ir
          * These can/ have to be overwritten by subclasses to create a
          * SourceSpecTransformer that can handle a specific language.
          */
-        virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() = 0;
+        virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator(
+            const llvm::SmallVector<SpecDeclaration> &specDeclarations) = 0;
 
         /**
          * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.

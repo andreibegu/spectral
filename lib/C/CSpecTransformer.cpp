@@ -21,8 +21,10 @@ namespace sourcespec2ir
     {
     }
 
-    std::unique_ptr<SourceWrapperGenerator> CSpecTransformer::createWrapperGenerator()
+    std::unique_ptr<SourceWrapperGenerator> 
+    CSpecTransformer::createWrapperGenerator(
+        const llvm::SmallVector<SpecDeclaration> &specDeclarations)
     {
-        return std::make_unique<CWrapperGenerator>();
+        return std::make_unique<CWrapperGenerator>(specDeclarations);
     }
 }

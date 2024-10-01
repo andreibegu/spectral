@@ -15,6 +15,12 @@
 namespace sourcespec2ir
 {
 
+    SourceWrapperGenerator::SourceWrapperGenerator(
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
+        : specDeclarations(specDeclarations)
+    {
+    }
+
     std::unique_ptr<MatchedWrapperFunctions>
     SourceWrapperGenerator::generateWrapperFunctions(
         const MatchedSpecifications &matchedSpecs)
@@ -350,8 +356,7 @@ namespace sourcespec2ir
 
     void SourceWrapperGenerator::buildSrcWithWrappers(
         const std::string &inPath, const std::string &outPath,
-        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-        llvm::ArrayRef<SpecDeclaration> specDeclarations)
+        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions)
     {
         // Load file as vector of lines
         auto sourceLines = readSrcFile(inPath);
@@ -375,6 +380,8 @@ namespace sourcespec2ir
         }
 
         // Call entry-point for subclasses to customize the generated source.
+        // TODO: Potentially provide the declarations here, so that the subclass 
+        // can insert them in a global scope if needed. 
         modifySrcWithWrappers(*sourceLines);
 
         // Write modified file

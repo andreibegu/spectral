@@ -96,15 +96,14 @@ namespace sourcespec2ir
         parser.reset();
 
         // Generate the wrapper-functions:
-        wrapperGenerator = createWrapperGenerator();
+        wrapperGenerator = createWrapperGenerator(*specDeclarations);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
 
         // Insert wrappers into source
         // TODO: Either move this into the WrapperGenerator, or into a new class
         const auto srcWrapperPath = getPathForSourceWithWrappers();
-        wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
-                                               *wrappers, *specDeclarations);
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath, *wrappers);
 
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(

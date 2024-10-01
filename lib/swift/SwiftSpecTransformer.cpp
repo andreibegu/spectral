@@ -19,8 +19,10 @@ namespace sourcespec2ir
     {
     }
 
-    std::unique_ptr<SourceWrapperGenerator> SwiftSpecTransformer::createWrapperGenerator()
+    std::unique_ptr<SourceWrapperGenerator> 
+    SwiftSpecTransformer::createWrapperGenerator(
+        const llvm::SmallVector<SpecDeclaration> &specDeclarations)
     {
-        return std::make_unique<SwiftWrapperGenerator>();
+        return std::make_unique<SwiftWrapperGenerator>(specDeclarations);
     }
 }

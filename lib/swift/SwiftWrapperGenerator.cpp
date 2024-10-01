@@ -12,6 +12,13 @@
 
 namespace sourcespec2ir
 {
+
+    SwiftWrapperGenerator::SwiftWrapperGenerator(
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
+        : SourceWrapperGenerator(specDeclarations)
+    {
+    }
+
     std::string SwiftWrapperGenerator::getWrapperFunctionString(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const std::string &expr,
