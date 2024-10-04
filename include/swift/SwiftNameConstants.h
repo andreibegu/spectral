@@ -23,15 +23,19 @@ namespace sourcespec2ir
 
     // Prefixes for the specification-functions for sequences
     const std::string SWIFT_SPEC_SEQ_TY_PREFIX = "Seq";
-    const std::string SWIFT_SPEC_SEQ_NEW_PREFIX = "_seqNew";
-    const std::string SWIFT_SPEC_SEQ_SIZE_PREFIX = "_seqSize";
-    const std::string SWIFT_SPEC_SEQ_GET_PREFIX = "_seqGet";
-    const std::string SWIFT_SPEC_SEQ_PREPEND_PREFIX = "_seqPrepend";
-    const std::string SWIFT_SPEC_SEQ_EQUALS_PREFIX = "_seqEq";
+    const std::string SWIFT_SPEC_SEQ_NEW = "init";
+    const std::string SWIFT_SPEC_SEQ_SIZE = "size";
+    const std::string SWIFT_SPEC_SEQ_GET = "subscript.get";
+    const std::string SWIFT_SPEC_SEQ_PREPEND = "prepend";
+    const std::string SWIFT_SPEC_SEQ_EQUALS = "equals";
 
     // Name of the built-in swift function for constructing a string from a literal
     const std::string SWIFT_STRING_CONSTR_LITERAL =
         "$sSS21_builtinStringLiteral17utf8CodeUnitCount7isASCIISSBp_BwBi1_tcfC";
+
+    // Name of the 'fake-macro'that is used to specify the required sequence-types
+    const std::string SWIFT_SPEC_SEQ_DEF_MACRO_START = "#defSeq<";
+    const std::string SWIFT_SPEC_SEQ_DEF_MACRO_END = ">";
 
 }
 

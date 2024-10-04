@@ -131,6 +131,9 @@ namespace sourcespec2ir
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const llvm::DIType *returnType, const std::string &expr)
     {
+        // TODO: We could also do the generation of the spec-lib functions using 
+        //       Swift-macros. However, that makes the compilation-process more
+        //       complicated, as the macros have to loaded in. 
         std::stringstream stream;
         stream << "// START - SpecLib-Functions \n";
 
@@ -175,13 +178,21 @@ namespace sourcespec2ir
                    << " { fatalError() } \n";
         }
 
-        // Determine which ADT-types have to be generated.
+        // Determine which ADT-types have to be generated 
+        // (using the user-provided declarations)
         llvm::SmallSet<std::string, 4> seqTypes;
-        getTypesFromSuffix(expr, SWIFT_SPEC_SEQ_NEW_PREFIX, seqTypes);
-        getTypesFromSuffix(expr, SWIFT_SPEC_SEQ_SIZE_PREFIX, seqTypes);
-        getTypesFromSuffix(expr, SWIFT_SPEC_SEQ_GET_PREFIX, seqTypes);
-        getTypesFromSuffix(expr, SWIFT_SPEC_SEQ_PREPEND_PREFIX, seqTypes);
-        getTypesFromSuffix(expr, SWIFT_SPEC_SEQ_EQUALS_PREFIX, seqTypes);
+        for (auto decl : specDeclarations)
+        {
+            llvm::StringRef declStr = decl.content;
+            if (declStr.starts_with(SWIFT_SPEC_SEQ_DEF_MACRO_START) &&
+                declStr.ends_with(">"))
+            {
+                auto typeStr = declStr.drop_front(SWIFT_SPEC_SEQ_DEF_MACRO_START.size())
+                                   .drop_back(SWIFT_SPEC_SEQ_DEF_MACRO_END.size()).str();
+                seqTypes.insert(typeStr);
+            }
+        }
+
         // Generate the sequence-types & the associated functions
         for (auto eTy : seqTypes)
         {
@@ -194,42 +205,30 @@ namespace sourcespec2ir
             // First element encodes content-types, the other fields are filler
             // to prevent the stryct from being decomposed.
             stream << "struct " << seqTy << " { "
-                   << "let e: " << eTy << " \n"
-                   << "let i1: Int64 \n"
-                   << "let i2: Int64 \n"
-                   << "let i3: Int64 \n"
-                   << "let i4: Int64 \n"
-                   << "let i5: Int64 \n"
+                   << "     let e: " << eTy << " \n"
+                   << "     let i1: Int64 \n"
+                   << "     let i2: Int64 \n"
+                   << "     let i3: Int64 \n"
+                   << "     let i4: Int64 \n"
+                   << "     let i5: Int64 \n"
+
+                    // Constructor for new sequence 
+                    << "    @inline(never) \n"
+                    << "    init() { fatalError() } \n"
+                    // Access element of sequence
+                    << "    @inline(never) \n"
+                    << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
+                    // Size of sequence
+                    << "    @inline(never) \n"
+                    << "    func size() -> Int64 { fatalError() } \n"
+                    // Prepend element to sequence 
+                    << "    @inline(never) \n"
+                    << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
+                    // Equality of sequences
+                    << "    @inline(never) \n"
+                    << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
+
                    << "} \n";
-            // New sequence
-            stream << "@inline(never) "
-                   << "func " << SWIFT_SPEC_SEQ_NEW_PREFIX << eTy << "() -> " << seqTy
-                   << " { fatalError() } \n";
-            // Size of sequence
-            stream << "@inline(never) "
-                   << "func " << SWIFT_SPEC_SEQ_SIZE_PREFIX << eTy 
-                   << "(_ s: " << seqTy << ") -> Int64"
-                   << " { fatalError() } \n";
-            // Get on sequence
-            stream << "@inline(never) "
-                   << "func " << SWIFT_SPEC_SEQ_GET_PREFIX << eTy 
-                   << "(_ s: " << seqTy << ", _ i: Int64) -> " << eTy
-                   << " { fatalError() } \n";
-            // Prepend to sequence
-            stream << "@inline(never) "
-                   << "func " << SWIFT_SPEC_SEQ_PREPEND_PREFIX << eTy << "(" 
-                   << "_ e: " << eTy << ", " 
-                   << "_ s: " << seqTy 
-                   << ") -> " << seqTy
-                   << " { fatalError() } \n";
-            // Equality on sequence
-            stream << "@inline(never) "
-                   << "func " << SWIFT_SPEC_SEQ_EQUALS_PREFIX << eTy << "(" 
-                   << "_ s1: " << seqTy << ", " 
-                   << "_ s2: " << seqTy 
-                   << ") -> Bool "
-                   << " { fatalError() } \n";
-            
         }
 
         stream << "// END - SpecLib-Functions \n";

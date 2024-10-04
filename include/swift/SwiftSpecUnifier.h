@@ -34,6 +34,12 @@ namespace sourcespec2ir
         };
 
         // Map to identify the spec-lib functions that are generated inside 
+        // of the wrapper-function based on their prefix. 
+        const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {
+            {SWIFT_SPEC_BOUND_VAR_PREFIX, BoundVar},
+        }; 
+
+        // Map to identify the spec-lib functions that are generated inside 
         // of the wrapper-function. 
         // Because we use the DISubprogram, we can use the unmangled names.
         const llvm::StringMap<SpecLibElement> GENERATED_NAME_MAP = {
@@ -42,16 +48,15 @@ namespace sourcespec2ir
             {"_perm", Perm}
         };
 
-        // Map to identify the spec-lib functions that are generated inside 
-        // of the wrapper-function based on their prefix. 
-        const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {
-            {SWIFT_SPEC_BOUND_VAR_PREFIX, BoundVar},
-            {SWIFT_SPEC_SEQ_NEW_PREFIX, SeqNew},
-            {SWIFT_SPEC_SEQ_SIZE_PREFIX, SeqSize},
-            {SWIFT_SPEC_SEQ_GET_PREFIX, SeqGet},
-            {SWIFT_SPEC_SEQ_PREPEND_PREFIX, SeqPrepend},
-            {SWIFT_SPEC_SEQ_EQUALS_PREFIX, SeqEquals}
-        }; 
+        // Map to identify the spec-lib functions that are generated 
+        // inside of a struct that represents an ADT
+        const llvm::StringMap<SpecLibElement> ADT_GENERATED_NAME_MAP = {
+            {SWIFT_SPEC_SEQ_NEW, SeqNew},
+            {SWIFT_SPEC_SEQ_SIZE, SeqSize},
+            {SWIFT_SPEC_SEQ_GET, SeqGet},
+            {SWIFT_SPEC_SEQ_PREPEND, SeqPrepend},
+            {SWIFT_SPEC_SEQ_EQUALS, SeqEquals}
+        };
 
         SwiftSpecUnifier(const bool printDebugInfo);
 
@@ -66,6 +71,8 @@ namespace sourcespec2ir
         llvm::Type *getSrcLibFracType() override;
 
         llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
     };
 
 }

@@ -4,6 +4,7 @@
 #include "SwiftNameConstants.h"
 
 #include <llvm/ADT/StringRef.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/Demangle/Demangle.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -22,6 +23,8 @@ namespace sourcespec2ir
     {
         auto fName = f.getName().str();
 
+        // Check if the spec-function is on of the functions from the
+        // spec-library-module.
         if (llvm::StringRef(fName).startswith(SWIFT_SPEC_MODULE_PREFIX))
         {
             // The name starts with the prefix of the spec-module
@@ -32,22 +35,19 @@ namespace sourcespec2ir
                 return std::make_optional<SpecLibElement>(match->getValue());
         }
 
-        // Check if f is a generated spec-function inside of the wrapper
-        if (auto sProg = f.getSubprogram())
-        {
-            if (sProg->getScope() == nullptr ||
-                !sProg->getScope()->getName().startswith(SWIFT_WRAPPER_PREFIX))
-                return std::nullopt;
+        auto sProg = f.getSubprogram();
+        if (sProg == nullptr || sProg->getScope() == nullptr)
+            return std::nullopt;
+        auto scope = sProg->getScope();
 
+        // Check if the function is a spec-function directly within the wrapper-function
+        if (scope->getName().startswith(SWIFT_WRAPPER_PREFIX))
+        {
             // Check for exact name matches
             const auto fName = sProg->getName();
-            auto match = GENERATED_NAME_MAP.find(sProg->getName());
+            auto match = GENERATED_NAME_MAP.find(fName);
             if (match != GENERATED_NAME_MAP.end())
                 return std::make_optional<SpecLibElement>(match->getValue());
-
-            // Check for prefix-matches
-            // if (fName.startswith(SWIFT_SPEC_BOUND_VAR_PREFIX))
-            //    return std::make_optional<SpecLibElement>(BoundVar);
 
             // Check prefix-matches
             for (auto key : GENERATED_PREFIX_MAP.keys())
@@ -58,6 +58,24 @@ namespace sourcespec2ir
                     return std::make_optional<SpecLibElement>(value);
                 }
             }
+        }
+
+        // Check if the function is a generated spec-function inside of a struct
+        // that represents an ADT
+        if (auto scopeStruct = llvm::dyn_cast<llvm::DICompositeType>(scope))
+        {
+            if (!(scopeStruct->getTag() == llvm::dwarf::Tag::DW_TAG_structure_type))
+                return std::nullopt;
+            if (!scopeStruct->getName().starts_with(SWIFT_SPEC_SEQ_TY_PREFIX))
+                return std::nullopt;
+            if (scopeStruct->getScope() == nullptr ||
+                !scopeStruct->getScope()->getName().startswith(SWIFT_WRAPPER_PREFIX))
+                return std::nullopt;
+
+            // Check for name matches
+            auto match = ADT_GENERATED_NAME_MAP.find(sProg->getName());
+            if (match != ADT_GENERATED_NAME_MAP.end())
+                return std::make_optional<SpecLibElement>(match->getValue());
         }
 
         return std::nullopt;
@@ -157,6 +175,45 @@ namespace sourcespec2ir
         else
         {
             return llvm::CallInst::Create(getUSpecBoundVar(type), {literalPtr});
+        }
+    }
+
+    llvm::CallInst *SwiftSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)
+    {
+        // Identical to the default-implementation, but the order of index and 
+        // sequence are swapped. 
+
+        // Check the signature of the old call to determine if a
+        // struct-type is returned.
+        bool containsStruct = oldCall.getCalledFunction()->getReturnType() ==
+                              llvm::Type::getVoidTy(*irContext);
+        if (containsStruct)
+        {
+            // Content-type is struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
+            llvm::SmallVector<llvm::Value *, 4> newArgs = {
+                oldCall.getArgOperand(0),
+                oldCall.getArgOperand(2),
+                oldCall.getArgOperand(1)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            addSret(newCall, 0, cType);
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            addByVal(newCall, 1, getUSpecSeqType(cType));
+            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
+            return newCall;
+        }
+        else
+        {
+            // Content-type is a non-struct-type
+            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+            llvm::SmallVector<llvm::Value *, 2> newArgs = {
+                oldCall.getArgOperand(1),
+                oldCall.getArgOperand(0)};
+            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
+            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+            addByVal(newCall, 0, getUSpecSeqType(cType));
+            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+            return newCall;
         }
     }
 

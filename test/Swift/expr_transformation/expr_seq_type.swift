@@ -9,10 +9,14 @@
 // CHECK-DAG: %pallas.seq.{{[0-9]+}} = type { float, i64, i64, i64 }
 // CHECK-DAG: %pallas.seq.{{[0-9]+}} = type { double, i64, i64, i64 }
 
+/*@
+declare #defSeq<Float>;
+declare #defSeq<Double>;
+@*/
 
 /*@
-requires _seqSizeFloat(_seqNewFloat()) > 0 && _seqSizeDouble(_seqNewDouble()) > 0 ;
-requires _seqSizeFloat(_seqNewFloat()) > 0 ;
+requires SeqFloat().size() >= 0 && SeqDouble().size() >= 0;
+requires SeqFloat().size() >= 0;
 @*/
 func someFunction(a: Int, b: Int) -> Int {
     return a + b

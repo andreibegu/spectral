@@ -12,7 +12,11 @@
 // CHECK-DAG: call i1 @pallas.seq.equals.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}})
 
 /*@
-requires _seqEqFloat(_seqNewFloat(), _seqNewFloat());
+declare #defSeq<Float>;
+@*/
+
+/*@
+requires SeqFloat().equals(SeqFloat());
 @*/
 func bar(a: Int, b: Int) -> Int {
     return a + b

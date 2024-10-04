@@ -18,7 +18,11 @@
 // CHECK-DAG: call float @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
 
 /*@
- requires _seqGetFloat(_seqPrependFloat(0.0, _seqNewFloat()), 0) == 0;
+declare #defSeq<Float>;
+@*/
+
+/*@
+ requires SeqFloat().prepend(0.0)[0] == 0;
  @*/
 func someFunctionWithoutMeaning(_ a: Int, _ b: Int) -> Int {
     return a + b
