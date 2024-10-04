@@ -25,13 +25,17 @@ namespace sourcespec2ir
         // corresponding enum-representation.
         
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"6_implyyS2b_SbtF", Imply},
-            {"4_sepyS2b_SbtF", SepConj},
             {"4FracVyACs5Int32V_AEtcfC", FracOf}, 
             {"7_forallyS2b_SbtF", Forall},
             {"10_forallSepyS2b_SbtF", ForallSep},
             {"7_existsyS2b_SbtF", Exists}
         };
+
+        // Map to identify the spec-lib functions that are generated inside 
+        // of the wrapper-function based on their prefix. 
+        const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {
+            {SWIFT_SPEC_BOUND_VAR_PREFIX, BoundVar},
+        }; 
 
         // Map to identify the spec-lib functions that are generated inside 
         // of the wrapper-function. 
@@ -42,16 +46,15 @@ namespace sourcespec2ir
             {"_perm", Perm}
         };
 
-        // Map to identify the spec-lib functions that are generated inside 
-        // of the wrapper-function based on their prefix. 
-        const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {
-            {SWIFT_SPEC_BOUND_VAR_PREFIX, BoundVar},
-            {SWIFT_SPEC_SEQ_NEW_PREFIX, SeqNew},
-            {SWIFT_SPEC_SEQ_SIZE_PREFIX, SeqSize},
-            {SWIFT_SPEC_SEQ_GET_PREFIX, SeqGet},
-            {SWIFT_SPEC_SEQ_PREPEND_PREFIX, SeqPrepend},
-            {SWIFT_SPEC_SEQ_EQUALS_PREFIX, SeqEquals}
-        }; 
+        // Map to identify the spec-lib functions that are generated 
+        // inside of a struct that represents an ADT
+        const llvm::StringMap<SpecLibElement> ADT_GENERATED_NAME_MAP = {
+            {SWIFT_SPEC_SEQ_NEW, SeqNew},
+            {SWIFT_SPEC_SEQ_SIZE, SeqSize},
+            {SWIFT_SPEC_SEQ_GET, SeqGet},
+            {SWIFT_SPEC_SEQ_PREPEND, SeqPrepend},
+            {SWIFT_SPEC_SEQ_EQUALS, SeqEquals}
+        };
 
         SwiftSpecUnifier(const bool printDebugInfo);
 
@@ -66,6 +69,8 @@ namespace sourcespec2ir
         llvm::Type *getSrcLibFracType() override;
 
         llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall) override;
+
+        llvm::CallInst *transformSeqGet(llvm::CallInst &oldCall) override;
     };
 
 }

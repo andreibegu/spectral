@@ -14,6 +14,102 @@
 
 namespace sourcespec2ir
 {
+
+    SourceWrapperGenerator::SourceWrapperGenerator(
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
+        : specDeclarations(specDeclarations)
+    {
+    }
+
+    std::unique_ptr<MatchedWrapperFunctions>
+    SourceWrapperGenerator::generateWrapperFunctions(
+        const MatchedSpecifications &matchedSpecs)
+    {
+        auto matchedWrappers = std::make_unique<MatchedWrapperFunctions>();
+
+        // Create wrappers for function-contracts
+        for (const auto &contract : matchedSpecs.matchedFContracts)
+            wrapFunctionContractBlock(*contract, *matchedWrappers);
+        // Create wrappers for loop-invariants
+        for (const auto &invBlock : matchedSpecs.matchedLoopInvariants)
+            wrapLoopInvariantBlock(*invBlock, *matchedWrappers);
+        // Create wrappers for blocks of specification-statements
+        for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
+            wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
+
+        return matchedWrappers;
+    }
+
+    void SourceWrapperGenerator::wrapFunctionContractBlock(
+        const MatchedFunctionContract &contract,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        const auto parentFunction = contract.function;
+        llvm::DIType *parentRetType = nullptr;
+        if (parentFunction->getSubprogram() != nullptr &&
+            parentFunction->getSubprogram()->getType() != nullptr)
+        {
+            parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
+        }
+
+        auto argList = getSrcVariablesForFunction(*parentFunction);
+        // Get insert-position for wrapper-functions
+        auto insertPos = getWrapperInsertLoc(contract);
+
+        // Wrap specification statements
+        for (auto &stmnt : contract.statements)
+        {
+            auto wrapperName = getNameForWrapperFunction();
+            auto wrapperStr = getWrapperFunctionString(
+                argList->getArrayRef(), stmnt->expr, wrapperName, parentRetType);
+            matchedWrappers.fContractWrappers[stmnt.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+        }
+    };
+
+    void SourceWrapperGenerator::wrapLoopInvariantBlock(
+        const MatchedLoopInvariantBlock &invBlock,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        // Determine the variables that can be referenced in the invariant
+        auto argList = getVarsForLoopInv(
+            invBlock.parentFunction, invBlock.loopHeader);
+        auto insertPos = getWrapperInsertLoc(invBlock);
+
+        // Generate wrappers for the individual invariants
+        for (auto &inv : invBlock.invariants)
+        {
+            auto wrapperName = getNameForWrapperFunction();
+            auto wrapperStr = getWrapperFunctionString(
+                argList->getArrayRef(), inv->expr, wrapperName);
+            matchedWrappers.loopInvWrappers[inv.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+        }
+    }
+
+    void SourceWrapperGenerator::wrapSpecStatementBlock(
+        const MatchedSpecStatementBlock &stmntBlock,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        // Determine the variables that can be referenced in the statement
+        auto argList = getVarsForStatement(stmntBlock.inst);
+        // Get insert-location for wrapper-function
+        auto insertPos = getWrapperInsertLoc(stmntBlock);
+
+        // Generate wrapper for the individual statements
+        for (auto &stmnt : stmntBlock.statements)
+        {
+            auto wrapperName = getNameForWrapperFunction();
+            auto wrapperStr = getWrapperFunctionString(
+                argList->getArrayRef(), stmnt->expr, wrapperName);
+            matchedWrappers.statementWrappers[stmnt.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+        }
+    }
+
     std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
     SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
     {
@@ -260,19 +356,10 @@ namespace sourcespec2ir
 
     void SourceWrapperGenerator::buildSrcWithWrappers(
         const std::string &inPath, const std::string &outPath,
-        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-        llvm::ArrayRef<SpecDeclaration> specDeclarations)
+        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions)
     {
         // Load file as vector of lines
         auto sourceLines = readSrcFile(inPath);
-
-        // Insert contents of the declaration-block
-        for (auto &decl : specDeclarations)
-        {
-            auto declStr = decl.content + ";";
-            auto insertPos = findInsertPos(decl.srcFileLine, *sourceLines);
-            insertLines(*sourceLines, declStr, insertPos);
-        }
 
         // Insert the wrapper-functions
         for (auto wrapper : wrapperFunctions)

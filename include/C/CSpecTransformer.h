@@ -20,7 +20,9 @@ namespace sourcespec2ir
             const std::string &workingDir, 
             bool runMem2Reg);
     protected:
-        std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator() override;
+        std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator(
+            const llvm::SmallVector<SpecDeclaration> &specDeclarations
+        ) override;
     };
 
 }

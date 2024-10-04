@@ -4,6 +4,7 @@
 #include "MatchedSourceSpec.h"
 #include "wrapper/SrcLocation.h"
 #include "wrapper/SrcWrapperFunction.h"
+#include "wrapper/MatchedWrapperFunctions.h"
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -26,8 +27,21 @@ namespace sourcespec2ir
     class SourceWrapperGenerator
     {
     public:
+        /**
+         * Generates a new wrapper-generator.
+         * The provided reference to the specDeclarations must remain valid for
+         * the lifetime of the SourceWrapperGenerator.
+         */
+        SourceWrapperGenerator(
+            const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations);
 
         virtual ~SourceWrapperGenerator() = default;
+
+        /**
+         * Generate wrapper-functions for the given specification-constructs.
+         */
+        std::unique_ptr<MatchedWrapperFunctions> generateWrapperFunctions(
+            const MatchedSpecifications &matchedSpecs);
 
         /**
          * Takes a string that contains a source-language expression along with
@@ -38,14 +52,14 @@ namespace sourcespec2ir
          * expression.
          * The generated wrapping-function MUST use the same ordering of it's
          * arguments as is defined by parameter srcVars.
-         * In case that the wrapper-function is attached to a function 
+         * In case that the wrapper-function is attached to a function
          * (i.e. in the case of a function contract), the returnType-parameter
-         * specifices the return-type of this function. 
+         * specifices the return-type of this function.
          */
         virtual std::string getWrapperFunctionString(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const std::string &expr,
-            const std::string &functionName, 
+            const std::string &functionName,
             const llvm::DIType *returnType = nullptr) = 0;
 
         /**
@@ -110,8 +124,7 @@ namespace sourcespec2ir
          */
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
-            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-            llvm::ArrayRef<SpecDeclaration> specDeclarations);
+            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions);
 
         /**
          * Returns a string representation of the given DIType that matches the
@@ -145,6 +158,8 @@ namespace sourcespec2ir
         getVarsForStatement(llvm::Instruction *inst);
 
     protected:
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;
+
         /**
          * Struct that represents a line of the source-file.
          * Keeps track of the textual represenation along with the line-number
@@ -221,6 +236,15 @@ namespace sourcespec2ir
         std::vector<SrcLine>::iterator findInsertPos(
             const size_t srcLineNumber, std::vector<SrcLine> &srcLines);
 
+        /**
+         * Inserts the given string into the vector of lines at the given index.
+         * The new lines are inserted before the given index, and a blank-line
+         * is added before the content.
+         */
+        void insertLines(
+            std::vector<SrcLine> &lines, const std::string &content,
+            std::vector<SrcLine>::iterator currentLine);
+
     private:
         /* Counter for generating names for the specification functions.
          * TODO: Replace with something more elaborate that takes exisiting
@@ -245,13 +269,25 @@ namespace sourcespec2ir
                           const std::vector<SrcLine> &lines);
 
         /**
-         * Inserts the given string into the vector of lines at the given index.
-         * The new lines are inserted before the given index, and a blank-line
-         * is added before the content.
+         * Creates a wrapping-function for every statement in the
+         * given contract-block.
          */
-        void insertLines(
-            std::vector<SrcLine> &lines, const std::string &content,
-            std::vector<SrcLine>::iterator currentLine);
+        void wrapFunctionContractBlock(const MatchedFunctionContract &contract,
+                                       MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the
+         * given loop-invariant-block.
+         */
+        void wrapLoopInvariantBlock(const MatchedLoopInvariantBlock &invBlock,
+                                    MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the
+         * given statement-block.
+         */
+        void wrapSpecStatementBlock(const MatchedSpecStatementBlock &stmntBlock,
+                                    MatchedWrapperFunctions &matchedWrappers);
     };
 
 }

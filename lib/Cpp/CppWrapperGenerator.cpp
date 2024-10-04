@@ -6,6 +6,12 @@
 
 namespace sourcespec2ir
 {
+    CppWrapperGenerator::CppWrapperGenerator(
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
+        : SourceWrapperGenerator(specDeclarations)
+    {
+    }
+
     std::string CppWrapperGenerator::getWrapperFunctionString(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const std::string &expr,
@@ -69,6 +75,15 @@ namespace sourcespec2ir
 
     void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
+
+        // Add content of the declaration-block to the file. 
+        for (auto &decl : specDeclarations)
+        {
+            auto declStr = decl.content + ";";
+            auto insertPos = findInsertPos(decl.srcFileLine, srcLines);
+            insertLines(srcLines, declStr, insertPos);
+        }
+
         // Add include for the specification-library to the top of the
         // generated file.
         srcLines.insert(srcLines.begin(),

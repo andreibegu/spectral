@@ -18,20 +18,28 @@ namespace sourcespec2ir
     // Name of the swift placeholder-type for fractions
     const std::string SWIFT_SPEC_FRAC_TYPE = "T10PallasSpec4FracV";
 
+    // Mangled name of the ==> operator from the spec-module
+    const std::string SWIFT_IMPLY_OP = "$sSb10PallasSpecE3eegoiyS2b_SbtFZ";
+    const std::string SWIFT_SEP_OP = "$sSb10PallasSpecE2mmoiyS2b_SbtFZ";
+
     // Prefix of the specification-function for bound variables.
     const std::string SWIFT_SPEC_BOUND_VAR_PREFIX = "_bv";
 
     // Prefixes for the specification-functions for sequences
     const std::string SWIFT_SPEC_SEQ_TY_PREFIX = "Seq";
-    const std::string SWIFT_SPEC_SEQ_NEW_PREFIX = "_seqNew";
-    const std::string SWIFT_SPEC_SEQ_SIZE_PREFIX = "_seqSize";
-    const std::string SWIFT_SPEC_SEQ_GET_PREFIX = "_seqGet";
-    const std::string SWIFT_SPEC_SEQ_PREPEND_PREFIX = "_seqPrepend";
-    const std::string SWIFT_SPEC_SEQ_EQUALS_PREFIX = "_seqEq";
+    const std::string SWIFT_SPEC_SEQ_NEW = "init";
+    const std::string SWIFT_SPEC_SEQ_SIZE = "size";
+    const std::string SWIFT_SPEC_SEQ_GET = "subscript.get";
+    const std::string SWIFT_SPEC_SEQ_PREPEND = "prepend";
+    const std::string SWIFT_SPEC_SEQ_EQUALS = "equals";
 
     // Name of the built-in swift function for constructing a string from a literal
     const std::string SWIFT_STRING_CONSTR_LITERAL =
         "$sSS21_builtinStringLiteral17utf8CodeUnitCount7isASCIISSBp_BwBi1_tcfC";
+
+    // Name of the 'fake-macro'that is used to specify the required sequence-types
+    const std::string SWIFT_SPEC_SEQ_DEF_MACRO_START = "#defSeq<";
+    const std::string SWIFT_SPEC_SEQ_DEF_MACRO_END = ">";
 
 }
 

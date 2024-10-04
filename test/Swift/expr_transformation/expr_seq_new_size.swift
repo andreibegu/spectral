@@ -20,7 +20,11 @@
 
 
 /*@
-requires _seqSizeFloat(_seqNewFloat()) > 0;
+declare #defSeq<Float>;
+@*/
+
+/*@
+requires SeqFloat().size() >= 0;
 @*/
 func someFunction(a: Int, b: Int) -> Int {
     return a + b
