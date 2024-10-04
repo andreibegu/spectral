@@ -10,7 +10,7 @@
 // CHECK-DAG: {{%[0-9]+}} = call i1 @pallas.imply(i1 %0, i1 %1)
 
 /*@
- requires _imply(a, b);
+ requires a ==> b;
  @*/
 func bar (a: Bool, b: Bool) -> Bool {
     return b || !a

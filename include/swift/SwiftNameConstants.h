@@ -18,6 +18,9 @@ namespace sourcespec2ir
     // Name of the swift placeholder-type for fractions
     const std::string SWIFT_SPEC_FRAC_TYPE = "T10PallasSpec4FracV";
 
+    // Mangled name of the ==> operator from the spec-module
+    const std::string SWIFT_IMPLY_OP = "$sSb10PallasSpecE3eegoiyS2b_SbtFZ";
+
     // Prefix of the specification-function for bound variables.
     const std::string SWIFT_SPEC_BOUND_VAR_PREFIX = "_bv";
 

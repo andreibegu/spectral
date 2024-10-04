@@ -1,7 +1,29 @@
 /// Logical implication (i.e. b1 ==> b2)
-@inline(never)
-public func _imply(_ b1: Bool, _ b2: Bool) -> Bool {
-    return (!b1) || b2 ;
+infix operator ==>: ImplicationPrecedence
+
+precedencegroup ImplicationPrecedence {
+    higherThan: 
+        TernaryPrecedence, 
+        AssignmentPrecedence
+    lowerThan: 
+        BitwiseShiftPrecedence, 
+        MultiplicationPrecedence, 
+        AdditionPrecedence, 
+        RangeFormationPrecedence, 
+        CastingPrecedence, 
+        NilCoalescingPrecedence, 
+        ComparisonPrecedence, 
+        LogicalConjunctionPrecedence, 
+        LogicalDisjunctionPrecedence 
+    associativity: left
+    assignment: false
+}
+
+public extension Bool {
+    @inline(never)
+    static func ==> (left: Bool, right: Bool) -> Bool {
+        fatalError();
+    } 
 }
 
 /// Separating conjunction (i.e. b1 ** b2)
