@@ -38,6 +38,8 @@ namespace sourcespec2ir
         // Check for static functions from the spec-module, which have a different prefix
         if (fName == SWIFT_IMPLY_OP)
             return std::make_optional(Imply); 
+        if (fName == SWIFT_SEP_OP)
+            return std::make_optional(SepConj);
 
         auto sProg = f.getSubprogram();
         if (sProg == nullptr || sProg->getScope() == nullptr)

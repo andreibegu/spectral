@@ -25,7 +25,6 @@ namespace sourcespec2ir
         // corresponding enum-representation.
         
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"4_sepyS2b_SbtF", SepConj},
             {"4FracVyACs5Int32V_AEtcfC", FracOf}, 
             {"7_forallyS2b_SbtF", Forall},
             {"10_forallSepyS2b_SbtF", ForallSep},

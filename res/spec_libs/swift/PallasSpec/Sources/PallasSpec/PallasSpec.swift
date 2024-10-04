@@ -21,16 +21,27 @@ precedencegroup ImplicationPrecedence {
 
 public extension Bool {
     @inline(never)
-    static func ==> (left: Bool, right: Bool) -> Bool {
-        fatalError();
+    static func ==>(left: Bool, right: Bool) -> Bool {
+        fatalError()
     } 
 }
 
 /// Separating conjunction (i.e. b1 ** b2)
+infix operator **: LogicalConjunctionPrecedence
+
+public extension Bool {
+    @inline(never)
+    static func **(left: Bool, right: Bool) -> Bool {
+        fatalError()
+    } 
+}
+
+/*
 @inline(never)
 public func _sep(_ b1: Bool, _ b2: Bool) -> Bool {
     return b1 && b2 ;
 }
+*/
 
 /// Universal quantifier
 @inline(never)
