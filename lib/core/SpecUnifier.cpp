@@ -244,21 +244,48 @@ namespace sourcespec2ir
 
     llvm::CallInst *SpecUnifier::transformSeqPrepend(llvm::CallInst &oldCall)
     {
-        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
+        // We assume, that the first argument is the return-value with an
+        // sret-attribute, the last argument is the pointer to the passed-in
+        // sequence, and the arguments in between represent the element that is
+        // prepended.
+        // In most cases, this will only be one argument, but e.g. Swift and
+        // Rust pass small structs as their individual elements.
+        auto numArgs = oldCall.getNumOperands() - 1;
+
+        // Obtain the content-type from the sequence that is passed as the first arg.
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(numArgs - 1));
         auto seqType = getUSpecSeqType(cType);
-        llvm::SmallVector<llvm::Value *> newArgs = {
-            oldCall.getArgOperand(0),
-            oldCall.getArgOperand(1),
-            oldCall.getArgOperand(2),
-        };
-        auto newCall = llvm::CallInst::Create(getUSpecSeqPrepend(cType), newArgs);
+
+        // Copy types and arguments of the passed element's representation.
+        IRTypeRepresentation elemTRepr;
+        for (unsigned int i = 1; i < numArgs - 1; ++i)
+        {
+            auto arg = oldCall.getArgOperand(i);
+            auto argT = arg->getType();
+            auto argAttrs = oldCall.getAttributes().getParamAttrs(i);
+            elemTRepr.addType(argT, argAttrs);
+        }
+
+        // Copy arguments 1:1 to the new call
+        llvm::SmallVector<llvm::Value *> newArgs;
+        for (unsigned int i = 0; i < numArgs; ++i)
+            newArgs.push_back(oldCall.getArgOperand(i));
+
+        auto newCall = llvm::CallInst::Create(
+            getUSpecSeqPrepend(cType, elemTRepr), newArgs);
+
+        // TODO: Copy attributes for the first and last element from the old call.
+
+        // Add attributes to return-type
         addSret(newCall, 0, seqType);
-        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-        // If the seq contains structs, the element is passed as a by-value pointer.
-        if (llvm::isa<llvm::StructType>(cType))
-            addByVal(newCall, 1, cType);
-        newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-        addByVal(newCall, 2, seqType);
+        // Add Attributes to representation of the prepended element
+        for (unsigned int i = 0; i < elemTRepr.getNumElems(); ++i)
+            for (auto attr : elemTRepr.getAttributes(i))
+                newCall->addParamAttr(i + 1, attr);
+        // Add attributes for the passed-in sequence
+        newCall->addParamAttr(numArgs - 1, llvm::Attribute::NoUndef);
+        addByVal(newCall, numArgs - 1, seqType);
+
         return newCall;
     }
 
@@ -393,7 +420,8 @@ namespace sourcespec2ir
         case SeqEquals:
             return transformSeqEquals(oldCall);
         default:
-            throw utils::PallasException("Encountered an unsupported type of specification-call.");
+            throw utils::PallasException(
+                "Encountered an unsupported type of specification-call.");
         }
     }
 
@@ -762,31 +790,46 @@ namespace sourcespec2ir
         return specSeqGet[type];
     }
 
-    llvm::Function *SpecUnifier::getUSpecSeqPrepend(llvm::Type *type)
+    llvm::Function *SpecUnifier::getUSpecSeqPrepend(
+        llvm::Type *type, const IRTypeRepresentation &typeRepr)
     {
         if (specSeqPrepend.find(type) == specSeqPrepend.end())
         {
             auto cnt = specSeqPrepend.size();
             auto name = PALLAS_SPEC_SEQ_PREPEND_BASE + "." + std::to_string(cnt);
-            const bool isStructT = llvm::isa<llvm::StructType>(type);
+            // const bool isStructT = llvm::isa<llvm::StructType>(type);
 
-            llvm::SmallVector<llvm::Type *> argList = {
-                llvm::PointerType::get(*irContext, 0)};
-            // If the content-type is a struct, the element is passed as a pointer.
-            if (isStructT)
-                argList.push_back(llvm::PointerType::get(*irContext, 0));
-            else
-                argList.push_back(type);
+            llvm::SmallVector<llvm::Type *> argList;
+            // Pointer for the return-value
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+            // Representation of the element that is prepended
+            for (auto t : typeRepr.getTypes())
+                argList.push_back(t);
+            // Pointer for the passed-in sequence
             argList.push_back(llvm::PointerType::get(*irContext, 0));
 
             auto specFun = createSpecLibFunction(
                 name, getVoidTy(), argList, PALLAS_SPEC_SEQ_PREPEND_BASE);
-            specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
-            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
-            if (isStructT)
-                specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, type));
-            specFun->addParamAttr(2, llvm::Attribute::NoUndef);
-            specFun->addParamAttr(2, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+
+            // Add attributes:
+            // Return-type
+            specFun->addParamAttr(
+                0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
+
+            // Attributes of type-representation
+            unsigned int idx = 1;
+            while (idx < typeRepr.getNumElems())
+            {
+                for (auto a : typeRepr.getAttributes(idx))
+                    specFun->addParamAttr(idx, a);
+                ++idx;
+            }
+
+            // Passed-in sequence
+            specFun->addParamAttr(argList.size() - 1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(
+                argList.size() - 1,
+                llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
             specSeqPrepend[type] = specFun;
         }
 
@@ -837,10 +880,12 @@ namespace sourcespec2ir
         return specFunction;
     }
 
-    void SpecUnifier::markAsSpecLibFunction(llvm::Function *specLib, const std::string &identifier)
+    void SpecUnifier::markAsSpecLibFunction(llvm::Function *specLib,
+                                            const std::string &identifier)
     {
         auto idStr = llvm::MDString::get(*irContext, identifier);
-        specLib->setMetadata(PALLAS_SPEC_LIB_MARKER, llvm::MDNode::get(*irContext, idStr));
+        specLib->setMetadata(PALLAS_SPEC_LIB_MARKER,
+                             llvm::MDNode::get(*irContext, idStr));
     }
 
     llvm::Type *SpecUnifier::getBoolTy()

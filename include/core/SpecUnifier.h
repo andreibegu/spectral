@@ -1,6 +1,8 @@
 #ifndef PALLAS_SPECUNIFIER_H
 #define PALLAS_SPECUNIFIER_H
 
+#include "wrapper/IRTypeRepresentation.h"
+
 #include <optional>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -234,7 +236,8 @@ namespace sourcespec2ir
          * Returns a pointer to the unified specification-function for
          * prepending an element to a sequence with the given content type.
          */
-        llvm::Function *getUSpecSeqPrepend(llvm::Type *type);
+        llvm::Function *getUSpecSeqPrepend(llvm::Type *type, 
+            const IRTypeRepresentation &typeRepr);
         
         /**
          * Returns a pointer to the unified specification-function for
@@ -262,11 +265,12 @@ namespace sourcespec2ir
             llvm::CallInst* call, unsigned int argNo, llvm::Type *rType);
 
         /**
-         * Helper that adds the byfal attribute to the argument with the given 
+         * Helper that adds the byval attribute to the argument with the given 
          * index of the given function. 
          */
         void addByVal(
             llvm::CallInst* call, unsigned int argNo, llvm::Type *type);
+
 
     private:
         /**
