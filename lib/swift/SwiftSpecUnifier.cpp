@@ -188,39 +188,51 @@ namespace sourcespec2ir
     {
         // Identical to the default-implementation, but the order of index and 
         // sequence are swapped. 
+        // Check if the result is returned as an sret-parameter
+        auto isParamReturn = oldCall.getCalledFunction()->getReturnType()->isVoidTy();
 
-        // Check the signature of the old call to determine if a
-        // struct-type is returned.
-        bool containsStruct = oldCall.getCalledFunction()->getReturnType() ==
-                              llvm::Type::getVoidTy(*irContext);
-        if (containsStruct)
-        {
-            // Content-type is struct-type
-            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(2));
-            llvm::SmallVector<llvm::Value *, 4> newArgs = {
-                oldCall.getArgOperand(0),
-                oldCall.getArgOperand(2),
-                oldCall.getArgOperand(1)};
-            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
-            addSret(newCall, 0, cType);
-            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-            addByVal(newCall, 1, getUSpecSeqType(cType));
-            newCall->addParamAttr(2, llvm::Attribute::NoUndef);
-            return newCall;
+        // Get the content-type of the sequence from the argument
+        auto cType = getContentTypeOfADT(
+            *oldCall.getArgOperand(isParamReturn ? 2 : 1));
+
+        // Build type-representation of the return-type
+        IRTypeRepresentation retTRepr;
+        auto retAttrs = isParamReturn ? oldCall.getAttributes().getParamAttrs(0)
+                                      : oldCall.getAttributes().getRetAttrs();
+        retTRepr.addType(oldCall.getCalledFunction()->getReturnType(), retAttrs);
+
+        // Build new arg-list by copying arguments and swapping position of 
+        // sequence and index.
+        llvm::SmallVector<llvm::Value *> newArgs;
+        if (isParamReturn) {
+            newArgs.push_back(oldCall.getArgOperand(0));
+            newArgs.push_back(oldCall.getArgOperand(2));
+            newArgs.push_back(oldCall.getArgOperand(1));
         }
-        else
+        else 
         {
-            // Content-type is a non-struct-type
-            auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
-            llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(1),
-                oldCall.getArgOperand(0)};
-            auto newCall = llvm::CallInst::Create(getUSpecSeqGet(cType), newArgs);
-            newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-            addByVal(newCall, 0, getUSpecSeqType(cType));
-            newCall->addParamAttr(1, llvm::Attribute::NoUndef);
-            return newCall;
+            newArgs.push_back(oldCall.getArgOperand(1));
+            newArgs.push_back(oldCall.getArgOperand(0));
         }
+        
+        // Build the new call
+        auto newCall = llvm::CallInst::Create(
+            getUSpecSeqGet(cType, retTRepr), newArgs);
+
+        // Add attributes:
+        if (isParamReturn) 
+            for (auto a : retTRepr.getAttributes(0))
+                newCall->addParamAttr(0, a); 
+
+        newCall->addParamAttr(isParamReturn ? 1 : 0, llvm::Attribute::NoUndef);
+        addByVal(newCall, isParamReturn ? 1 : 0, getUSpecSeqType(cType));
+        newCall->addParamAttr(isParamReturn ? 2 : 1, llvm::Attribute::NoUndef);
+
+        if (!isParamReturn)
+            for (auto a : retTRepr.getAttributes(0))
+                newCall->addRetAttr(a); 
+
+        return newCall;
     }
 
 } // namespace sourcespec2ir

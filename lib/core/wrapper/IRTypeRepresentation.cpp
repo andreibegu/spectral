@@ -39,4 +39,8 @@ namespace sourcespec2ir
         return types.size();
     }
 
+    bool IRTypeRepresentation::isReturnByParam() const {
+        return types.size() == 1 && types.front()->isVoidTy();
+    }
+
 }

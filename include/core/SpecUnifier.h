@@ -229,12 +229,17 @@ namespace sourcespec2ir
         /**
          * Returns a pointer to the unified specification-function for accessing
          * an element of a sequence with the given content-type.
+         * The representation of the returned element is specified through the 
+         * provided type-representation. 
          */
-        llvm::Function *getUSpecSeqGet(llvm::Type *type);
+        llvm::Function *getUSpecSeqGet(llvm::Type *type, 
+            const IRTypeRepresentation &typeRepr);
 
         /**
          * Returns a pointer to the unified specification-function for
          * prepending an element to a sequence with the given content type.
+         * The representation of the prepended element is specified through 
+         * the passed IRTypeRepresentation. 
          */
         llvm::Function *getUSpecSeqPrepend(llvm::Type *type, 
             const IRTypeRepresentation &typeRepr);
@@ -256,6 +261,18 @@ namespace sourcespec2ir
          * with the given content-type in the unified specification representation.
          */
         llvm::StructType *getUSpecSeqType(llvm::Type *type);
+
+        /**
+         * Convinience- and helper-functions that are used in the implementation 
+         * of the SpecUnifier, and that can also be used by subclasses.
+         */
+
+        /**
+         * Constructs an IRTypeRepresentation based on the specified arguments
+         * of the given function-call by copying the types and attributes. 
+         */
+        // std::unique_ptr<IRTypeRepresentation> getTypeReprFromCall();
+
 
         /**
          * Helper that adds the sret attribute to the argument with the given 

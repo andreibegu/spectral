@@ -19,6 +19,14 @@ namespace sourcespec2ir
      *
      * Required because different compilers represent e.g. small structs differently
      * when passing them to a function.
+     * 
+     * When a return-type is represented, two cases are possible:
+     * - If the type-vector only contains a void-type, this indicates that the 
+     *   return-value is handles through an sret-parameter. 
+     *   In this case, the attributes belong to the sret-parameter. 
+     * - If the type-vector contains a single, non-void type, this indicates
+     *   that the function retunrs its result normally. In this case, 
+     *   the attributes belong to the return-type.
      */
     struct IRTypeRepresentation
     {
@@ -52,6 +60,12 @@ namespace sourcespec2ir
          * Returns the number of elements in the type-representation.
          */
         size_t getNumElems() const;
+
+        /**
+         * If this ype-representation represents a return-value, 
+         * check if it represents a return by sret-parameter.
+         */
+        bool isReturnByParam() const;
     };
 }
 

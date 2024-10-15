@@ -6,7 +6,7 @@
 // CHECK-NOT: struct.pallasSpec::seq
 
 // COM: Check that declarations are present
-// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] double @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0), i64 noundef)
+// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] noundef double @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0), i64 noundef)
 // CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0), double noundef, ptr noundef byval(%pallas.seq.0))
 
 // COM: Check that the metadata-annotations are present
@@ -15,7 +15,7 @@
 
 // COM: Check that the spec-functions are called
 // CHECK-DAG: call void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0) %{{[0-9]+}}, double noundef 0.000000e+00, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}) 
-// CHECK-DAG: call double @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
+// CHECK-DAG: call noundef double @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
 
 /*@
  requires pallasSpec::seqGet(pallasSpec::seqPrepend(0.0, pallasSpec::seqNew<double>()), 0) == 0.0;
