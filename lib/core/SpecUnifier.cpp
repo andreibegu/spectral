@@ -4,8 +4,6 @@
 #include "PallasException.h"
 #include "IrLookup.h"
 
-#include <iostream>
-#include <stdexcept>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Attributes.h>
@@ -109,19 +107,22 @@ namespace sourcespec2ir
 
     llvm::CallInst *SpecUnifier::transformResult(llvm::CallInst &oldCall)
     {
-        auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        if (llvm::isa<llvm::StructType>(type))
-        {
-            auto newCall = llvm::CallInst::Create(
-                getUSpecResult(type), {oldCall.getArgOperand(0)});
-            addSret(newCall, 0, type);
-            return newCall;
-        }
-        else
-        {
-            llvm::SmallVector<llvm::Value *, 1> newArgs;
-            return llvm::CallInst::Create(getUSpecResult(type), newArgs);
-        }
+        auto numArgs = oldCall.arg_size();
+        // Build representation of the return-type
+        auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
+
+        // Build new arg-list (1:1 copy)
+        llvm::SmallVector<llvm::Value *> newArgs;
+        for (unsigned int i = 0; i < numArgs; ++i)
+            newArgs.push_back(oldCall.getArgOperand(i));
+
+        auto newCall = llvm::CallInst::Create(
+            getUSpecResult(*retRepr), newArgs);
+
+        // Copy attributes to new call
+        applyAttrToReturn(*retRepr, newCall);
+
+        return newCall;
     }
 
     llvm::CallInst *SpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
@@ -593,35 +594,37 @@ namespace sourcespec2ir
         return specFun;
     }
 
-    llvm::Function *SpecUnifier::getUSpecResult(llvm::Type *type)
+    llvm::Function *SpecUnifier::getUSpecResult(
+        const IRTypeRepresentation &retRepr)
     {
-        if (specResult.find(type) == specResult.end())
-        {
-            // Generate declaration for new result-function with the given type
-            auto cnt = specResult.size();
-            auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
+        // Check if an appropriate function has already been generated
+        for (auto p : specResult)
+            if (p.first == retRepr)
+                return p.second;
 
-            // Function-types differ for struct- and non-struct-types
-            if (llvm::isa<llvm::StructType>(type))
-            {
-                // struct type
-                auto specFun = createSpecLibFunction(
-                    specName, getVoidTy(),
-                    {llvm::PointerType::get(*irContext, 0)},
-                    PALLAS_SPEC_RESULT_BASE);
-                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
-                                             *irContext, type));
-                specResult[type] = specFun;
-            }
-            else
-            {
-                // non-struct-type
-                specResult[type] = createSpecLibFunction(
-                    specName, type, {}, PALLAS_SPEC_RESULT_BASE);
-            }
-        }
+        // Generate declaration for new result-function with the given type
+        auto cnt = specResult.size();
+        auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
 
-        return specResult[type];
+        llvm::SmallVector<llvm::Type *> argList;
+        // Ptr for return value
+        if (retRepr.isReturnByParam())
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+
+        auto specFun = createSpecLibFunction(
+            specName, retRepr.getTypes().front(),
+            argList, PALLAS_SPEC_RESULT_BASE);
+
+        // Add attributes:
+        applyAttrToReturn(retRepr, specFun);
+
+        // Register the new spec-function:
+        // Todo: Get rid of duplicate copies, and change to use a map instead of
+        // a vector of pairs. 
+        specResult.push_back(
+            std::make_pair(IRTypeRepresentation(retRepr), specFun));
+
+        return specFun;
     }
 
     llvm::Function *SpecUnifier::getUSpecBoundVar(llvm::Type *type)

@@ -180,7 +180,7 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for the
          * \result-construct of the given type.
          */
-        llvm::Function *getUSpecResult(llvm::Type *type);
+        llvm::Function *getUSpecResult(const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the specification-function for the bound-variables
@@ -331,11 +331,12 @@ namespace sourcespec2ir
 
         llvm::Function *specSepConj = nullptr;
 
-        // llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
+        // tODO: Implement these as maps instead
         llvm::SmallVector<std::tuple<
             IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>> specOld;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
+        // llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
+        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function*>> specResult;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
 
