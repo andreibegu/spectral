@@ -137,17 +137,17 @@ namespace sourcespec2ir
         spec function.
         */
 
-        auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        const auto isStructT = llvm::isa<llvm::StructType>(type);
+        auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
+        auto isPtrRet = retRepr->isReturnByParam();
 
         //
         //  Extract the pointer to the string-literal
         //
-        if ((!isStructT && oldCall.arg_size() != 2) ||
-            (isStructT && oldCall.arg_size() != 3))
+        if ((!isPtrRet && oldCall.arg_size() != 2) ||
+            (isPtrRet && oldCall.arg_size() != 3))
             throw utils::PallasException("Unexpected signature of bound variable");
         // Get pointer to string-literal:
-        auto ptrToStr = isStructT ? oldCall.getArgOperand(2) : oldCall.getArgOperand(1);
+        auto ptrToStr = isPtrRet ? oldCall.getArgOperand(2) : oldCall.getArgOperand(1);
         // Get extractvalue-instruction that decomposes result from string-constructor
         auto extractInst = llvm::dyn_cast<llvm::ExtractValueInst>(ptrToStr);
         if (!extractInst)
@@ -170,18 +170,15 @@ namespace sourcespec2ir
 
         // TODO: Remove call to BridgeRelease if it exists (and if we run dce)
 
-        if (llvm::isa<llvm::StructType>(type))
-        {
-            llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(0), literalPtr};
-            auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
-            newCall->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, type));
-            return newCall;
-        }
-        else
-        {
-            return llvm::CallInst::Create(getUSpecBoundVar(type), {literalPtr});
-        }
+        // Build new arg-list
+        llvm::SmallVector<llvm::Value *> newArgs;
+        if (isPtrRet)
+            newArgs.push_back(oldCall.getArgOperand(0));
+        newArgs.push_back(literalPtr);
+
+        auto newCall = llvm::CallInst::Create(getUSpecBoundVar(*retRepr), newArgs);
+        applyAttrToReturn(*retRepr, newCall);
+        return newCall;
     }
 
     llvm::CallInst *SwiftSpecUnifier::transformSeqGet(llvm::CallInst &oldCall)

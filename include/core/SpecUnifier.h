@@ -186,7 +186,7 @@ namespace sourcespec2ir
          * Returns pointer to the specification-function for the bound-variables
          * construct of the given type.
          */
-        llvm::Function *getUSpecBoundVar(llvm::Type *type);
+        llvm::Function *getUSpecBoundVar(const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the unified specification-function for the
@@ -331,14 +331,14 @@ namespace sourcespec2ir
 
         llvm::Function *specSepConj = nullptr;
 
-        // tODO: Implement these as maps instead
+        // TODO: Implement these as maps instead
         llvm::SmallVector<std::tuple<
             IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>> specOld;
 
-        // llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function*>> specResult;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
+        // llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
+        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specBoundVar;
 
         llvm::Function *specExists = nullptr;
 

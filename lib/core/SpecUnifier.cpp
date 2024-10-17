@@ -127,21 +127,16 @@ namespace sourcespec2ir
 
     llvm::CallInst *SpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
     {
-        auto type = utils::getReturnType(*oldCall.getCalledFunction());
-        if (llvm::isa<llvm::StructType>(type))
-        {
-            llvm::SmallVector<llvm::Value *, 2> newArgs = {
-                oldCall.getArgOperand(0),
-                oldCall.getArgOperand(1)};
-            auto newCall = llvm::CallInst::Create(getUSpecBoundVar(type), newArgs);
-            addSret(newCall, 0, type);
-            return newCall;
-        }
-        else
-        {
-            return llvm::CallInst::Create(
-                getUSpecBoundVar(type), {oldCall.getArgOperand(0)});
-        }
+        auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
+
+        // Build new arg-list (1:1 copy)
+        llvm::SmallVector<llvm::Value *> newArgs;
+        for (unsigned int i = 0; i < oldCall.arg_size(); ++i)
+            newArgs.push_back(oldCall.getArgOperand(i));
+
+        auto newCall = llvm::CallInst::Create(getUSpecBoundVar(*retRepr), newArgs);
+        applyAttrToReturn(*retRepr, newCall);
+        return newCall;
     }
 
     llvm::CallInst *SpecUnifier::transformExists(llvm::CallInst &oldCall)
@@ -620,44 +615,41 @@ namespace sourcespec2ir
 
         // Register the new spec-function:
         // Todo: Get rid of duplicate copies, and change to use a map instead of
-        // a vector of pairs. 
+        // a vector of pairs.
         specResult.push_back(
             std::make_pair(IRTypeRepresentation(retRepr), specFun));
 
         return specFun;
     }
 
-    llvm::Function *SpecUnifier::getUSpecBoundVar(llvm::Type *type)
+    llvm::Function *SpecUnifier::getUSpecBoundVar(
+        const IRTypeRepresentation &retRepr)
     {
-        if (specBoundVar.find(type) == specBoundVar.end())
-        {
-            // Generate declaration
-            auto cnt = specBoundVar.size();
-            auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
+        // Check if an appropriate function has already been generated
+        for (auto p : specBoundVar)
+            if (p.first == retRepr)
+                return p.second;
 
-            if (llvm::isa<llvm::StructType>(type))
-            {
-                // struct type
-                llvm::SmallVector<llvm::Type *> args(
-                    {llvm::PointerType::get(*irContext, 0),
-                     llvm::PointerType::get(*irContext, 0)});
-                auto specFun = createSpecLibFunction(
-                    specName, getVoidTy(), args, PALLAS_SPEC_BOUND_VAR);
-                specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(
-                                             *irContext, type));
-                specBoundVar[type] = specFun;
-            }
-            else
-            {
-                // non-struct-type
-                llvm::SmallVector<llvm::Type *> args(
-                    {llvm::PointerType::get(*irContext, 0)});
-                specBoundVar[type] = createSpecLibFunction(
-                    specName, type, args, PALLAS_SPEC_BOUND_VAR);
-            }
-        }
+        // Generate declaration for the given type
+        auto cnt = specBoundVar.size();
+        auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
 
-        return specBoundVar[type];
+        llvm::SmallVector<llvm::Type *> argList;
+        // Ptr for the return-value
+        if (retRepr.isReturnByParam())
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+        // Ptr for the string-constant
+        argList.push_back(llvm::PointerType::get(*irContext, 0));
+
+        auto specFun = createSpecLibFunction(
+            specName, retRepr.getTypes().front(), argList, PALLAS_SPEC_BOUND_VAR);
+
+        // Apply attributes
+        applyAttrToReturn(retRepr, specFun);
+
+        specBoundVar.push_back(
+            std::make_pair(IRTypeRepresentation(retRepr), specFun));
+        return specFun;
     }
 
     llvm::Function *SpecUnifier::getUSpecExists()
