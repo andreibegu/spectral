@@ -3,7 +3,10 @@
 
 #include "wrapper/IRTypeRepresentation.h"
 
+#include <vector>
+#include <tuple>
 #include <optional>
+#include <utility>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -170,7 +173,8 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for the
          * \old-construct of the given type.
          */
-        llvm::Function *getUSpecOld(llvm::Type *type);
+        llvm::Function *getUSpecOld(const IRTypeRepresentation &argRepr, 
+                                    const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the unified specification-function for the
@@ -263,16 +267,45 @@ namespace sourcespec2ir
         llvm::StructType *getUSpecSeqType(llvm::Type *type);
 
         /**
-         * Convinience- and helper-functions that are used in the implementation 
-         * of the SpecUnifier, and that can also be used by subclasses.
+         * Helper-functions that are used in the implementation of the spec-unifier
+         * and can be used by subclasses.
          */
 
         /**
-         * Constructs an IRTypeRepresentation based on the specified arguments
-         * of the given function-call by copying the types and attributes. 
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function.
+         * If the function returns by sret-parameter, the attributes are applied
+         * to the parameter, otherwise they are applied to the return-value. 
          */
-        // std::unique_ptr<IRTypeRepresentation> getTypeReprFromCall();
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
+            llvm::Function *func);
 
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function.
+         * The given argIdx specifies to which arguments of the function the 
+         * attributes are applied. 
+         */
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
+            llvm::Function *func, unsigned int argIdx);
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function-call.
+         * If the function returns by sret-parameter, the attributes are applied
+         * to the parameter, otherwise they are applied to the return-value. 
+         */
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
+            llvm::CallInst *call);
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function-call.
+         * The given argIdx specifies to which arguments of the call the 
+         * attributes are applied. 
+         */
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
+            llvm::CallInst *call, unsigned int argIdx);
 
         /**
          * Helper that adds the sret attribute to the argument with the given 
@@ -298,7 +331,9 @@ namespace sourcespec2ir
 
         llvm::Function *specSepConj = nullptr;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
+        // llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
+        llvm::SmallVector<std::tuple<
+            IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>> specOld;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
 
