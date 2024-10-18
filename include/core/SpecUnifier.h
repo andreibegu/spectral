@@ -237,7 +237,7 @@ namespace sourcespec2ir
          * provided type-representation. 
          */
         llvm::Function *getUSpecSeqGet(llvm::Type *type, 
-            const IRTypeRepresentation &typeRepr);
+            const IRTypeRepresentation &retRepr);
 
         /**
          * Returns a pointer to the unified specification-function for
@@ -246,7 +246,7 @@ namespace sourcespec2ir
          * the passed IRTypeRepresentation. 
          */
         llvm::Function *getUSpecSeqPrepend(llvm::Type *type, 
-            const IRTypeRepresentation &typeRepr);
+            const IRTypeRepresentation &argRepr);
         
         /**
          * Returns a pointer to the unified specification-function for
@@ -337,7 +337,6 @@ namespace sourcespec2ir
 
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function*>> specResult;
 
-        // llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specBoundVar;
 
         llvm::Function *specExists = nullptr;
@@ -354,9 +353,12 @@ namespace sourcespec2ir
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSize;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
+        llvm::SmallVector<std::tuple<
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqGet;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+        // llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+        llvm::SmallVector<std::tuple<
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqPrepend;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
 
