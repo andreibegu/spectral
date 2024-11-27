@@ -89,7 +89,7 @@ namespace
         if (llvm::sys::path::is_absolute(path))
             return path;
 
-        llvm::SmallString<256> pathVec = llvm::StringRef(path);
+        llvm::SmallString<512> pathVec = llvm::StringRef(path);
         llvm::sys::fs::make_absolute(pathVec);
         auto absPath = llvm::sys::path::remove_leading_dotslash(pathVec);
         return absPath.str();
@@ -384,13 +384,14 @@ namespace sourcespec2ir
         {
             // Build the path for the scope of the function by joining directory
             // and filename. Sometimes, a leading ./ occurs, which we remove.
+            // Afterwards, the path is converted into an absolute path.
             const auto fFile = llvm::sys::path::remove_leading_dotslash(
                 sProg.getFilename());
-            const auto fDir = llvm::sys::path::remove_leading_dotslash(
-                sProg.getDirectory());
+            const auto fDir = sProg.getDirectory();
             const auto fFullPath = fDir +
                                    llvm::sys::path::get_separator() + fFile;
-            fPath = fFullPath.str();
+            fPath = makeAbsPath(
+                llvm::sys::path::remove_leading_dotslash(fFullPath.str()).str());
         }
 
         // llvm::errs() << "=================================\n";

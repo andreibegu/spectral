@@ -1,7 +1,12 @@
 #ifndef PALLAS_SPECUNIFIER_H
 #define PALLAS_SPECUNIFIER_H
 
+#include "wrapper/IRTypeRepresentation.h"
+
+#include <vector>
+#include <tuple>
 #include <optional>
+#include <utility>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
@@ -168,19 +173,20 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for the
          * \old-construct of the given type.
          */
-        llvm::Function *getUSpecOld(llvm::Type *type);
+        llvm::Function *getUSpecOld(const IRTypeRepresentation &argRepr, 
+                                    const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the unified specification-function for the
          * \result-construct of the given type.
          */
-        llvm::Function *getUSpecResult(llvm::Type *type);
+        llvm::Function *getUSpecResult(const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the specification-function for the bound-variables
          * construct of the given type.
          */
-        llvm::Function *getUSpecBoundVar(llvm::Type *type);
+        llvm::Function *getUSpecBoundVar(const IRTypeRepresentation &retRepr);
 
         /**
          * Returns pointer to the unified specification-function for the
@@ -227,14 +233,20 @@ namespace sourcespec2ir
         /**
          * Returns a pointer to the unified specification-function for accessing
          * an element of a sequence with the given content-type.
+         * The representation of the returned element is specified through the 
+         * provided type-representation. 
          */
-        llvm::Function *getUSpecSeqGet(llvm::Type *type);
+        llvm::Function *getUSpecSeqGet(llvm::Type *type, 
+            const IRTypeRepresentation &retRepr);
 
         /**
          * Returns a pointer to the unified specification-function for
          * prepending an element to a sequence with the given content type.
+         * The representation of the prepended element is specified through 
+         * the passed IRTypeRepresentation. 
          */
-        llvm::Function *getUSpecSeqPrepend(llvm::Type *type);
+        llvm::Function *getUSpecSeqPrepend(llvm::Type *type, 
+            const IRTypeRepresentation &argRepr);
         
         /**
          * Returns a pointer to the unified specification-function for
@@ -255,6 +267,47 @@ namespace sourcespec2ir
         llvm::StructType *getUSpecSeqType(llvm::Type *type);
 
         /**
+         * Helper-functions that are used in the implementation of the spec-unifier
+         * and can be used by subclasses.
+         */
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function.
+         * If the function returns by sret-parameter, the attributes are applied
+         * to the parameter, otherwise they are applied to the return-value. 
+         */
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
+            llvm::Function *func);
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function.
+         * The given argIdx specifies to which arguments of the function the 
+         * attributes are applied. 
+         */
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
+            llvm::Function *func, unsigned int argIdx);
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function-call.
+         * If the function returns by sret-parameter, the attributes are applied
+         * to the parameter, otherwise they are applied to the return-value. 
+         */
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
+            llvm::CallInst *call);
+
+        /**
+         * Applies the attributes from the given IRTypeRepresentation to the 
+         * given function-call.
+         * The given argIdx specifies to which arguments of the call the 
+         * attributes are applied. 
+         */
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
+            llvm::CallInst *call, unsigned int argIdx);
+
+        /**
          * Helper that adds the sret attribute to the argument with the given 
          * index of the given function. 
          */
@@ -262,11 +315,12 @@ namespace sourcespec2ir
             llvm::CallInst* call, unsigned int argNo, llvm::Type *rType);
 
         /**
-         * Helper that adds the byfal attribute to the argument with the given 
+         * Helper that adds the byval attribute to the argument with the given 
          * index of the given function. 
          */
         void addByVal(
             llvm::CallInst* call, unsigned int argNo, llvm::Type *type);
+
 
     private:
         /**
@@ -277,11 +331,13 @@ namespace sourcespec2ir
 
         llvm::Function *specSepConj = nullptr;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specOld;
+        // TODO: Implement these as maps instead
+        llvm::SmallVector<std::tuple<
+            IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>> specOld;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specResult;
+        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function*>> specResult;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specBoundVar;
+        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specBoundVar;
 
         llvm::Function *specExists = nullptr;
 
@@ -297,9 +353,12 @@ namespace sourcespec2ir
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSize;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqGet;
+        llvm::SmallVector<std::tuple<
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqGet;
 
-        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+        // llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
+        llvm::SmallVector<std::tuple<
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqPrepend;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
 

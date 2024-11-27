@@ -42,7 +42,9 @@ namespace sourcespec2ir
         std::string clangCall = "clang-17 -emit-llvm -S -g -O0 " + srcFilePath +
                                 " -o " + irOutStr +
                                 " -Xclang -disable-O0-optnone" +
-                                " -I " + specLibPath + "/";
+                                " -I " + specLibPath + "/" + 
+                                " -Xclang -disable-llvm-passes " +
+                                " -fdebug-compilation-dir=. " ; // Use relative paths in the debug-info
         auto eCode = std::system(clangCall.c_str());
         if (eCode != 0)
             throw utils::PallasException(
