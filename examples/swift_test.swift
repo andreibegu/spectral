@@ -1,7 +1,6 @@
 /*@
-requires imply(x > 5, y > 10);
-ensures sep(x > 5, y > 10);
+requires a ||| b;
 @*/
-func foo(x: Int, y: Int) -> Int {
-    return x + y * (y + 6)
+func foo(_ a: Bool, _ b: Bool) -> Bool {
+    return a && b;
 }

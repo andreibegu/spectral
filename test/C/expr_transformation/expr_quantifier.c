@@ -4,7 +4,7 @@
 // CHECK-NOT: PALLAS_BOUND_VAR___
 // CHECK-NOT: exists
 // CHECK-NOT: forall
-// CHECK-NOT: forallP
+// CHECK-NOT: forallS
 // COM: Declarations are created and labeled with MD-nodes
 // CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] double [[bv:@pallas.boundVar.[0-9]+]](ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
@@ -28,7 +28,7 @@
 /*@
  ensures exists(0 <= BV(double)("x") && BV(double)("x") <= 10,  BV(double)("x") != 42);
  ensures forall(0 <= BV(double)("i"),  true);
- ensures forallP(0 <= BV(double)("i"),  true);
+ ensures forallS(0 <= BV(double)("i"),  true);
 @*/
 double fun (double a) {
     return a > 0 ? a : -1 * a;

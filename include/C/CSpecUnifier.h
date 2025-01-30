@@ -26,7 +26,7 @@ namespace sourcespec2ir
             {"_or", ScOr},
             {"exists", Exists},
             {"forall", Forall},
-            {"forallP", ForallSep},
+            {"forallS", ForallSep},
             {"fracOf", FracOf},
             {"Perm", Perm},
             {"sep", SepConj}

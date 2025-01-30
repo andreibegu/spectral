@@ -60,7 +60,7 @@ typedef struct
 
 bool exists(bool range, bool expr);
 bool forall(bool range, bool expr);
-bool forallP(bool range, bool expr);
+bool forallS(bool range, bool expr);
 
 
 /*******************************************
