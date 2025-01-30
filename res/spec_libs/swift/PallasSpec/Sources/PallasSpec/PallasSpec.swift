@@ -26,6 +26,27 @@ public extension Bool {
     } 
 }
 
+/// Short-circuting and-operator for use in specifications
+infix operator &&&: LogicalConjunctionPrecedence
+
+public extension Bool {
+    @inline(never)
+    static func &&&(left: Bool, right: Bool) -> Bool {
+        fatalError()
+    } 
+}
+
+
+/// Short-circuting or-operator for use in specifications
+infix operator |||: LogicalDisjunctionPrecedence
+
+public extension Bool {
+    @inline(never)
+    static func |||(left: Bool, right: Bool) -> Bool {
+        fatalError()
+    } 
+}
+
 /// Separating conjunction (i.e. b1 ** b2)
 infix operator **: LogicalConjunctionPrecedence
 
@@ -35,13 +56,6 @@ public extension Bool {
         fatalError()
     } 
 }
-
-/*
-@inline(never)
-public func _sep(_ b1: Bool, _ b2: Bool) -> Bool {
-    return b1 && b2 ;
-}
-*/
 
 /// Universal quantifier
 @inline(never)

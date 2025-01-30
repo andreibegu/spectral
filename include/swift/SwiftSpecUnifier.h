@@ -31,6 +31,15 @@ namespace sourcespec2ir
             {"7_existsyS2b_SbtF", Exists}
         };
 
+        // Map to identify specification-functions that are defined as 
+        // infix-operators in the specification-library.
+        const llvm::StringMap<SpecLibElement> INFIX_OP_NAME_MAP = {
+            {SWIFT_IMPLY_OP, Imply}, 
+            {SWIFT_SCAND_OP, ScAnd},
+            {SWIFT_SCOR_OP, ScOr},
+            {SWIFT_SEP_OP, SepConj}
+        };
+
         // Map to identify the spec-lib functions that are generated inside 
         // of the wrapper-function based on their prefix. 
         const llvm::StringMap<SpecLibElement> GENERATED_PREFIX_MAP = {

@@ -75,10 +75,16 @@ bool Perm(void *loc, frac p);
  *******************************************/
 
 // Logical implication (b1 ==> b2)
-bool imply(bool b1, bool b2);
+bool imply(bool lhs, bool rhs);
+
+// Short circuting and-operator for use in specificaions.
+bool _and(bool lhs, bool rhs);
+
+// Short circuting or-operator for use in specificaions.
+bool _or(bool lhs, bool rhs);
 
 // Separating conjunction (b1 ** b2)
-bool sep(bool b1, bool b2);
+bool sep(bool lhs, bool rhs);
 
 // Define a fraction as a division of two integers
 // Only valid for positive parameters with 0 < (numerator \ denominator ) <= 1.

@@ -20,6 +20,8 @@ namespace sourcespec2ir
 
     // Mangled name of the ==> operator from the spec-module
     const std::string SWIFT_IMPLY_OP = "$sSb10PallasSpecE3eegoiyS2b_SbtFZ";
+    const std::string SWIFT_SCAND_OP = "$sSb10PallasSpecE3aaaoiyS2b_SbtFZ";
+    const std::string SWIFT_SCOR_OP = "$sSb10PallasSpecE3ooooiyS2b_SbtFZ";
     const std::string SWIFT_SEP_OP = "$sSb10PallasSpecE2mmoiyS2b_SbtFZ";
 
     // Prefix of the specification-function for bound variables.

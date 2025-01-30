@@ -71,6 +71,22 @@ namespace sourcespec2ir
         return llvm::CallInst::Create(getUSpecImply(), newArgs);
     }
 
+    llvm::CallInst *SpecUnifier::transformScAnd(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecScAnd(), newArgs);
+    }
+
+    llvm::CallInst *SpecUnifier::transformScOr(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecScOr(), newArgs);
+    }
+
     llvm::CallInst *SpecUnifier::transformSepConj(llvm::CallInst &oldCall)
     {
         llvm::SmallVector<llvm::Value *, 2> newArgs = {
@@ -270,7 +286,7 @@ namespace sourcespec2ir
         // Add attributes for the passed-in sequence
         newCall->addParamAttr(numArgs - 1, llvm::Attribute::NoUndef);
         addByVal(newCall, numArgs - 1, seqType);
-        
+
         return newCall;
     }
 
@@ -361,6 +377,10 @@ namespace sourcespec2ir
         {
         case Imply:
             return transformImply(oldCall);
+        case ScAnd:
+            return transformScAnd(oldCall);
+        case ScOr:
+            return transformScOr(oldCall);
         case SepConj:
             return transformSepConj(oldCall);
         case Old:
@@ -525,6 +545,42 @@ namespace sourcespec2ir
             markAsSpecLibFunction(specImply, PALLAS_SPEC_IMPLY);
         }
         return specImply;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecScAnd()
+    {
+        if (!specScAnd)
+        {
+            // TODO: Check if zeroext, noundef attributes should be added
+            llvm::SmallVector<llvm::Type *> specArgs(
+                {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            auto specFT = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(*irContext), specArgs, false);
+            specScAnd = llvm::Function::Create(
+                specFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_SCAND, irModule);
+
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specScAnd, PALLAS_SPEC_SCAND);
+        }
+        return specScAnd;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecScOr()
+    {
+        if (!specScOr)
+        {
+            // TODO: Check if zeroext, noundef attributes should be added
+            llvm::SmallVector<llvm::Type *> specArgs(
+                {llvm::Type::getInt1Ty(*irContext), llvm::Type::getInt1Ty(*irContext)});
+            auto specFT = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(*irContext), specArgs, false);
+            specScOr = llvm::Function::Create(
+                specFT, llvm::Function::ExternalLinkage, PALLAS_SPEC_SCOR, irModule);
+
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specScOr, PALLAS_SPEC_SCOR);
+        }
+        return specScOr;
     }
 
     llvm::Function *SpecUnifier::getUSpecSepConj()

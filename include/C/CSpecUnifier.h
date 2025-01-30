@@ -22,6 +22,8 @@ namespace sourcespec2ir
         // Map names of functions of the specification-library to the corresponding enum-representation.
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
             {"imply", Imply},
+            {"_and", ScAnd},
+            {"_or", ScOr},
             {"exists", Exists},
             {"forall", Forall},
             {"forallP", ForallSep},

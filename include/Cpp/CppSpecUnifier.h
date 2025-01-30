@@ -28,6 +28,8 @@ namespace sourcespec2ir
         // corresponding enum-representation.
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
             {"imply(bool, bool)", Imply},
+            {"_and(bool, bool)", ScAnd},
+            {"_or(bool, bool)", ScOr},
             {"exists(bool, bool)", Exists},
             {"forall(bool, bool)", Forall},
             {"forallSep(bool, bool)", ForallSep},

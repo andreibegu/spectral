@@ -247,7 +247,7 @@ E.g. a reference to the old value of a memory location (`\old(&x)`) is represent
 
 Because frontends for different source-languages use different specification-librarys respectively, these source-language specific librarys are transformed into the unified specification-library which is the common specification-format for the backends.  
 
-## Type-repesentations
+## Type-representations
 When values are passed to- or returned from functions in the specification-library, 
 they can be represented in different ways. This is primarily relevant for structs which are passed differently depending on their size and on the used compiler. 
 One goal of our specification translation is, that it should be usable with different backends and 
@@ -284,12 +284,34 @@ of type ```T```.
 ## IR-Representaion of spec-lib:
 - The names of the function in the specification-library should not matter. The functions can by identified by using the metadata-node that is labeled with `!pallas.specLib`.
 
-### Imply
+### Logical Implication
 Models a boolean implication (i.e. the first argument implies the second argument). 
 ```
 declare !pallas.specLib !144 i1 @pallas.imply(i1, i1)
 
 !144 = !{!"pallas.imply"}
+```
+
+### Short-Circuting And
+Models a short-circuting logical and-operator. Most programming languages 
+provide this operator natively. However, during compilation, these short-circuting 
+operators are converted into branches and multiple basic blocks, which can cause 
+issues with the verification-backend. Hence, we provide an alternative of this 
+operator that can be handled more easily by the backend. 
+```
+declare !pallas.specLib !144 i1 @pallas.scAnd(i1, i1)
+
+!144 = !{!"pallas.scAnd"}
+```
+
+### Short-Circuting Or
+Models a short-circuting logical or-operator. 
+For why this operator exists, see the description of the short-circuting 
+or-operator.  
+```
+declare !pallas.specLib !144 i1 @pallas.scOr(i1, i1)
+
+!144 = !{!"pallas.scOr"}
 ```
 
 ### Separating conjunction

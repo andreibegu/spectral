@@ -36,6 +36,8 @@ namespace sourcespec2ir
         enum SpecLibElement
         {
             Imply,     // Implication
+            ScAnd,     // Short-circuting and
+            ScOr,      // Short-circuting or
             SepConj,   // Separating conjunction
             Old,       // Old value of variable
             Result,    // Result in fucntion contract
@@ -115,6 +117,10 @@ namespace sourcespec2ir
          */
         virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall);
 
+        virtual llvm::CallInst *transformScAnd(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformScOr(llvm::CallInst &oldCall);
+
         virtual llvm::CallInst *transformSepConj(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformOld(llvm::CallInst &oldCall);
@@ -162,6 +168,19 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for implications.
          */
         llvm::Function *getUSpecImply();
+
+        /**
+         * Returns pointer to the unified specification-function for 
+         * the short-circuting and-operator.
+         */
+        llvm::Function *getUSpecScAnd();
+
+        
+        /**
+         * Returns pointer to the unified specification-function for 
+         * the short-circuting or-operator.
+         */
+        llvm::Function *getUSpecScOr();
 
         /**
          * Returns pointer to the unified specification-function for 
@@ -328,6 +347,10 @@ namespace sourcespec2ir
          * Raw pointers, ownership lies with module.
          */
         llvm::Function *specImply = nullptr;
+
+        llvm::Function *specScAnd = nullptr;
+
+        llvm::Function *specScOr = nullptr;
 
         llvm::Function *specSepConj = nullptr;
 

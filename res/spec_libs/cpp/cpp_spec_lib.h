@@ -32,9 +32,13 @@ namespace pallasSpec
      *                    Operators                    *
      ***************************************************/
     
-    bool imply(bool b1, bool b2);
+    bool imply(bool lhs, bool rhs);
 
-    bool sep(bool b1, bool b2);
+    bool _and(bool lhs, bool rhs);
+
+    bool _or(bool lhs, bool rhs);
+
+    bool sep(bool lhs, bool rhs);
 
     /***************************************************
      *                Special expressions              *
