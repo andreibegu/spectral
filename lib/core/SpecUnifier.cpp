@@ -204,6 +204,33 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *SpecUnifier::transformPtrBlockLength(llvm::CallInst &oldCall)
+    {
+        auto newCall = llvm::CallInst::Create(
+            getUSpecPtrBlockLength(),
+            {oldCall.getArgOperand(0)});
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformPtrBlockOffset(llvm::CallInst &oldCall)
+    {
+        auto newCall = llvm::CallInst::Create(
+            getUSpecPtrBlockOffset(),
+            {oldCall.getArgOperand(0)});
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformPtrLength(llvm::CallInst &oldCall)
+    {
+        auto newCall = llvm::CallInst::Create(
+            getUSpecPtrLength(),
+            {oldCall.getArgOperand(0)});
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        return newCall;
+    }
+
     llvm::CallInst *SpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
     {
         auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
@@ -414,6 +441,12 @@ namespace sourcespec2ir
         }
         case Perm:
             return transformPerm(oldCall);
+        case PtrBlockLength:
+            return transformPtrBlockLength(oldCall);
+        case PtrBlockOffset:
+            return transformPtrBlockOffset(oldCall);
+        case PtrLength:
+            return transformPtrLength(oldCall);
         case SeqNew:
             return transformSeqNew(oldCall);
         case SeqSize:
@@ -759,6 +792,51 @@ namespace sourcespec2ir
             specPerm = specFun;
         }
         return specPerm;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecPtrBlockLength()
+    {
+        if (!specPtrBlockLength)
+        {
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(*irContext, 0)};
+            auto specFun = createSpecLibFunction(
+                PALLAS_SPEC_PTR_BLOCK_LENGTH,
+                llvm::IntegerType::getInt64Ty(*irContext), argList);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specPtrBlockLength = specFun;
+        }
+        return specPtrBlockLength;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecPtrBlockOffset()
+    {
+        if (!specPtrBlockOffset)
+        {
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(*irContext, 0)};
+            auto specFun = createSpecLibFunction(
+                PALLAS_SPEC_PTR_BLOCK_OFFSET,
+                llvm::IntegerType::getInt64Ty(*irContext), argList);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specPtrBlockOffset = specFun;
+        }
+        return specPtrBlockOffset;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecPtrLength()
+    {
+        if (!specPtrLength)
+        {
+            llvm::SmallVector<llvm::Type *> argList = {
+                llvm::PointerType::get(*irContext, 0)};
+            auto specFun = createSpecLibFunction(
+                PALLAS_SPEC_PTR_LENGTH,
+                llvm::IntegerType::getInt64Ty(*irContext), argList);
+            specFun->addParamAttr(0, llvm::Attribute::NoUndef);
+            specPtrLength = specFun;
+        }
+        return specPtrLength;
     }
 
     llvm::Function *SpecUnifier::getUSpecSeqNew(llvm::Type *type)

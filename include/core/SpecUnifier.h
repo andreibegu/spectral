@@ -47,6 +47,9 @@ namespace sourcespec2ir
             ForallSep, // Universal quantifier with separating conjunction
             FracOf,    // Construct fraction from two ints
             Perm,      // Assert permission over memory location
+            PtrBlockLength, // Length pointer-block
+            PtrBlockOffset, // Offset in pointer block
+            PtrLength, // Size of valid locations after the given pointer
             SeqNew,    // New sequence
             SeqSize,   // Size of sequence
             SeqGet,    // Get element from sequence
@@ -138,6 +141,12 @@ namespace sourcespec2ir
         virtual llvm::CallInst *transformFracOf(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformPerm(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformPtrBlockLength(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformPtrBlockOffset(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformPtrLength(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall);
 
@@ -237,6 +246,14 @@ namespace sourcespec2ir
          */
         llvm::Function *getUSpecPerm();
 
+        /**
+         * Return pointer to the unified specification-functions 
+         * regarding validity of pointers
+         */
+        llvm::Function *getUSpecPtrBlockLength();
+        llvm::Function *getUSpecPtrBlockOffset();
+        llvm::Function *getUSpecPtrLength();
+        
         /**
          * Returns pointer to the unified specification-function for creating
          * empty sequences with the given content type.
@@ -371,6 +388,12 @@ namespace sourcespec2ir
         llvm::Function *specFracOf = nullptr;
 
         llvm::Function *specPerm = nullptr;
+
+        llvm::Function *specPtrBlockLength = nullptr;
+
+        llvm::Function *specPtrBlockOffset = nullptr;
+
+        llvm::Function *specPtrLength  = nullptr;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqNew;
 

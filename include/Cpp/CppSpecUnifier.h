@@ -46,6 +46,9 @@ namespace sourcespec2ir
             {"seqPrepend<", SeqPrepend},
             {"seqEquals<", SeqEquals}, 
             {"Perm<", Perm}, 
+            {"ptrBlockLength<", PtrBlockLength},
+            {"ptrBlockOffset<", PtrBlockOffset},
+            {"ptrLength<", PtrLength}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";

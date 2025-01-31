@@ -29,6 +29,9 @@ namespace sourcespec2ir
             {"forallS", ForallSep},
             {"fracOf", FracOf},
             {"Perm", Perm},
+            {"ptr_block_length", PtrBlockLength},
+            {"ptr_block_offset", PtrBlockOffset},
+            {"ptr_length", PtrLength},
             {"sep", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {

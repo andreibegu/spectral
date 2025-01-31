@@ -58,6 +58,12 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_PERM = "pallas.perm";
 
+    const std::string PALLAS_SPEC_PTR_BLOCK_LENGTH = "pallas.ptrBlockLength";
+
+    const std::string PALLAS_SPEC_PTR_BLOCK_OFFSET = "pallas.ptrBlockOffset";
+
+    const std::string PALLAS_SPEC_PTR_LENGTH = "pallas.ptrLength";
+
     const std::string PALLAS_SPEC_SEQ_NEW_BASE = "pallas.seq.new";
 
     const std::string PALLAS_SPEC_SEQ_SIZE_BASE = "pallas.seq.size";

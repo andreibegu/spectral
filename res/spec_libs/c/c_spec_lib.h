@@ -64,11 +64,16 @@ bool forallS(bool range, bool expr);
 
 
 /*******************************************
- *             Permissions                 *
+ *         Permissions & Pointers          *
  *******************************************/
 
 // Function to specify permission over a heap-location
 bool Perm(void *loc, frac p);
+
+// Functions for specifying properties about pointer validity
+int64_t ptr_block_length(void *ptr);
+int64_t ptr_block_offset(void *ptr);
+int64_t ptr_length(void *ptr); 
 
 /*******************************************
  *               Operators                 *

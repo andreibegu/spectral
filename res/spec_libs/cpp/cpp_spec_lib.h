@@ -65,10 +65,19 @@ namespace pallasSpec
     frac fracOf(int numerator, int denominator);
 
     /***************************************************
-     *                   Permissions                   *
+     *              Permissions & Pointers             *
      ***************************************************/
     template<typename T>
     bool Perm(T *loc, frac p);
+
+    template<typename T>
+    std::size_t ptrBlockLength(T *loc);
+
+    template<typename T>
+    std::size_t ptrBlockOffset(T *loc);
+
+    template<typename T>
+    std::size_t ptrLength(T *loc);
 
     /***************************************************
      *              Sequence-operations                *

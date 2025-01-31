@@ -433,13 +433,40 @@ declare !pallas.specLib !130 void @pallas.fracOf(ptr sret(%pallas.fracT), i32 no
 Asserts an amount of permission over the given memory location. 
 The first argument specifies the memory-location, and the second argument the asserted amount of permission. 
 
-The type of the pointer that is passed a the first argument has to be determined from the IR. 
+The type of the pointer that is passed as the first argument has to be determined from the IR. 
 
 ```
 declare !pallas.specLib !129 i1 @pallas.perm(ptr noundef, ptr noundef byval(%pallas.fracT))
 
 !129 = !{!"pallas.perm"}
 ```
+
+### Pointer block length
+Returns the length of the allocated memory block that the given pointer points into. 
+
+```
+declare !pallas.specLib !129 i64 @pallas.ptrBlockLength(ptr noundef)
+
+!129 = !{!"pallas.ptrBlockLength"}
+```
+
+### Pointer block offset
+Returns the offset of the given pointer within its allocated memory block.
+```
+declare !pallas.specLib !129 i64 @pallas.ptrBlockOffset(ptr noundef)
+
+!129 = !{!"pallas.ptrBlockOffset"}
+```
+
+### Pointer length
+Syntactic sugar for (ptrBlockLength(ptr) - ptrBlockOffset(ptr))
+
+```
+declare !pallas.specLib !129 i64 @pallas.ptrLength(ptr noundef)
+
+!129 = !{!"pallas.ptrLength"}
+```
+
 
 ### Sequence-type
 A sequence of content-type `T` is encoded as a struct. The first value of the 
