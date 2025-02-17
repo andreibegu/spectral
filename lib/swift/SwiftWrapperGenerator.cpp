@@ -62,8 +62,13 @@ namespace sourcespec2ir
         const auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
         // Manually handle some cases where the type is not correctly resolved.
+        // This is only required in simple examples, where the used type is not 
+        // used in the code itself. (e.g. Bool is used as a return type, 
+        // but the code does not contain any local variables of type Bool.).
         if (srcType == "$sytD")
             return "Void";
+        if (srcType == "$sSbD")
+            return "Bool"; 
 
         return srcType;
     }
