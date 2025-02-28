@@ -151,6 +151,7 @@ namespace sourcespec2ir
             if (retTypeStr != "Void")
             {
                 stream << "@inline(never) \n";
+                stream << "@_optimize(none) \n";
                 stream << "func _result() -> " << retTypeStr
                        << "{ fatalError() } \n";
             }
@@ -164,10 +165,12 @@ namespace sourcespec2ir
         {
             // Generate function for old
             stream << "@inline(never) \n";
+            stream << "@_optimize(none) \n";
             stream << "func _old(_ v: " << type << ") -> " << type
                    << " { fatalError() } \n";
             // Generate function for Perm
             stream << "@inline(never) \n";
+            stream << "@_optimize(none) \n";
             stream << "func _perm(_ loc: " << type << ", _ f: Frac) -> Bool "
                    << "{ fatalError() } \n";
         }
@@ -179,6 +182,7 @@ namespace sourcespec2ir
         for (auto bvType : bvTypes)
         {
             stream << "@inline(never) \n";
+            stream << "@_optimize(none) \n";
             stream << "func _bv" << bvType << "(_ id: String) -> " << bvType
                    << " { fatalError() } \n";
         }
@@ -219,18 +223,23 @@ namespace sourcespec2ir
 
                     // Constructor for new sequence 
                     << "    @inline(never) \n"
+                    << "    @_optimize(none) \n"
                     << "    init() { fatalError() } \n"
                     // Access element of sequence
                     << "    @inline(never) \n"
+                    << "    @_optimize(none) \n"
                     << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
                     // Size of sequence
                     << "    @inline(never) \n"
+                    << "    @_optimize(none) \n"
                     << "    func size() -> Int64 { fatalError() } \n"
                     // Prepend element to sequence 
                     << "    @inline(never) \n"
+                    << "    @_optimize(none) \n"
                     << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
                     // Equality of sequences
                     << "    @inline(never) \n"
+                    << "    @_optimize(none) \n"
                     << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
 
                    << "} \n";

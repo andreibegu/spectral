@@ -27,8 +27,12 @@ namespace sourcespec2ir
     {
         // Generate a file for the compiled ir in the working directory
 
-        std::string irFileName = "tmp_ir_source" +
-                                 std::to_string(callCounter++) + ".ll";
+        //std::string irFileName = "tmp_ir_source" +
+        //                         std::to_string(callCounter++) + ".ll";
+        // The names of the functions in Swift contain the filename.
+        // Hence we always have to sude the same filename, otherwise functions 
+        // get duplicated when linking the two modules.
+        std::string irFileName = "tmp_ir_source.ll";
         auto irOutPath = llvm::SmallString<128>(workingDir);
         llvm::sys::path::append(irOutPath, irFileName);
         auto irOutStr = irOutPath.str().str();
@@ -45,8 +49,10 @@ namespace sourcespec2ir
         call << " -emit-ir ";
         call << " -g ";
         // call << " -gdwarf-types ";
+        
         call << " -Onone ";
-        // call << " -g -O ";
+        // call << " -Ounchecked ";
+
         // call << " -Xfrontend -disable-llvm-optzns ";
         // call << " -Xfrontend -disable-requirement-machine-loop-normalization ";
         call << " -Xfrontend -disable-debugger-shadow-copies ";

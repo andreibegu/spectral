@@ -68,9 +68,6 @@ namespace sourcespec2ir
             llvm::createModuleToFunctionPassAdaptor(llvm::LoopSimplifyPass()));
         mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
             llvm::createFunctionToLoopPassAdaptor(LoopIDPass())));
-        // mpm.addPass(llvm::createModuleToFunctionPassAdaptor(
-        //     llvm::createFunctionToLoopPassAdaptor(llvm::LoopRotatePass())));
-
         mpm.run(*irModule, mam);
 
         // Run mem2reg only if cl-option was set.
