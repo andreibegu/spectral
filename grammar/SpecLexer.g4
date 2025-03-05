@@ -17,7 +17,7 @@ DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 PURE: 'pure';
 
-SEMI: ';';
+SPEC_EXPR_END: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);
 Newline: ( '\r' '\n'? | '\n') -> channel(HIDDEN);
 SPEC_OTHER: . ;

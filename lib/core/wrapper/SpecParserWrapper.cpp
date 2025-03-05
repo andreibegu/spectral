@@ -15,6 +15,10 @@ namespace sourcespec2ir
 
     SpecParser::FileContext *SpecParserWrapper::getSrcParseTree()
     {
+        if (srcLexer.getNumberOfSyntaxErrors() != 0 || 
+            srcParser.getNumberOfSyntaxErrors() != 0) {
+            return nullptr;
+        }
         return srcParseTree;
     }
 }

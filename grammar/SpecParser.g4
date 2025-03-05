@@ -1,7 +1,7 @@
 parser grammar SpecParser;
 options { tokenVocab = SpecLexer; }
 
-file: .*? (specDeclarationBlock .*?)? (spec .*?)*;
+file: nonSpec (specDeclarationBlock nonSpec)? (spec nonSpec)*;
 
 spec: specContractBlock | specStatementBlock | specLoopInvariantBlock;
 
@@ -14,24 +14,26 @@ specStatementBlock: SPEC_START specStatement+ SPEC_END;
 specLoopInvariantBlock: SPEC_START specLoopInvariant+ SPEC_END;
 
 specContractClause
-    : ('requires' specExpression ';') # requiresClause
-    | ('ensures'  specExpression ';') # ensuresClause
+    : ('requires' specExpression SPEC_EXPR_END) # requiresClause
+    | ('ensures'  specExpression SPEC_EXPR_END) # ensuresClause
     ;
 
 specPureFlag
-    : 'pure' ';' # pureFlag;
+    : 'pure' SPEC_EXPR_END # pureFlag;
 
 specLoopInvariant
-    : ('loop_invariant' specExpression ';')
+    : ('loop_invariant' specExpression SPEC_EXPR_END)
     ;
 
 specStatement
-    : ('assert' specExpression ';') # assertStatement
-    | ('assume' specExpression ';') # assumeStatement
+    : ('assert' specExpression SPEC_EXPR_END) # assertStatement
+    | ('assume' specExpression SPEC_EXPR_END) # assumeStatement
     ;
 
 specDeclaration
-    : ('declare' specExpression ';') # declarationClause
+    : ('declare' specExpression SPEC_EXPR_END) # declarationClause
     ;
 
-specExpression: (~';')+ ;
+specExpression: (~SPEC_EXPR_END)+ ;
+
+nonSpec: (~(SPEC_START | SPEC_END))*;
