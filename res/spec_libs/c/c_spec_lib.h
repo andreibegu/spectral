@@ -34,7 +34,7 @@ typedef struct
 #define DEF_SEQ_T(type) typedef struct { \
     type contentType; \
     int32_t dummy1, dummy2, dummy3, dummy4, dummy5; \
-    } SEQ(type)
+} SEQ(type)
 
 
 /*******************************************
@@ -42,25 +42,26 @@ typedef struct
  *******************************************/
 
 // Macros to define a version of \result for every possible return-type
-#define RESULT(type) PALLAS_RESULT___ ## type
-#define DEF_RESULT(type) type RESULT(type) ()
+#define RESULT_NAME(type) PALLAS_RESULT___ ## type
+#define DEF_RESULT(type) type RESULT_NAME(type) ()
+#define _result(type) RESULT_NAME(type)()
 
 // Macros to define a version of \old(...) for every possible parameter-type
-#define OLD(type) PALLAS_OLD___ ## type
-#define DEF_OLD(type) type OLD(type) (type var)
-
+#define _old(type) PALLAS_OLD___ ## type
+#define DEF_OLD(type) type _old(type) (type var)
 
 /*******************************************
  *              Quantifiers                *
  *******************************************/
 
 // Macros to define bound variables. 
-#define BV(type) PALLAS_BOUND_VAR___ ## type
-#define DEF_BV(type) type BV(type) (const char *id)
+#define BV_NAME(type) PALLAS_BOUND_VAR___ ## type
+#define DEF_BV(type) type BV_NAME(type) (const char *id)
+#define _bv(type, id) BV_NAME(type)(#id)
 
-bool exists(bool range, bool expr);
-bool forall(bool range, bool expr);
-bool forallS(bool range, bool expr);
+bool _exists(bool range, bool expr);
+bool _forall(bool range, bool expr);
+bool _forallS(bool range, bool expr);
 
 
 /*******************************************
@@ -68,19 +69,20 @@ bool forallS(bool range, bool expr);
  *******************************************/
 
 // Function to specify permission over a heap-location
-bool Perm(void *loc, frac p);
+bool _Perm(void *loc, frac p);
 
 // Functions for specifying properties about pointer validity
-int64_t ptr_block_length(void *ptr);
-int64_t ptr_block_offset(void *ptr);
-int64_t ptr_length(void *ptr); 
+int64_t _ptr_block_length(void *ptr);
+int64_t _ptr_block_offset(void *ptr);
+int64_t _ptr_length(void *ptr); 
+
 
 /*******************************************
  *               Operators                 *
  *******************************************/
 
 // Logical implication (b1 ==> b2)
-bool imply(bool lhs, bool rhs);
+bool _imply(bool lhs, bool rhs);
 
 // Short circuting and-operator for use in specificaions.
 bool _and(bool lhs, bool rhs);
@@ -89,11 +91,20 @@ bool _and(bool lhs, bool rhs);
 bool _or(bool lhs, bool rhs);
 
 // Separating conjunction (b1 ** b2)
-bool sep(bool lhs, bool rhs);
+bool _sep(bool lhs, bool rhs);
 
 // Define a fraction as a division of two integers
 // Only valid for positive parameters with 0 < (numerator \ denominator ) <= 1.
-frac fracOf(int numerator, int denominator);
+frac _fracOf(int numerator, int denominator);
+
+/*******************************************
+ *          Shorthand-notations            *
+ *******************************************/
+
+// Macro for write-permission
+#define _write _fracOf(1, 1)
+
+#define _inRange(lower, v, upper) _and(lower <= v , v < upper)
 
 /*******************************************
  *          Sequence-operations            *
@@ -101,24 +112,24 @@ frac fracOf(int numerator, int denominator);
 
 // Expands to the name of the size-function for sequence<type> & 
 // defines the size-function for seqence<type>.
-#define SEQ_SIZE(type) PALLAS_SEQ_SIZE___ ## type
-#define DEF_SEQ_SIZE(type) size_t SEQ_SIZE(type) ( SEQ(type) s )
+#define _seqSize(type) PALLAS_SEQ_SIZE___ ## type
+#define DEF_SEQ_SIZE(type) size_t _seqSize(type) ( SEQ(type) s )
 
 // Macros to define the at-function (access at index) for sequence<type>.
-#define SEQ_AT(type) PALLAS_SEQ_AT___ ## type
-#define DEF_SEQ_AT(type) type SEQ_AT(type) ( SEQ(type) s, size_t idx )
+#define _seqAt(type) PALLAS_SEQ_AT___ ## type
+#define DEF_SEQ_AT(type) type _seqAt(type) ( SEQ(type) s, size_t idx )
 
 // Macros to define prepending a value to a sequence of type sequence<type>.
-#define SEQ_PREPEND(type) PALLAS_SEQ_PREPEND___ ## type
-#define DEF_SEQ_PREPEND(type) SEQ(type) SEQ_PREPEND(type) ( type e, SEQ(type) s)
+#define _seqPrepend(type) PALLAS_SEQ_PREPEND___ ## type
+#define DEF_SEQ_PREPEND(type) SEQ(type) _seqPrepend(type) ( type e, SEQ(type) s)
 
 // Macros to define sequence-creation
-#define SEQ_NEW(type) PALLAS_SEQ_NEW___ ## type
-#define DEF_SEQ_NEW(type) SEQ(type) SEQ_NEW(type) ()
+#define _seqNew(type) PALLAS_SEQ_NEW___ ## type
+#define DEF_SEQ_NEW(type) SEQ(type) _seqNew(type) ()
 
 // Macro to define sequence-equality
-#define SEQ_EQ(type) PALLAS_SEQ_EQ___ ## type
-#define DEF_SEQ_EQ(type) bool SEQ_EQ(type) (SEQ(type) s1, SEQ(type) s2)
+#define _seqEq(type) PALLAS_SEQ_EQ___ ## type
+#define DEF_SEQ_EQ(type) bool _seqEq(type) (SEQ(type) s1, SEQ(type) s2)
 
 
 /*********************************************

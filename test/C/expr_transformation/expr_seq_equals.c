@@ -16,7 +16,7 @@
  @*/
 
 /*@
- requires SEQ_EQ(double)(SEQ_NEW(double)(), SEQ_NEW(double)());
+ requires _seqEq(double)(_seqNew(double)(), _seqNew(double)());
  @*/
 int bar (int a, float b) {
     return a + b;

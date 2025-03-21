@@ -25,8 +25,8 @@
 
 /*@
  requires arr != NULL && n >= 0;
- requires ptr_block_length(arr) == n && ptr_block_offset(arr) == 0;
- requires ptr_length(arr) == n;
+ requires _ptr_block_length(arr) == n && _ptr_block_offset(arr) == 0;
+ requires _ptr_length(arr) == n;
  @*/
 void clear (int *arr, int n) {
     for (int i = 0; i < n; i++) {

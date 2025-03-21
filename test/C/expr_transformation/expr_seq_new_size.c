@@ -19,7 +19,7 @@
  @*/
 
 /*@
- requires SEQ_SIZE(double)(SEQ_NEW(double)()) == 0;
+ requires _seqSize(double)(_seqNew(double)()) == 0;
  @*/
 int bar (int a, float b) {
     return a + b;

@@ -17,7 +17,7 @@
 
 
 /*@
- requires Perm(a, fracOf(1, 2));
+ requires _Perm(a, _fracOf(1, 2));
  @*/
 void bar (int *a, float b) {
     float c = *a + b;

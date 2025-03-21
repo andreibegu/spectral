@@ -23,7 +23,7 @@ typedef struct S {
 @*/
 
 /*@
-ensures RESULT(SmallStruct)().a == RESULT(SmallStruct)().a;
+ensures _result(SmallStruct).a == _result(SmallStruct).a;
 @*/
 SmallStruct fun () {
     SmallStruct s;

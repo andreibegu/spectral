@@ -22,7 +22,7 @@ typedef struct S {
 @*/
 
 /*@
- ensures forall(0 <= BV(SmallStruct)("i").f,  true);
+ ensures _forall(0 <= _bv(SmallStruct, i).f,  true);
 @*/
 int fun (SmallStruct s) {
     return s.f + s.i;

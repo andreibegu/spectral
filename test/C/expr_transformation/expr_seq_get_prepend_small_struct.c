@@ -27,7 +27,7 @@ typedef struct S {
  @*/
 
 /*@
- requires SEQ_AT(SmallStruct)(SEQ_PREPEND(SmallStruct)(s, SEQ_NEW(SmallStruct)()), 0).a == 1;
+ requires _seqAt(SmallStruct)(_seqPrepend(SmallStruct)(s, _seqNew(SmallStruct)()), 0).a == 1;
  @*/
 int bar (SmallStruct s) {
     return s.a + s.b;

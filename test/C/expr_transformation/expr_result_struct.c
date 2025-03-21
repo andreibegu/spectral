@@ -17,7 +17,7 @@ typedef struct S {
 @*/
 
 /*@
-ensures RESULT(SillyStruct)().a >= 0;
+ensures _result(SillyStruct).a >= 0;
 @*/
 SillyStruct fun (SillyStruct s) {
     s.a = 0;

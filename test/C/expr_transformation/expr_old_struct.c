@@ -19,7 +19,7 @@ typedef struct S {
 @*/
 
 /*@
-ensures OLD(SuperStruct)(s).a == s.a;
+ensures _old(SuperStruct)(s).a == s.a;
 @*/
 void fun (SuperStruct s) {
     int c = s.a + s.b;

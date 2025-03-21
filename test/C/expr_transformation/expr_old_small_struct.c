@@ -23,7 +23,7 @@ typedef struct S {
 @*/
 
 /*@
-ensures OLD(SmallStruct)(s).a == 0;
+ensures _old(SmallStruct)(s).a == 0;
 @*/
 void fun (SmallStruct s) {
     int c = s.a + s.b;
