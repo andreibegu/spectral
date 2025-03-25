@@ -64,8 +64,6 @@ namespace pallasSpec
      ***************************************************/
     frac _fracOf(int numerator, int denominator);
 
-    #define _write pallasSpec::_fracOf(1, 1)
-
     /***************************************************
      *              Permissions & Pointers             *
      ***************************************************/
@@ -98,6 +96,13 @@ namespace pallasSpec
 
     template<typename T>
     bool _seqEquals(seq<T> s1, seq<T> s2);
+
+    /***************************************************
+     *              Convenience macros                 *
+     ***************************************************/
+    #define _write pallasSpec::_fracOf(1, 1)
+
+    #define _inRange(lower, v, upper) _and(lower <= v , v < upper)
 }
 
 
