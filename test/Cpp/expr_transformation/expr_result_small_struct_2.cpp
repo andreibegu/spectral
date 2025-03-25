@@ -17,7 +17,7 @@ struct SillyStruct {
 };
 
 /*@
-ensures pallasSpec::result<SillyStruct>().a >= 0;
+ensures pallasSpec::_result<SillyStruct>().a >= 0;
 @*/
 SillyStruct fun (SillyStruct s) {
     s.a = 0;

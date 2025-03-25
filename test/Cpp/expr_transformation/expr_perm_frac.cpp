@@ -20,7 +20,7 @@
 
 
 /*@
- requires pallasSpec::Perm(a, pallasSpec::fracOf(1, 2));
+ requires pallasSpec::_Perm(a, pallasSpec::_fracOf(1, 2));
  @*/
 void bar (int *a, float b) {
     float c = *a + b;

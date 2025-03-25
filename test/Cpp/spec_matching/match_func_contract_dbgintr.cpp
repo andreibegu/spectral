@@ -5,7 +5,7 @@
 #include <vector>
 
 /*@
-ensures pallasSpec::result<int>() >= 0;
+ensures pallasSpec::_result<int>() >= 0;
 @*/
 int bar(std::vector<int> v)
 {

@@ -26,7 +26,7 @@ class ColorfulClass {
 };
 
 /*@
- requires pallasSpec::seqGet(pallasSpec::seqPrepend(c, pallasSpec::seqNew<ColorfulClass>()), 0).a == 0;
+ requires pallasSpec::_seqGet(pallasSpec::_seqPrepend(c, pallasSpec::_seqNew<ColorfulClass>()), 0).a == 0;
  @*/
 int bar (ColorfulClass c) {
     return c.a + c.b;

@@ -20,7 +20,7 @@ class ClumsyClass {
 };
 
 /*@
- ensures pallasSpec::forall(0 <= pallasSpec::bVar<ClumsyClass>("i").i1, true);
+ ensures pallasSpec::_forall(0 <= pallasSpec::_bv<ClumsyClass>("i").i1, true);
 @*/
 int fun (ClumsyClass c) {
     return c.i1 + c.i2;

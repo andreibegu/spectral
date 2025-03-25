@@ -10,7 +10,7 @@
 // CHECK-DAG: {{%[0-9]+}} = call i1 @pallas.sepConj(
 
 /*@
-requires pallasSpec::sep(a > 0, b < 0);
+requires pallasSpec::_sep(a > 0, b < 0);
 @*/
 void festiveFunction (int a, int b) {
     int c = a + b;

@@ -8,7 +8,7 @@
 // CHECK-DAG: = call noundef double [[res]]()
 
 /*@
-ensures pallasSpec::result<double>() >= 0;
+ensures pallasSpec::_result<double>() >= 0;
 @*/
 double fun (double a) {
     return a > 0 ? a : -1 * a;

@@ -12,7 +12,7 @@
 // CHECK-DAG: call i1 @pallas.seq.equals.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}})
 
 /*@
- requires pallasSpec::seqEquals(pallasSpec::seqNew<double>(), pallasSpec::seqNew<double>());
+ requires pallasSpec::_seqEquals(pallasSpec::_seqNew<double>(), pallasSpec::_seqNew<double>());
  @*/
 int bar (int a, float b) {
     return a + b;

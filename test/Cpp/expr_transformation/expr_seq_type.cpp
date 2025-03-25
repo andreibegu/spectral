@@ -5,8 +5,8 @@
 // CHECK-DAG: %pallas.seq.{{[0-9]+}} = type { double, i64, i64, i64 }
 
 /*@
- requires pallasSpec::seqSize(pallasSpec::seqNew<float>()) == 0;
- requires pallasSpec::seqSize(pallasSpec::seqNew<double>()) == 0;
+ requires pallasSpec::_seqSize(pallasSpec::_seqNew<float>()) == 0;
+ requires pallasSpec::_seqSize(pallasSpec::_seqNew<double>()) == 0;
  @*/
 int bar (int a, float b) {
     return a + b;

@@ -19,7 +19,7 @@ struct SuperStruct {
 };
 
 /*@
-ensures pallasSpec::old(s).a == s.a;
+ensures pallasSpec::_old(s).a == s.a;
 @*/
 void fun (SuperStruct s) {
     int c = s.a + s.b;

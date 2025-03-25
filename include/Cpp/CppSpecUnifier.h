@@ -27,28 +27,28 @@ namespace sourcespec2ir
         // Map names of functions of the specification-library to the 
         // corresponding enum-representation.
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"imply(bool, bool)", Imply},
+            {"_imply(bool, bool)", Imply},
             {"_and(bool, bool)", ScAnd},
             {"_or(bool, bool)", ScOr},
-            {"exists(bool, bool)", Exists},
-            {"forall(bool, bool)", Forall},
-            {"forallSep(bool, bool)", ForallSep},
-            {"fracOf(int, int)", FracOf}, 
-            {"sep(bool, bool)", SepConj}
+            {"_exists(bool, bool)", Exists},
+            {"_forall(bool, bool)", Forall},
+            {"_forallS(bool, bool)", ForallSep},
+            {"_fracOf(int, int)", FracOf}, 
+            {"_sep(bool, bool)", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
-            {"old<", Old},
-            {"result<", Result},
-            {"bVar<", BoundVar},
-            {"seqNew<", SeqNew},
-            {"seqSize<", SeqSize},
-            {"seqGet<", SeqGet},
-            {"seqPrepend<", SeqPrepend},
-            {"seqEquals<", SeqEquals}, 
-            {"Perm<", Perm}, 
-            {"ptrBlockLength<", PtrBlockLength},
-            {"ptrBlockOffset<", PtrBlockOffset},
-            {"ptrLength<", PtrLength}
+            {"_old<", Old},
+            {"_result<", Result},
+            {"_bv<", BoundVar},
+            {"_seqNew<", SeqNew},
+            {"_seqSize<", SeqSize},
+            {"_seqGet<", SeqGet},
+            {"_seqPrepend<", SeqPrepend},
+            {"_seqEquals<", SeqEquals}, 
+            {"_Perm<", Perm}, 
+            {"_ptrBlockLength<", PtrBlockLength},
+            {"_ptrBlockOffset<", PtrBlockOffset},
+            {"_ptrLength<", PtrLength}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";
