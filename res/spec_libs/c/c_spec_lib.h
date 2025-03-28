@@ -50,6 +50,11 @@ typedef struct
 #define _old(type) PALLAS_OLD___ ## type
 #define DEF_OLD(type) type _old(type) (type var)
 
+// Macro to refer to the old value of a pointer-type variable, as * cannot be 
+// passed to the '_old'-macro. 
+#define _oldPtr PALLAS_OLD___ptr
+void* _oldPtr (void *v);
+
 /*******************************************
  *              Quantifiers                *
  *******************************************/

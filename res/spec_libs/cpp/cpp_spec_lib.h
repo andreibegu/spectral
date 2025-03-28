@@ -102,7 +102,7 @@ namespace pallasSpec
      ***************************************************/
     #define _write pallasSpec::_fracOf(1, 1)
 
-    #define _inRange(lower, v, upper) _and(lower <= v , v < upper)
+    #define _inRange(lower, v, upper) pallasSpec::_and(lower <= v , v < upper)
 }
 
 
