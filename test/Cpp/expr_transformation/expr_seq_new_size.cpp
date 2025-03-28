@@ -18,7 +18,7 @@
 // CHECK-DAG: call i64 [[size]](ptr noundef byval(%pallas.seq.{{[0-9]+}}) %{{[0-9]+}})
 
 /*@
- requires pallasSpec::seqSize(pallasSpec::seqNew<double>()) == 0;
+ requires pallasSpec::_seqSize(pallasSpec::_seqNew<double>()) == 0;
  @*/
 int bar (int a, float b) {
     return a + b;

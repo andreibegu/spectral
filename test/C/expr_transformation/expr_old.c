@@ -16,8 +16,8 @@
 @*/
 
 /*@
-ensures OLD(double)(a) == a;
-ensures OLD(float)(b) == b;
+ensures _old(double)(a) == a;
+ensures _old(float)(b) == b;
 @*/
 void fun (double a, float b) {
     double c = a + b;

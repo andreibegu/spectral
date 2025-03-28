@@ -19,7 +19,7 @@ typedef struct S {
 @*/
 
 /*@
- ensures forall(0 <= BV(SqueakyStruct)("i").a,  true);
+ ensures _forall(0 <= _bv(SqueakyStruct, i).a,  true);
 @*/
 int fun (SqueakyStruct s) {
     return s.a + s.h;

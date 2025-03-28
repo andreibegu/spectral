@@ -26,9 +26,9 @@
 @*/
 
 /*@
- ensures exists(0 <= BV(double)("x") && BV(double)("x") <= 10,  BV(double)("x") != 42);
- ensures forall(0 <= BV(double)("i"),  true);
- ensures forallS(0 <= BV(double)("i"),  true);
+ ensures _exists(0 <= _bv(double, x) && _bv(double, x) <= 10,  _bv(double, x) != 42);
+ ensures _forall(0 <= _bv(double, i),  true);
+ ensures _forallS(0 <= _bv(double, i),  true);
 @*/
 double fun (double a) {
     return a > 0 ? a : -1 * a;

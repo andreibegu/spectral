@@ -10,7 +10,7 @@
 // CHECK-DAG: {{%[0-9]+}} = call i1 @pallas.sepConj(
 
 /*@
-requires sep(x > 0, y < 0);
+requires _sep(x > 0, y < 0);
 @*/
 void friendlyFunction (double x, double y) {
     int z = x + y;

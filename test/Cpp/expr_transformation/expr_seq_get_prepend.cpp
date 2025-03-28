@@ -18,7 +18,7 @@
 // CHECK-DAG: call noundef double @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
 
 /*@
- requires pallasSpec::seqGet(pallasSpec::seqPrepend(0.0, pallasSpec::seqNew<double>()), 0) == 0.0;
+ requires pallasSpec::_seqGet(pallasSpec::_seqPrepend(0.0, pallasSpec::_seqNew<double>()), 0) == 0.0;
  @*/
 int bar (int a, float b) {
     return a + b;

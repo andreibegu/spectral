@@ -12,8 +12,8 @@
 // CHECK-DAG: = call noundef double [[oldD]](double noundef
 
 /*@
-ensures pallasSpec::old(a) == a;
-ensures pallasSpec::old(b) == b;
+ensures pallasSpec::_old(a) == a;
+ensures pallasSpec::_old(b) == b;
 @*/
 void fun (double a, float b) {
     double c = a + b;

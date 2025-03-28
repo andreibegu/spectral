@@ -20,7 +20,7 @@
  @*/
 
 /*@
- requires SEQ_AT(double)(SEQ_PREPEND(double)(0, SEQ_NEW(double)()), 0) == 42;
+ requires _seqAt(double)(_seqPrepend(double)(0, _seqNew(double)()), 0) == 42;
  @*/
 int bar (int a, float b) {
     return a + b;

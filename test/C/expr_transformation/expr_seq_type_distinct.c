@@ -9,7 +9,7 @@
 
 // Comparisson of different types, this is expected to fail.
 /*@
- requires SEQ_NEW(float)() == SEQ_NEW(double)();
+ requires _seqNew(float)() == _seqNew(double)();
  @*/
 int bar (int a, float b) {
     return a + b;

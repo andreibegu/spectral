@@ -20,7 +20,7 @@ typedef struct S {
 @*/
 
 /*@
-ensures RESULT(SmallStruct)().i >= 0;
+ensures _result(SmallStruct).i >= 0;
 @*/
 SmallStruct fun () {
     SmallStruct s;

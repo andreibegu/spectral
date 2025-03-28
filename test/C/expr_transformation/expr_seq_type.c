@@ -10,8 +10,8 @@
  @*/
 
 /*@
- requires SEQ_SIZE(float)(SEQ_NEW(float)()) == 0;
- requires SEQ_SIZE(double)(SEQ_NEW(double)()) == 0;
+ requires _seqSize(float)(_seqNew(float)()) == 0;
+ requires _seqSize(double)(_seqNew(double)()) == 0;
  @*/
 int bar (int a, float b) {
     return a + b;

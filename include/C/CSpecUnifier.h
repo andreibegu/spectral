@@ -21,18 +21,18 @@ namespace sourcespec2ir
     public:
         // Map names of functions of the specification-library to the corresponding enum-representation.
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"imply", Imply},
+            {"_imply", Imply},
             {"_and", ScAnd},
             {"_or", ScOr},
-            {"exists", Exists},
-            {"forall", Forall},
-            {"forallS", ForallSep},
-            {"fracOf", FracOf},
-            {"Perm", Perm},
-            {"ptr_block_length", PtrBlockLength},
-            {"ptr_block_offset", PtrBlockOffset},
-            {"ptr_length", PtrLength},
-            {"sep", SepConj}
+            {"_exists", Exists},
+            {"_forall", Forall},
+            {"_forallS", ForallSep},
+            {"_fracOf", FracOf},
+            {"_Perm", Perm},
+            {"_ptr_block_length", PtrBlockLength},
+            {"_ptr_block_offset", PtrBlockOffset},
+            {"_ptr_length", PtrLength},
+            {"_sep", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"PALLAS_OLD___", Old},

@@ -24,9 +24,9 @@
 
 /*@
  requires arr != nullptr && n >= 0;
- requires pallasSpec::ptrBlockLength(arr) == n && 
-          pallasSpec::ptrBlockOffset(arr) == 0 &&
-          pallasSpec::ptrLength(arr) == n;
+ requires pallasSpec::_ptrBlockLength(arr) == n && 
+          pallasSpec::_ptrBlockOffset(arr) == 0 &&
+          pallasSpec::_ptrLength(arr) == n;
  @*/
 void clear (int *arr, int n) {
     for (int i = 0; i < n; i++) {

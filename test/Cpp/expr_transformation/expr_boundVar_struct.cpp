@@ -16,7 +16,7 @@ class ClumsyClass {
 };
 
 /*@
- ensures pallasSpec::forall(0 <= pallasSpec::bVar<ClumsyClass>("i").i1,  true);
+ ensures pallasSpec::_forall(0 <= pallasSpec::_bv<ClumsyClass>("i").i1,  true);
 @*/
 double fun (ClumsyClass c) {
     return c.d1 + c.d2;

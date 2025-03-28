@@ -9,7 +9,7 @@
 // CHECK-DAG: {{%[0-9]+}} = call i1 @pallas.imply(
 
 /*@
-requires pallasSpec::imply(a > 0, b > 0) && a > 0;
+requires pallasSpec::_imply(a > 0, b > 0) && a > 0;
 @*/
 void fun (int a, int b) {
     int c = a + b;

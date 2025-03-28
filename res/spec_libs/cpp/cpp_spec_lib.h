@@ -32,70 +32,77 @@ namespace pallasSpec
      *                    Operators                    *
      ***************************************************/
     
-    bool imply(bool lhs, bool rhs);
+    bool _imply(bool lhs, bool rhs);
 
     bool _and(bool lhs, bool rhs);
 
     bool _or(bool lhs, bool rhs);
 
-    bool sep(bool lhs, bool rhs);
+    bool _sep(bool lhs, bool rhs);
 
     /***************************************************
      *                Special expressions              *
      ***************************************************/
     template<typename T> 
-    T old(T v);
+    T _old(T v);
 
     template<typename T>
-    T result();
+    T _result();
 
     /***************************************************
      *                    Quantifiers                  *
      ***************************************************/
     template<typename T>
-    T bVar(const char* id);
+    T _bv(const char* id);
 
-    bool exists(bool range, bool expr);
-    bool forall(bool range, bool expr);
-    bool forallSep(bool range, bool expr);
+    bool _exists(bool range, bool expr);
+    bool _forall(bool range, bool expr);
+    bool _forallS(bool range, bool expr);
 
     /***************************************************
      *                     Fractions                   *
      ***************************************************/
-    frac fracOf(int numerator, int denominator);
+    frac _fracOf(int numerator, int denominator);
 
     /***************************************************
      *              Permissions & Pointers             *
      ***************************************************/
     template<typename T>
-    bool Perm(T *loc, frac p);
+    bool _Perm(T *loc, frac p);
 
     template<typename T>
-    std::size_t ptrBlockLength(T *loc);
+    std::size_t _ptrBlockLength(T *loc);
 
     template<typename T>
-    std::size_t ptrBlockOffset(T *loc);
+    std::size_t _ptrBlockOffset(T *loc);
 
     template<typename T>
-    std::size_t ptrLength(T *loc);
+    std::size_t _ptrLength(T *loc);
 
     /***************************************************
      *              Sequence-operations                *
      ***************************************************/
     template<typename T>
-    seq<T> seqNew();
+    seq<T> _seqNew();
 
     template<typename T>
-    std::size_t seqSize(seq<T> s);
+    std::size_t _seqSize(seq<T> s);
 
     template<typename T>
-    T seqGet(seq<T> s, std::size_t idx);
+    T _seqGet(seq<T> s, std::size_t idx);
 
     template<typename T>
-    seq<T> seqPrepend(T e, seq<T> s);
+    seq<T> _seqPrepend(T e, seq<T> s);
 
     template<typename T>
-    bool seqEquals(seq<T> s1, seq<T> s2);
+    bool _seqEquals(seq<T> s1, seq<T> s2);
+
+    /***************************************************
+     *              Convenience macros                 *
+     ***************************************************/
+    #define _write pallasSpec::_fracOf(1, 1)
+
+    #define _inRange(lower, v, upper) pallasSpec::_and(lower <= v , v < upper)
 }
 
 

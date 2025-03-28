@@ -10,7 +10,7 @@
 
 
 /*@
-requires imply(a > 0, b > 0) && a > 0;
+requires _imply(a > 0, b > 0) && a > 0;
 @*/
 void fun (int a, int b) {
     int c = a + b;

@@ -25,9 +25,9 @@
 
 
 /*@
- ensures pallasSpec::exists(0 <= pallasSpec::bVar<double>("x") && pallasSpec::bVar<double>("x") <= 10,  pallasSpec::bVar<double>("x") != 42);
- ensures pallasSpec::forall(0 <= pallasSpec::bVar<double>("i"),  true);
- ensures pallasSpec::forallSep(0 <= pallasSpec::bVar<double>("i"),  true);
+ ensures pallasSpec::_exists(0 <= pallasSpec::_bv<double>("x") && pallasSpec::_bv<double>("x") <= 10,  pallasSpec::_bv<double>("x") != 42);
+ ensures pallasSpec::_forall(0 <= pallasSpec::_bv<double>("i"),  true);
+ ensures pallasSpec::_forallS(0 <= pallasSpec::_bv<double>("i"),  true);
 @*/
 double fun (double a) {
     return a > 0 ? a : -1 * a;
