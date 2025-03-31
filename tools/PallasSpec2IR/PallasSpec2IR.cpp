@@ -8,9 +8,11 @@
 
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
+#include <chrono>
 #include <map>
 #include <memory>
 #include <string>
+#include <sstream>
 
 /*
  * Commandline-options
@@ -81,8 +83,14 @@ static llvm::cl::opt<bool> clMem2Reg(
     "mem2reg", llvm::cl::desc("Apply mem2reg pass to the compiled source."), llvm::cl::init(false),
     llvm::cl::cat(SpecTransformCat));
 
+static llvm::cl::opt<bool> clPrintTime(
+    "t", llvm::cl::desc("Print how long the translantion took."),
+    llvm::cl::init(false), llvm::cl::cat(SpecTransformCat));
+
 int main(int argc, char **argv)
 {
+    auto startTime = std::chrono::high_resolution_clock::now();
+
     // Parse commandline-options and wrap them in struct
     llvm::cl::HideUnrelatedOptions(SpecTransformCat);
     llvm::cl::ParseCommandLineOptions(argc, argv);
@@ -154,6 +162,17 @@ int main(int argc, char **argv)
         llvm::errs() << e.what() << "\n";
         llvm::errs() << "===============================================\n";
         return 1;
+    }
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsedTime = (endTime - startTime);
+
+    if (clPrintTime) {
+        std::stringstream sStream;
+        sStream.setf(std::ios::fixed);
+        sStream.precision(3);
+        sStream << elapsedTime.count();
+        llvm::outs() << "Translation took " << sStream.str() << " seconds \n";
     }
 
     return 0;
