@@ -20,16 +20,20 @@ The structure of the repository is based on
 - [VCLLVM](https://github.com/Drevanoorschot/VCLLVM)
 - [LLVM Source Tree Layout](https://llvm.org/docs/Projects.html#source-tree-layout)
 
+## Project-setup using DevContainer
+- Clone the repository 
+- Open the clones repository in VSCode
+
 ## Project setup in VSCode
 - Ensure that the following packages are installed:
+    - build-essential
+    - gdb
     - cmake
     - zlib1g-dev
     - libzstd-dev
     - ninja-build
     - llvm-17-dev
     - clang-17
-    - build-essential
-    - gdb
 - If you want to use the swift-frontend, make sure that Swift 6.0 is installed and available on your PATH.
 - Install the C/C++ Extension Pack for VSCode
 - Clone repo

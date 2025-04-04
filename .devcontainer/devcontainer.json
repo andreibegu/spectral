@@ -1,0 +1,17 @@
+{
+    // "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+    "build": {"dockerfile": "Dockerfile"},
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools-extension-pack",
+                "ms-vscode.cmake-tools",
+                "swiftlang.swift-vscode"
+            ]
+        }
+    },
+
+    // "postCreateCommand": ""
+}
