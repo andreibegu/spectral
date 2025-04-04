@@ -21,8 +21,49 @@ The structure of the repository is based on
 - [LLVM Source Tree Layout](https://llvm.org/docs/Projects.html#source-tree-layout)
 
 ## Project-setup using DevContainer
+
+### Setup the DevContainer
+- Install Docker, Visual Studio Code
+- Install the Devcontainer-extension in VSCode
 - Clone the repository 
-- Open the clones repository in VSCode
+- Open folder of the cloned repository in VSCode
+- Press 'Ctrl-Shift-P' and select 'Reopen in Container'
+    - This may take a few minutes as it builds the container
+
+### Setup the CMake extension
+- Press ```Ctrl-Shift-P``` and select ```CMake: Scan for Kits```
+- Press ```Ctrl-Shift-P``` and select ```CMake: Select a Kit```
+    - Select the listed GCC-kit
+    - Optionally, you can also select clang as a kit, but this works less good during debugging
+- Press ```Ctrl-Shift-P``` and select ```CMake: Configure```
+
+By default, we use ninja as the CMake generator. 
+
+### Build using CMake:
+- Press ```Ctrl-Shift-P``` and select ```CMake: Build```
+This will build the specification-translation framework. 
+
+### Setup debug-configuration: 
+To setup and modify the run- and debug-configuration for the CMake extension, 
+add or modify the following entry to your settings.json:
+(Type ```Ctrl-Shift-P``` and select 'Preferences: Open Workspace Settings (JSON)')
+
+```
+"cmake.debugConfig": {
+    "args": [
+        "${workspaceFolder}/examples/spec_demo.c", 
+        "-o", "${workspaceFolder}/.tmp/spec_demo.ll", 
+        "-d",
+        "-m",
+        "-lib", "${workspaceFolder}/res/spec_libs/c"
+    ]
+}
+``` 
+
+Here you can specify the arguments that are passed to the application when debugging it from VSCode. 
+
+To run the debug-configuration, type ```Ctrl-Shift-P``` and select ```CMake: Debug```.
+
 
 ## Project setup in VSCode
 - Ensure that the following packages are installed:

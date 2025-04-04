@@ -1,3 +1,16 @@
 {
     "cmake.generator": "Ninja",
+    "cmake.exportCompileCommandsFile": true,
+    "cmake.debugConfig": {
+        "args": [
+            "${workspaceFolder}/examples/spec_demo.c",
+            "-o",
+            "${workspaceFolder}/examples/spec_demo.ll",
+            "-m",   
+            "-lib",
+            "${workspaceFolder}/res/spec_libs/c", 
+            "-t",
+            "-wDir", "${workspaceFolder}/examples/"
+        ]
+    }
 }
