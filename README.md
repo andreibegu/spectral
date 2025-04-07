@@ -1,5 +1,6 @@
 # Pallas_Spec2IR
 Transformation from source-level specifications to specifications on IR-level.
+The documentation can be found [here](Documentation.md).
 
 ## Invocation
 After building the project using the instructions below, the executable is located under ```/.build/bin/pallasSpec2ir```.
