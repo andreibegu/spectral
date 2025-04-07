@@ -36,6 +36,7 @@ The structure of the repository is based on
     - Select the listed GCC-kit
     - Optionally, you can also select clang as a kit, but this works less good during debugging
 - Press ```Ctrl-Shift-P``` and select ```CMake: Configure```
+- If one of the above steps fails, delete the ```/build/``` folder and try again.
 
 By default, we use ninja as the CMake generator. 
 

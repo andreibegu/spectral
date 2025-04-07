@@ -11,6 +11,9 @@ RUN apt-get update && apt-get -y install \
         llvm-17-dev \
         clang-17
 
+# Install venv for testing
+RUN apt-get -y install python3-venv
+
 # Setup Swift 6
 # See https://www.swift.org/install/linux/tarball/
 # Based on https://github.com/swiftlang/swift-docker/blob/main/6.0/ubuntu/24.04/Dockerfile
