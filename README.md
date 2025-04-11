@@ -5,12 +5,13 @@ The documentation can be found [here](Documentation.md).
 ## Invocation
 After building the project using the instructions below, the executable is located under ```/.build/bin/pallasSpec2ir```.
 The tool can then be invoked as follows:
-> ./.build/bin/pallasSpec2ir SRC_PATH -o OUT_PATH --wDir W_DIR -m
+> ./.build/bin/pallasSpec2ir SRC_PATH -o OUT_PATH --wDir W_DIR --lib LIB_PATH -m 
 
 where 
 - ```SRC_PATH``` is the path to the source-file that should be transformed
 - ```OUT_PATH``` is the path where the resulting LLVM-module should be saved
 - ```W_DIR``` is an optional path to a working directory where temporary files will be created
+- ```LIB_PATH``` is the path to the specification library
 - ```-m``` (optional) causes information about the matching of specifications to language-constructs to be printed.
 
 For a full overview of the available options and parameters, run the tool with the ```--help```-option.
