@@ -125,4 +125,7 @@ The lit-setup is based on:
 To build the specification-library for Swift, run `ninja BuildSwiftLib` in the build-directory of the project. 
 The library is build in `res/swift/PallasSpec/.build/debug/`.
 
-	
+## Licence 
+Copyright (c) 2024 - 2025 Formal Methods and Tools, University of Twente All rights reserved.
+
+This project is licenced under the Apache License 2.0 as described in LICENSE.txt in the root of this project.
