@@ -28,30 +28,58 @@ namespace sourcespec2ir
         // Safety-check that the state of the object is valid
         assert(contract == nullptr);
 
-        // Match contract to function
         auto loc = getLocFromCtx(ctx);
-        const auto specFun = matchFContract(loc);
-        auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
-        assert(irFunction != nullptr);
+        bool isExternal = ctx->specExternalClause() != nullptr;
+        bool isAssumed = isExternal &&
+                         ctx->specExternalClause()->ASSUMED() != nullptr;
 
-        // Create new matched contract
-        contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
+        // TODO: Set the assumed-flag if it was an external contracts!
+        if (isAssumed)
+            throw utils::PallasException(
+                "Assumed is currently not supported for external contracts.");
 
-        // Add all statements to the contract by traversing the children
-        for (auto c : ctx->children)
-            visit(c);
+        llvm::SmallVector<llvm::Function *> irFunctions;
+        if (isExternal)
+        {
+            // Match external contract to function
+            auto *externalClause = ctx->specExternalClause();
+            bool isSrcMapping = externalClause->SRC() != nullptr;
+            auto matchingStr = getExprAsStr(*externalClause->specExpression());
+            irFunctions = matchExternalContract(matchingStr, isSrcMapping, loc);
+        }
+        else
+        {
+            // Match contract to function
+            const auto specFun = matchFContract(loc);
+            auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
+            if (irFunction != nullptr)
+                irFunctions.push_back(irFunction);
+        }
 
-        // Add the new contract to the collection of contracts.
-        matchedSpecs->matchedFContracts.push_back(std::move(contract));
+        if (irFunctions.empty() && !isExternal)
+            throw utils::PallasException("Failed to match contract to function.");
+
+        for (auto *irFunction : irFunctions)
+        {
+            // Create new matched contract
+            contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
+
+            // Add all statements to the contract by traversing the children
+            for (auto c : ctx->children)
+                visit(c);
+
+            matchedSpecs->matchedFContracts.push_back(std::move(contract));
+        }
+
         return 0;
     }
 
     std::any SourceSpecMatcher::visitPureFlag(SpecParser::PureFlagContext *ctx)
     {
         // Set pure-flag of contract to true
-        if (!contract) 
+        if (!contract)
             throw utils::PallasException("Encountered pure-flag without contract.");
-        contract->isPure = true; 
+        contract->isPure = true;
         return 0;
     }
 
@@ -180,7 +208,7 @@ namespace sourcespec2ir
 
     SrcRange SourceSpecMatcher::getLocFromCtx(const antlr4::ParserRuleContext *ctx)
     {
-        // We change the column-numbering to start with 1 to be consistent with 
+        // We change the column-numbering to start with 1 to be consistent with
         // the line-info of LLVM
         return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine() + 1,
                         ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1);
@@ -192,5 +220,4 @@ namespace sourcespec2ir
         return SrcLocation(exprCtx.start->getLine(),
                            exprCtx.start->getCharPositionInLine());
     }
-
 }

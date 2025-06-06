@@ -16,6 +16,11 @@ ASSUME: 'assume';
 DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 PURE: 'pure';
+EXTERNAL: 'external';
+CONTRACT: 'contract';
+ASSUMED: 'assumed';
+IR: 'ir';
+SRC: 'src';
 
 SPEC_EXPR_END: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);

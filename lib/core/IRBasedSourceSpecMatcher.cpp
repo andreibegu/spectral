@@ -3,6 +3,7 @@
 #include "PallasException.h"
 #include "SrcLookup.h"
 
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -37,6 +38,14 @@ namespace
     {
         auto locStr = getLocationString(startLine, endLine);
         llvm::outs() << "Matched contract at " << locStr
+                     << " to " << fName << "\n";
+    }
+
+    void printExternalContractMatchingInfo(size_t startLine, size_t endLine,
+                                           std::string fName)
+    {
+        auto locStr = getLocationString(startLine, endLine);
+        llvm::outs() << "Matched external contract at " << locStr
                      << " to " << fName << "\n";
     }
 
@@ -243,6 +252,34 @@ namespace sourcespec2ir
         }
 
         return utils::getSrcNameOfFunction(*closestFunction);
+    }
+
+    llvm::SmallVector<llvm::Function *>
+    IRBasedSourceSpecMatcher::matchExternalContract(
+        const std::string matchingStr, const bool isSrcName, SrcRange loc)
+    {
+        if (isSrcName)
+        {
+            throw utils::PallasException(
+                "Matching of external contracts using a source-level name is "
+                "unsupported by the default-implementation.");
+        }
+
+        llvm::SmallVector<llvm::Function *> results;
+        const std::regex matchRegex(matchingStr);
+        for (auto &f : irModule->functions())
+        {
+            if (std::regex_match(f.getName().str(), matchRegex))
+            {
+                results.push_back(&f);
+                if (printMatchingInfo)
+                    printExternalContractMatchingInfo(
+                        loc.getStartLine(), loc.getEndLine(),
+                        utils::getSrcNameOfFunction(f));
+            }
+        }
+
+        return results;
     }
 
     std::pair<llvm::Function *, llvm::Loop *>

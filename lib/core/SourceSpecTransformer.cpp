@@ -452,7 +452,7 @@ namespace sourcespec2ir
             // is the col smaller than the offset
             const bool newColInvalid =
                 oldLine - oldFLine - lineOffset == 0 &&
-                oldCol < colOffset; 
+                oldCol < colOffset;
 
             //  Replace references to old DISubprogram in the scope of the location
             auto newScope = oldScope;
@@ -496,7 +496,7 @@ namespace sourcespec2ir
                     inlinedLoc->isImplicitCode());
                 // Build new debug-location
                 auto newLoc = llvm::DILocation::get(
-                    *irContext, 
+                    *irContext,
                     it->getDebugLoc().getLine(),
                     it->getDebugLoc().getCol(),
                     it->getDebugLoc().getScope(),

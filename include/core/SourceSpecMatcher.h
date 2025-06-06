@@ -7,6 +7,7 @@
 #include "wrapper/SrcLocation.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <llvm/ADT/SmallVector.h>
@@ -39,6 +40,21 @@ namespace sourcespec2ir
     protected:
         SpecParser::FileContext *specParseTree;
         llvm::Module *irModule;
+
+        /**
+         * Given the mapping-string of an external contract, this method
+         * determines if the contract can be matched to some functions in the
+         * module and returns a list of pointers to those functions.
+         * The flag 'isSrcName' determines if the name should be interpreted as
+         *  source- or ir-name.
+         *
+         * The default-implementation only supports source-level matching
+         * strings  and interprets them as a regular expression that matches on
+         * the names of functions in the module.
+         */
+        virtual llvm::SmallVector<llvm::Function *> matchExternalContract(
+            const std::string matchingStr, const bool isSrcName, 
+            SrcRange loc) = 0;
 
         /**
          * Given the location of a specContractBlock in the source-file,
@@ -102,12 +118,12 @@ namespace sourcespec2ir
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
-                            SpecParser::SpecExpressionContext *expr, 
+                            SpecParser::SpecExpressionContext *expr,
                             const SrcRange &loc);
 
         // Adds a statement to the current block of specification-statements
         void addToStmntBlock(SpecStatementType type,
-                             SpecParser::SpecExpressionContext *expr, 
+                             SpecParser::SpecExpressionContext *expr,
                              const SrcRange &loc);
 
         /**
@@ -120,13 +136,13 @@ namespace sourcespec2ir
 
         /**
          * Extracts the source-location from a given parser-rule context and
-         * returns it as a SrcRange. 
+         * returns it as a SrcRange.
          */
         SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
 
         /**
-         * Returns the location in the source-file where the given expression 
-         * starts. 
+         * Returns the location in the source-file where the given expression
+         * starts.
          */
         SrcLocation getExprStartLoc(
             const SpecParser::SpecExpressionContext &exprCtx);
