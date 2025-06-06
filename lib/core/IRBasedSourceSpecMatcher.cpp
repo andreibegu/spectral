@@ -122,7 +122,7 @@ namespace sourcespec2ir
     std::string IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
     {
         const llvm::Function *closestFunction = nullptr;
-        auto endLine = loc.getEnd()->getLine();
+        auto endLine = loc.getEndLine();
 
         // Map of line-numbers to functions to check for ambiguous matching
         std::map<unsigned int, llvm::SmallPtrSet<llvm::Function *, 4>> lineToFunc;

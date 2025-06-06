@@ -11,14 +11,14 @@ namespace sourcespec2ir
      */
     struct SrcLocation
     {
-        size_t line;
-        size_t column;
+        const size_t line;
+        const size_t column;
 
         SrcLocation(size_t line, size_t column);
         SrcLocation(const SrcLocation &baseLoc, size_t colOffset);
 
-        inline size_t getLine() { return line; }
-        inline size_t getColumn() { return column; }
+        inline size_t getLine() const { return line; }
+        inline size_t getColumn() const { return column; }
     };
 
     /**
@@ -27,18 +27,16 @@ namespace sourcespec2ir
      */
     struct SrcRange
     {
-        SrcLocation startLoc;
-        SrcLocation endLoc;
+        const SrcLocation startLoc;
+        const SrcLocation endLoc;
 
         SrcRange(size_t startLine, size_t startColumn,
                  size_t endLine, size_t endColumn);
 
-        inline SrcLocation *getStart() { return &startLoc; }
-        inline SrcLocation *getEnd() { return &endLoc; }
-        inline size_t getStartLine() { return startLoc.getLine(); }
-        inline size_t getStartCol() { return startLoc.getColumn(); }
-        inline size_t getEndLine() { return endLoc.getLine(); }
-        inline size_t getEndCol() { return endLoc.getColumn(); }
+        inline size_t getStartLine() const { return startLoc.getLine(); }
+        inline size_t getStartCol() const { return startLoc.getColumn(); }
+        inline size_t getEndLine() const { return endLoc.getLine(); }
+        inline size_t getEndCol() const { return endLoc.getColumn(); }
     };
 }
 
