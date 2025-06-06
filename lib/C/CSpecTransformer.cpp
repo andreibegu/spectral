@@ -8,6 +8,7 @@ namespace sourcespec2ir
         std::unique_ptr<SourceCompilerDriver> compilerDriver,
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
+        llvm::SmallVector<std::string> extContractPaths,
         const utils::OutputConfig &outputConfig,
         const std::string &workingDir, 
         bool runMem2Reg)
@@ -15,6 +16,7 @@ namespace sourcespec2ir
                                 std::move(specUnifier),
                                 srcInPath,
                                 outPath,
+                                extContractPaths,
                                 outputConfig,
                                 workingDir, 
                                 runMem2Reg)

@@ -35,11 +35,13 @@ namespace sourcespec2ir
         std::unique_ptr<SourceCompilerDriver> compilerDriver,
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
+        llvm::SmallVector<std::string> extContractPaths,
         const utils::OutputConfig &outputConfig,
         const std::string &workingDir,
         bool runMem2Reg)
         : srcInPath(srcInPath),
           outPath(outPath),
+          extContractPaths(extContractPaths),
           workingDir(workingDir),
           outputConfig(outputConfig),
           runMem2Reg(runMem2Reg),
@@ -91,6 +93,8 @@ namespace sourcespec2ir
 
         // Release the parser and input-streams
         parser.reset();
+
+        // TODO: Iterate over the contract-lib-files and parse external contracts.
 
         // Generate the wrapper-functions:
         wrapperGenerator = createWrapperGenerator(*specDeclarations);

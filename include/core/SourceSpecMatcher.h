@@ -60,8 +60,6 @@ namespace sourcespec2ir
          * Given the location of a specContractBlock in the source-file,
          * this method returns the name of the funcion that the specification
          * refers to.
-         * TODO: Check if it makes more sense to return a pointer to the
-         *       function instead of the name.
          */
         virtual llvm::Function *matchFContract(SrcRange loc) = 0;
 

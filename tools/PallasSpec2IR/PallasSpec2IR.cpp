@@ -6,6 +6,7 @@
 #include "utils/OutputConfig.h"
 #include "utils/PallasException.h"
 
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/raw_ostream.h>
 #include <chrono>
@@ -61,6 +62,12 @@ static llvm::cl::opt<std::string> clLibPath(
     llvm::cl::init("../../res/spec_libs/c/"),
     llvm::cl::cat(SpecTransformCat));
 
+static llvm::cl::list<std::string> clCLibPath(
+    "cLib",
+    llvm::cl::desc("Path to a file containing contract spectifications"),
+    llvm::cl::value_desc("Path to contract-file"),
+    llvm::cl::cat(SpecTransformCat));
+
 static llvm::cl::opt<ClSourceLang> clLang(
     "lang", llvm::cl::desc("Source-language of the input-file"),
     llvm::cl::init(Infer),
@@ -77,7 +84,6 @@ static llvm::cl::opt<std::string> clWorkDir(
     llvm::cl::desc("The working directory. If the option is not set, the current directory is used."),
     llvm::cl::value_desc("Path to the working-directory."),
     llvm::cl::cat(SpecTransformCat));
-
 
 static llvm::cl::opt<bool> clMem2Reg(
     "mem2reg", llvm::cl::desc("Apply mem2reg pass to the compiled source."), llvm::cl::init(false),
@@ -121,6 +127,11 @@ int main(int argc, char **argv)
             llvm::outs() << "Infered source-language as: " << langNames[lang] << "\n";
     }
 
+    // Get paths to contract-files
+    llvm::SmallVector<std::string> contractFiles;
+    for (auto path : clCLibPath)
+        contractFiles.push_back(path);
+
     if (config.printDebugInfo)
     {
         llvm::outs() << "Source-language set to " << langNames[lang] << " \n";
@@ -135,21 +146,24 @@ int main(int argc, char **argv)
             sourcespec2ir::CSpecTransformer transformer(
                 std::make_unique<sourcespec2ir::CCompilerDriver>(clLibPath, clWorkDir),
                 std::make_unique<sourcespec2ir::CSpecUnifier>(config.printUnificationInfo),
-                clInFile, clOutFile, config, clWorkDir, clMem2Reg);
+                clInFile, clOutFile, contractFiles, config,
+                clWorkDir, clMem2Reg);
             transformer.transformModule();
         }
         else if (lang == Cpp)
         {
             sourcespec2ir::CppSpecTransformer transformer(
-                clLibPath, clInFile, clOutFile, config, clWorkDir, clMem2Reg);
+                clLibPath, clInFile, clOutFile, contractFiles, config,
+                clWorkDir, clMem2Reg);
             transformer.transformModule();
         }
         else if (lang == Swift)
         {
             sourcespec2ir::SwiftSpecTransformer transformer(
-                clLibPath, clInFile, clOutFile, config, clWorkDir, clMem2Reg);
+                clLibPath, clInFile, clOutFile, contractFiles, config,
+                clWorkDir, clMem2Reg);
             transformer.transformModule();
-        } 
+        }
     }
     catch (const sourcespec2ir::utils::PallasException &e)
     {
@@ -167,7 +181,8 @@ int main(int argc, char **argv)
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedTime = (endTime - startTime);
 
-    if (clPrintTime) {
+    if (clPrintTime)
+    {
         std::stringstream sStream;
         sStream.setf(std::ios::fixed);
         sStream.precision(3);

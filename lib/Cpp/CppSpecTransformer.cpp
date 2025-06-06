@@ -9,13 +9,15 @@ namespace sourcespec2ir
     CppSpecTransformer::CppSpecTransformer(
         std::string specLibPath,
         std::string srcInPath, std::string outPath,
+        llvm::SmallVector<std::string> extContractPaths,
         const utils::OutputConfig &outputConfig,
         const std::string &workingDir, 
         bool runMem2Reg)
         : SourceSpecTransformer(
               std::make_unique<CppCompilerDriver>(specLibPath, workingDir),
               std::make_unique<CppSpecUnifier>(outputConfig.printUnificationInfo),
-              srcInPath, outPath, outputConfig, workingDir, runMem2Reg)
+              srcInPath, outPath, extContractPaths, outputConfig, workingDir, 
+              runMem2Reg)
     {
     }
 
