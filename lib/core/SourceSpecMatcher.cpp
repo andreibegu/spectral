@@ -50,8 +50,7 @@ namespace sourcespec2ir
         else
         {
             // Match contract to function
-            const auto specFun = matchFContract(loc);
-            auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
+            auto *irFunction = matchFContract(loc);
             if (irFunction != nullptr)
                 irFunctions.push_back(irFunction);
         }

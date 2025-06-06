@@ -119,9 +119,9 @@ namespace sourcespec2ir
     {
     }
 
-    std::string IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
+    llvm::Function *IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
     {
-        const llvm::Function *closestFunction = nullptr;
+        llvm::Function *closestFunction = nullptr;
         auto endLine = loc.getEndLine();
 
         // Map of line-numbers to functions to check for ambiguous matching
@@ -251,7 +251,7 @@ namespace sourcespec2ir
                 utils::getSrcNameOfFunction(*closestFunction));
         }
 
-        return utils::getSrcNameOfFunction(*closestFunction);
+        return closestFunction;
     }
 
     llvm::SmallVector<llvm::Function *>

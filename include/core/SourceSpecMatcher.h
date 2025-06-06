@@ -63,7 +63,7 @@ namespace sourcespec2ir
          * TODO: Check if it makes more sense to return a pointer to the
          *       function instead of the name.
          */
-        virtual std::string matchFContract(SrcRange loc) = 0;
+        virtual llvm::Function *matchFContract(SrcRange loc) = 0;
 
         /**
          * Given the location of a specification-block of loop-invariants,
