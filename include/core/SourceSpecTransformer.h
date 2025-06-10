@@ -38,7 +38,7 @@ namespace sourcespec2ir
             std::string srcInPath, std::string outPath,
             llvm::SmallVector<std::string> extContractPaths,
             const utils::OutputConfig &outputConfig,
-            const std::string &workingDir, 
+            const std::string &workingDir,
             bool runMem2Reg);
 
         void transformModule();
@@ -55,12 +55,12 @@ namespace sourcespec2ir
         /**
          * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
          * Can be overwritten by subclasses to use a different matching strategy.
-         * 
-         * The given path refers to the original source-file from which the 
-         * parse-tree of the specifications was created. 
+         *
+         * The given path refers to the original source-file from which the
+         * parse-tree of the specifications was created.
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
-            SpecParser::FileContext *specParseTree, llvm::Module *irModule, 
+            SpecParser::FileContext *specParseTree, llvm::Module *irModule,
             std::string srcFilePath, bool matchExternalOnly);
 
     private:
@@ -111,6 +111,12 @@ namespace sourcespec2ir
         void verifyModule(llvm::Module &module, const std::string msg);
 
         /**
+         * Runs the matching stage for external contracts on the given file. 
+         */
+        std::unique_ptr<MatchedSpecifications>
+        matchExternalContract(const std::string &contractPath);
+
+        /**
          * Encodes a block of function-contract statements into metadata
          */
         void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
@@ -148,12 +154,11 @@ namespace sourcespec2ir
          */
         llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
 
-
         /**
          * Modifies the debug-locations of the instructions in the generated
          * wrapper-functions to represent the locations from the original
          * source-file.
-         * Modifies irModule and uses the passed matched specifications 
+         * Modifies irModule and uses the passed matched specifications
          * to find the wrapper-functions and to determine the appropriate scopes.
          */
         void rewriteWrapperLocations(const MatchedSpecifications &matchedSpecs);
@@ -161,22 +166,22 @@ namespace sourcespec2ir
         /**
          * Modifies the debug-locations of the instructions in the passed
          * wrapper function to represent the location in the source file.
-         * 
-         * The passed compilation-unit and scope-file are used as the 
+         *
+         * The passed compilation-unit and scope-file are used as the
          * cu and scope of the wrapper-function.
          */
         void rewriteWrapperLocations(
             const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
-            llvm::DICompileUnit *cu, llvm::DIFile *scopeFile, 
+            llvm::DICompileUnit *cu, llvm::DIFile *scopeFile,
             llvm::DIScope *scope);
 
         /**
-         * Returns a scope where all scope-references to the old subprogram are 
+         * Returns a scope where all scope-references to the old subprogram are
          * transitively replaced with references to the new subprogram.
          */
-        llvm::DIScope *replaceSubprogInScope(llvm::DIScope *scope, 
-            const llvm::DISubprogram *oldSubprog, llvm::DISubprogram *newSubprog, 
-            llvm::DIBuilder &diBuilder);
+        llvm::DIScope *replaceSubprogInScope(llvm::DIScope *scope,
+                                             const llvm::DISubprogram *oldSubprog, llvm::DISubprogram *newSubprog,
+                                             llvm::DIBuilder &diBuilder);
 
         /**
          * Write the IR-representation of the given module into
@@ -195,11 +200,11 @@ namespace sourcespec2ir
                                         llvm::Module &moduleWithWrappers);
 
         /**
-         * Adds the functions that belong to the given set of wrapper-functions 
+         * Adds the functions that belong to the given set of wrapper-functions
          * to the module's llvm.used-list.
          */
         void markWrapperFunctionsAsUsed(llvm::Module &module,
-            llvm::ArrayRef<SrcWrapperFunction *> wrappers);
+                                        llvm::ArrayRef<SrcWrapperFunction *> wrappers);
 
         /**
          * Generates a MDTuple that encodes a source-location.
@@ -207,24 +212,22 @@ namespace sourcespec2ir
         llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
 
         /**
-         * Helper that returns the DIFile for a given function and checks for 
-         * nullpointers. 
+         * Helper that returns the DIFile for a given function and checks for
+         * nullpointers.
          */
         llvm::DIFile *getFileForFunc(llvm::Function *f);
 
         /**
-         * Helper that returns the DIScope for a given function and checks for 
-         * nullpointers. 
+         * Helper that returns the DIScope for a given function and checks for
+         * nullpointers.
          */
         llvm::DIScope *getScopeForFunc(llvm::Function *f);
 
         /**
-         * Helper that returns the compilation-unit for a given function and 
-         * checks for nullpointers. 
+         * Helper that returns the compilation-unit for a given function and
+         * checks for nullpointers.
          */
         llvm::DICompileUnit *getCUForFunc(llvm::Function *f);
-
-        
 
         /**
          * Returns the path where the source-file that has been extended with

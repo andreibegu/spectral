@@ -27,17 +27,17 @@ namespace sourcespec2ir
 
     public:
         IRBasedSourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                 llvm::Module *irModule,
                                  const std::string &srcFilePath,
+                                 llvm::Module *irModule,
                                  llvm::FunctionAnalysisManager *fam,
-                                 const bool printMatchingInfo, 
+                                 const bool printMatchingInfo,
                                  bool matchExternalOnly);
 
     protected:
         llvm::Function *matchFContract(SrcRange loc) override;
 
         llvm::SmallVector<llvm::Function *> matchExternalContract(
-            const std::string matchingStr, const bool isSrcName, 
+            const std::string matchingStr, const bool isSrcName,
             SrcRange loc) override;
 
         std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
@@ -46,7 +46,6 @@ namespace sourcespec2ir
         llvm::Instruction *matchStatementBlock(SrcRange loc) override;
 
     private:
-        std::string srcFilePath;
         const bool printMatchingInfo;
         llvm::FunctionAnalysisManager *fam;
 

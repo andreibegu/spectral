@@ -2,6 +2,7 @@
 #define PALLAS_SRCLOCATION_H
 
 #include <cstddef>
+#include <string>
 
 namespace sourcespec2ir
 {
@@ -13,9 +14,11 @@ namespace sourcespec2ir
     {
         const size_t line;
         const size_t column;
+        const std::string file;
 
-        SrcLocation(size_t line, size_t column);
-        SrcLocation(const SrcLocation &baseLoc, size_t colOffset);
+        SrcLocation(size_t line, size_t column, std::string file);
+        SrcLocation(const SrcLocation &baseLoc, size_t colOffset,
+                    std::string file);
 
         inline size_t getLine() const { return line; }
         inline size_t getColumn() const { return column; }
@@ -31,7 +34,7 @@ namespace sourcespec2ir
         const SrcLocation endLoc;
 
         SrcRange(size_t startLine, size_t startColumn,
-                 size_t endLine, size_t endColumn);
+                 size_t endLine, size_t endColumn, std::string file);
 
         inline size_t getStartLine() const { return startLoc.getLine(); }
         inline size_t getStartCol() const { return startLoc.getColumn(); }

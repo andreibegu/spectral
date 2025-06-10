@@ -8,9 +8,11 @@
 namespace sourcespec2ir
 {
     SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                         llvm::Module *irModule, 
+                                         const std::string file,
+                                         llvm::Module *irModule,
                                          bool matchExternalOnly)
         : specParseTree(specParseTree),
+          file(file),
           irModule(irModule),
           matchExternalOnly(matchExternalOnly)
     {
@@ -37,7 +39,7 @@ namespace sourcespec2ir
 
         if (matchExternalOnly && !isExternal)
             throw utils::PallasException(
-                "Encountered non-external contract in contract-file."); 
+                "Encountered non-external contract in contract-file.");
 
         // TODO: Set the assumed-flag if it was an external contracts!
         if (isAssumed)
@@ -119,7 +121,7 @@ namespace sourcespec2ir
     {
         if (matchExternalOnly)
             throw utils::PallasException(
-                "Encountered loop invariant in contract-file."); 
+                "Encountered loop invariant in contract-file.");
 
         // Match the spec-block to the IR
         auto loc = getLocFromCtx(ctx);
@@ -162,7 +164,7 @@ namespace sourcespec2ir
 
         if (matchExternalOnly)
             throw utils::PallasException(
-                "Encountered statement-block in contract-file."); 
+                "Encountered statement-block in contract-file.");
 
         // Match contract to instruction
         auto loc = getLocFromCtx(ctx);
@@ -219,18 +221,20 @@ namespace sourcespec2ir
         return charStream->getText(i);
     }
 
-    SrcRange SourceSpecMatcher::getLocFromCtx(const antlr4::ParserRuleContext *ctx)
+    SrcRange SourceSpecMatcher::getLocFromCtx(
+        const antlr4::ParserRuleContext *ctx)
     {
         // We change the column-numbering to start with 1 to be consistent with
         // the line-info of LLVM
         return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine() + 1,
-                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1);
+                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1,
+                        file);
     }
 
     SrcLocation SourceSpecMatcher::getExprStartLoc(
         const SpecParser::SpecExpressionContext &exprCtx)
     {
         return SrcLocation(exprCtx.start->getLine(),
-                           exprCtx.start->getCharPositionInLine());
+                           exprCtx.start->getCharPositionInLine(), file);
     }
 }

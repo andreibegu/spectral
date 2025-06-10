@@ -110,12 +110,11 @@ namespace sourcespec2ir
 {
 
     IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(
-        SpecParser::FileContext *specParseTree, llvm::Module *irModule,
-        const std::string &srcFilePath,
-        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo, 
+        SpecParser::FileContext *specParseTree,
+        const std::string &srcFilePath, llvm::Module *irModule,
+        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo,
         bool matchExternalOnly)
-        : SourceSpecMatcher(specParseTree, irModule, matchExternalOnly),
-          srcFilePath(srcFilePath),
+        : SourceSpecMatcher(specParseTree, srcFilePath, irModule, matchExternalOnly),
           printMatchingInfo(printMatchingInfo), fam(fam)
     {
     }
@@ -412,7 +411,7 @@ namespace sourcespec2ir
         // Check that the file that is referenced from the DISubprogram
         // of the given function matches the source-file from which the
         // specifications were extracted.
-        const auto specFilePath = makeAbsPath(srcFilePath);
+        const auto specFilePath = makeAbsPath(file);
 
         // Build a scope for the source-file from which the function originates.
         // Some compilers put an absolute-path into the filename-field, while

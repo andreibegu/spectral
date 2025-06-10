@@ -30,6 +30,7 @@ namespace sourcespec2ir
     {
     public:
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
+                          const std::string file,
                           llvm::Module *irModule, bool matchExternalOnly);
 
         virtual ~SourceSpecMatcher() = default;
@@ -39,8 +40,9 @@ namespace sourcespec2ir
 
     protected:
         SpecParser::FileContext *specParseTree;
+        const std::string file;
         llvm::Module *irModule;
-        bool matchExternalOnly; 
+        bool matchExternalOnly;
 
         /**
          * Given the mapping-string of an external contract, this method
@@ -54,7 +56,7 @@ namespace sourcespec2ir
          * the names of functions in the module.
          */
         virtual llvm::SmallVector<llvm::Function *> matchExternalContract(
-            const std::string matchingStr, const bool isSrcName, 
+            const std::string matchingStr, const bool isSrcName,
             SrcRange loc) = 0;
 
         /**

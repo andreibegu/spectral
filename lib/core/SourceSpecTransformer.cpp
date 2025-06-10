@@ -97,19 +97,7 @@ namespace sourcespec2ir
         // TODO: generalize so that multiple src-files are supported and normal
         //          specs are only matched within the same file!
         for (auto contractPath : extContractPaths)
-        {
-            // Parse external contracts.
-            auto parser = std::make_unique<SpecParserWrapper>(contractPath);
-            auto contractParseTree = parser->getSrcParseTree();
-            if (!contractParseTree)
-                throw utils::PallasException(
-                    "Unable to parse external contract: " + contractPath);
-            // Match external contracts
-            auto matcher = createSpecMatcher(
-                contractParseTree, irModule.get(), contractPath, true);
-            auto extContracts = matcher->matchSpecs();
-            matchedSpecs->merge(std::move(extContracts));
-        }
+            matchedSpecs->merge(matchExternalContract(contractPath));
 
         // Generate the wrapper-functions:
         wrapperGenerator = createWrapperGenerator(*specDeclarations);
@@ -179,6 +167,21 @@ namespace sourcespec2ir
 
         // Dump the generated IR
         writeToFile(*irModule, outPath);
+    }
+
+    std::unique_ptr<MatchedSpecifications> 
+    SourceSpecTransformer::matchExternalContract(const std::string &contractPath)
+    {
+        auto parser = std::make_unique<SpecParserWrapper>(contractPath);
+        auto contractParseTree = parser->getSrcParseTree();
+        if (!contractParseTree)
+            throw utils::PallasException(
+                "Unable to parse external contract: " + contractPath);
+        // Match external contracts
+        auto matcher = createSpecMatcher(
+            contractParseTree, irModule.get(), contractPath, true);
+        auto extContracts = matcher->matchSpecs();
+        return extContracts;
     }
 
     void SourceSpecTransformer::encodeLoopInvBlock(
@@ -772,7 +775,7 @@ namespace sourcespec2ir
         std::string srcFilePath, bool matchExternalOnly)
     {
         return std::make_unique<IRBasedSourceSpecMatcher>(
-            specParseTree, irModule, srcFilePath, &fam,
+            specParseTree, srcFilePath, irModule, &fam,
             outputConfig.printMatchingInfo, matchExternalOnly);
     }
 }
