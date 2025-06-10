@@ -64,6 +64,7 @@ namespace sourcespec2ir
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
         bool isPure = false;
+        bool isAssumed = false;
 
         MatchedFunctionContract(llvm::Function *function, const SrcRange &srcLoc)
             : function(function), srcLoc(srcLoc)

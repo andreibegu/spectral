@@ -41,7 +41,6 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Encountered non-external contract in contract-file.");
 
-        // TODO: Set the assumed-flag if it was an external contracts!
         if (isAssumed)
             throw utils::PallasException(
                 "Assumed is currently not supported for external contracts.");
@@ -70,6 +69,7 @@ namespace sourcespec2ir
         {
             // Create new matched contract
             contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
+            contract->isAssumed = isAssumed;
 
             // Add all statements to the contract by traversing the children
             for (auto c : ctx->children)
