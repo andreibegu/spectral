@@ -8,9 +8,11 @@
 namespace sourcespec2ir
 {
     SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                         llvm::Module *irModule)
+                                         llvm::Module *irModule, 
+                                         bool matchExternalOnly)
         : specParseTree(specParseTree),
-          irModule(irModule)
+          irModule(irModule),
+          matchExternalOnly(matchExternalOnly)
     {
     }
 
@@ -32,6 +34,10 @@ namespace sourcespec2ir
         bool isExternal = ctx->specExternalClause() != nullptr;
         bool isAssumed = isExternal &&
                          ctx->specExternalClause()->ASSUMED() != nullptr;
+
+        if (matchExternalOnly && !isExternal)
+            throw utils::PallasException(
+                "Encountered non-external contract in contract-file."); 
 
         // TODO: Set the assumed-flag if it was an external contracts!
         if (isAssumed)
@@ -111,6 +117,10 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(
         SpecParser::SpecLoopInvariantBlockContext *ctx)
     {
+        if (matchExternalOnly)
+            throw utils::PallasException(
+                "Encountered loop invariant in contract-file."); 
+
         // Match the spec-block to the IR
         auto loc = getLocFromCtx(ctx);
         auto [parentFunc, loop] = matchLoopInvBlock(loc);
@@ -149,6 +159,10 @@ namespace sourcespec2ir
     {
         // Safety-check that the state of the object is valid
         assert(stmntBlock == nullptr);
+
+        if (matchExternalOnly)
+            throw utils::PallasException(
+                "Encountered statement-block in contract-file."); 
 
         // Match contract to instruction
         auto loc = getLocFromCtx(ctx);

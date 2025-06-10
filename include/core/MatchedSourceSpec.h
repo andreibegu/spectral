@@ -185,6 +185,11 @@ namespace sourcespec2ir
               matchedStmntBlocks()
         {
         }
+
+        /**
+         * Adds the specifications from 'specs2' to this object.
+         */
+        void merge(std::unique_ptr<MatchedSpecifications> specs2);
     };
 
 }

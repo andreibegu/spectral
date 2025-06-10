@@ -61,7 +61,7 @@ namespace sourcespec2ir
          */
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
             SpecParser::FileContext *specParseTree, llvm::Module *irModule, 
-            std::string srcFilePath);
+            std::string srcFilePath, bool matchExternalOnly);
 
     private:
         std::string srcInPath;

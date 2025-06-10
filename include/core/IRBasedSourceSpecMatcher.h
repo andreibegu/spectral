@@ -30,7 +30,8 @@ namespace sourcespec2ir
                                  llvm::Module *irModule,
                                  const std::string &srcFilePath,
                                  llvm::FunctionAnalysisManager *fam,
-                                 const bool printMatchingInfo);
+                                 const bool printMatchingInfo, 
+                                 bool matchExternalOnly);
 
     protected:
         llvm::Function *matchFContract(SrcRange loc) override;

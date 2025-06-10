@@ -64,7 +64,7 @@ static llvm::cl::opt<std::string> clLibPath(
 
 static llvm::cl::list<std::string> clCLibPath(
     "cLib",
-    llvm::cl::desc("Path to a file containing contract spectifications"),
+    llvm::cl::desc("Path to a file containing contract specifications"),
     llvm::cl::value_desc("Path to contract-file"),
     llvm::cl::cat(SpecTransformCat));
 
@@ -137,6 +137,9 @@ int main(int argc, char **argv)
         llvm::outs() << "Source-language set to " << langNames[lang] << " \n";
         llvm::outs() << "From: " << clInFile << " to: " << clOutFile << "\n";
         llvm::outs() << "Working directory: " << clWorkDir << "\n";
+        llvm::outs() << "External contracts: \n";
+        for (auto p : contractFiles)
+            llvm::outs() << "  - " << p << "\n";
     }
 
     try

@@ -112,8 +112,9 @@ namespace sourcespec2ir
     IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(
         SpecParser::FileContext *specParseTree, llvm::Module *irModule,
         const std::string &srcFilePath,
-        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo)
-        : SourceSpecMatcher(specParseTree, irModule),
+        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo, 
+        bool matchExternalOnly)
+        : SourceSpecMatcher(specParseTree, irModule, matchExternalOnly),
           srcFilePath(srcFilePath),
           printMatchingInfo(printMatchingInfo), fam(fam)
     {

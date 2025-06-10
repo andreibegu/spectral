@@ -30,7 +30,7 @@ namespace sourcespec2ir
     {
     public:
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                          llvm::Module *irModule);
+                          llvm::Module *irModule, bool matchExternalOnly);
 
         virtual ~SourceSpecMatcher() = default;
 
@@ -40,6 +40,7 @@ namespace sourcespec2ir
     protected:
         SpecParser::FileContext *specParseTree;
         llvm::Module *irModule;
+        bool matchExternalOnly; 
 
         /**
          * Given the mapping-string of an external contract, this method

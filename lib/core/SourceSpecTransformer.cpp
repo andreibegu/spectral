@@ -88,13 +88,28 @@ namespace sourcespec2ir
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get(),
-                                             srcInPath);
+                                             srcInPath, false);
         auto matchedSpecs = specMatcher->matchSpecs();
 
         // Release the parser and input-streams
         parser.reset();
 
-        // TODO: Iterate over the contract-lib-files and parse external contracts.
+        // TODO: generalize so that multiple src-files are supported and normal
+        //          specs are only matched within the same file!
+        for (auto contractPath : extContractPaths)
+        {
+            // Parse external contracts.
+            auto parser = std::make_unique<SpecParserWrapper>(contractPath);
+            auto contractParseTree = parser->getSrcParseTree();
+            if (!contractParseTree)
+                throw utils::PallasException(
+                    "Unable to parse external contract: " + contractPath);
+            // Match external contracts
+            auto matcher = createSpecMatcher(
+                contractParseTree, irModule.get(), contractPath, true);
+            auto extContracts = matcher->matchSpecs();
+            matchedSpecs->merge(std::move(extContracts));
+        }
 
         // Generate the wrapper-functions:
         wrapperGenerator = createWrapperGenerator(*specDeclarations);
@@ -754,10 +769,10 @@ namespace sourcespec2ir
      */
     std::unique_ptr<SourceSpecMatcher> SourceSpecTransformer::createSpecMatcher(
         SpecParser::FileContext *specParseTree, llvm::Module *irModule,
-        std::string srcFilePath)
+        std::string srcFilePath, bool matchExternalOnly)
     {
         return std::make_unique<IRBasedSourceSpecMatcher>(
             specParseTree, irModule, srcFilePath, &fam,
-            outputConfig.printMatchingInfo);
+            outputConfig.printMatchingInfo, matchExternalOnly);
     }
 }
