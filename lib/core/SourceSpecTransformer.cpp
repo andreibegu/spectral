@@ -25,6 +25,7 @@
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
+#include "WrapperLocCollector.h"
 #include "passes/LoopIDPass.h"
 #include "wrapper/SpecParserWrapper.h"
 #include "wrapper/MatchedWrapperFunctions.h"
@@ -85,6 +86,11 @@ namespace sourcespec2ir
         // Collect declarations
         SpecDeclarationCollector declCollector(srcParseTree);
         auto specDeclarations = declCollector.collectDeclarations();
+
+        // Collect location-markers:
+        WrapperLocCollector wLocCollector(*srcParseTree, srcInPath);
+        auto wLocMarkers = wLocCollector.collectLocationMarkers();
+        // TODO: Do something smart with the location-markers
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get(),

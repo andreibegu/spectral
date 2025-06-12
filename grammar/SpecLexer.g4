@@ -21,6 +21,7 @@ CONTRACT: 'contract';
 ASSUMED: 'assumed';
 IR: 'ir';
 SRC: 'src';
+WRAPPER_LOC: 'wrapper location';
 
 SPEC_EXPR_END: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);

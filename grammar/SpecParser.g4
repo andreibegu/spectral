@@ -3,7 +3,11 @@ options { tokenVocab = SpecLexer; }
 
 file: nonSpec (specDeclarationBlock nonSpec)? (spec nonSpec)*;
 
-spec: specContractBlock | specStatementBlock | specLoopInvariantBlock;
+spec
+    : specContractBlock 
+    | specStatementBlock 
+    | specLoopInvariantBlock 
+    | wrapperLocationMarker;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -12,6 +16,8 @@ specContractBlock: SPEC_START specExternalClause? specPureFlag? specContractClau
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
 specLoopInvariantBlock: SPEC_START specLoopInvariant+ SPEC_END;
+
+wrapperLocationMarker: SPEC_START 'wrapper location' specExpression? SPEC_EXPR_END SPEC_END;
 
 specContractClause
     : ('requires' specExpression SPEC_EXPR_END) # requiresClause

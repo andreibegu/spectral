@@ -126,27 +126,6 @@ namespace sourcespec2ir
         void addToStmntBlock(SpecStatementType type,
                              SpecParser::SpecExpressionContext *expr,
                              const SrcRange &loc);
-
-        /**
-         * Retrieving the textual representation of the specification
-         * expressions using getText() removes the whitespaces.
-         * This method returns the full textual representatoin including
-         * whitespaces by using the underlying token-stream.
-         */
-        std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
-
-        /**
-         * Extracts the source-location from a given parser-rule context and
-         * returns it as a SrcRange.
-         */
-        SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
-
-        /**
-         * Returns the location in the source-file where the given expression
-         * starts.
-         */
-        SrcLocation getExprStartLoc(
-            const SpecParser::SpecExpressionContext &exprCtx);
     };
 
 }

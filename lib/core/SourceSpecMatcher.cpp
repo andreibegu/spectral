@@ -1,9 +1,8 @@
 #include "SourceSpecMatcher.h"
 #include "PallasException.h"
-#include "SrcLookup.h"
+#include "ParsingUtils.h"
 
 #include <cassert>
-#include <stdexcept>
 
 namespace sourcespec2ir
 {
@@ -32,7 +31,7 @@ namespace sourcespec2ir
         // Safety-check that the state of the object is valid
         assert(contract == nullptr);
 
-        auto loc = getLocFromCtx(ctx);
+        auto loc = utils::getLocFromCtx(ctx, file);
         bool isExternal = ctx->specExternalClause() != nullptr;
         bool isAssumed = isExternal &&
                          ctx->specExternalClause()->ASSUMED() != nullptr;
@@ -51,7 +50,7 @@ namespace sourcespec2ir
             // Match external contract to function
             auto *externalClause = ctx->specExternalClause();
             bool isSrcMapping = externalClause->SRC() != nullptr;
-            auto matchingStr = getExprAsStr(*externalClause->specExpression());
+            auto matchingStr = utils::getExprAsStr(*externalClause->specExpression());
             irFunctions = matchExternalContract(matchingStr, isSrcMapping, loc);
         }
         else
@@ -93,14 +92,16 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitRequiresClause(
         SpecParser::RequiresClauseContext *ctx)
     {
-        addToFContract(Requires, ctx->specExpression(), getLocFromCtx(ctx));
+        addToFContract(Requires, ctx->specExpression(),
+                       utils::getLocFromCtx(ctx, file));
         return 0;
     }
 
     std::any SourceSpecMatcher::visitEnsuresClause(
         SpecParser::EnsuresClauseContext *ctx)
     {
-        addToFContract(Ensures, ctx->specExpression(), getLocFromCtx(ctx));
+        addToFContract(Ensures, ctx->specExpression(),
+                       utils::getLocFromCtx(ctx, file));
         return 0;
     }
 
@@ -110,9 +111,9 @@ namespace sourcespec2ir
     {
         if (!contract)
             assert("No contract set while adding statement");
-        auto exprStr = getExprAsStr(*expr);
+        auto exprStr = utils::getExprAsStr(*expr);
         auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr));
+            type, exprStr, loc, utils::getExprStartLoc(*expr, file));
         contract->addStatement(std::move(stmnt));
     }
 
@@ -124,7 +125,7 @@ namespace sourcespec2ir
                 "Encountered loop invariant in contract-file.");
 
         // Match the spec-block to the IR
-        auto loc = getLocFromCtx(ctx);
+        auto loc = utils::getLocFromCtx(ctx, file);
         auto [parentFunc, loop] = matchLoopInvBlock(loc);
 
         if (parentFunc == nullptr || loop == nullptr)
@@ -145,9 +146,9 @@ namespace sourcespec2ir
         // Collect the individual invariants from the invariant-block
         for (auto *inv : ctx->specLoopInvariant())
         {
-            auto stringRepr = getExprAsStr(*inv->specExpression());
-            auto exprLoc = getExprStartLoc(*inv->specExpression());
-            auto invLoc = getLocFromCtx(inv);
+            auto stringRepr = utils::getExprAsStr(*inv->specExpression());
+            auto exprLoc = utils::getExprStartLoc(*inv->specExpression(), file);
+            auto invLoc = utils::getLocFromCtx(inv, file);
             invBlock->addInvariant(
                 std::make_unique<MatchedLoopInvariant>(stringRepr, invLoc, exprLoc));
         }
@@ -167,7 +168,7 @@ namespace sourcespec2ir
                 "Encountered statement-block in contract-file.");
 
         // Match contract to instruction
-        auto loc = getLocFromCtx(ctx);
+        auto loc = utils::getLocFromCtx(ctx, file);
         const auto instr = matchStatementBlock(loc);
         assert(instr != nullptr);
 
@@ -186,14 +187,16 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitAssertStatement(
         SpecParser::AssertStatementContext *ctx)
     {
-        addToStmntBlock(Assert, ctx->specExpression(), getLocFromCtx(ctx));
+        addToStmntBlock(Assert, ctx->specExpression(), 
+            utils::getLocFromCtx(ctx, file));
         return 0;
     }
 
     std::any SourceSpecMatcher::visitAssumeStatement(
         SpecParser::AssumeStatementContext *ctx)
     {
-        addToStmntBlock(Assume, ctx->specExpression(), getLocFromCtx(ctx));
+        addToStmntBlock(Assume, ctx->specExpression(), 
+            utils::getLocFromCtx(ctx, file));
         return 0;
     }
 
@@ -203,38 +206,9 @@ namespace sourcespec2ir
     {
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
-        auto exprStr = getExprAsStr(*expr);
+        auto exprStr = utils::getExprAsStr(*expr);
         auto stmnt = std::make_unique<MatchedSpecStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr));
+            type, exprStr, loc, utils::getExprStartLoc(*expr, file));
         stmntBlock->addStatement(std::move(stmnt));
-    }
-
-    std::string SourceSpecMatcher::getExprAsStr(
-        const SpecParser::SpecExpressionContext &eCtx)
-    {
-        auto startToken = eCtx.start;
-        auto stopToken = eCtx.stop;
-        auto charStream = startToken->getTokenSource()->getInputStream();
-
-        antlr4::misc::Interval i(startToken->getStartIndex(),
-                                 stopToken->getStopIndex());
-        return charStream->getText(i);
-    }
-
-    SrcRange SourceSpecMatcher::getLocFromCtx(
-        const antlr4::ParserRuleContext *ctx)
-    {
-        // We change the column-numbering to start with 1 to be consistent with
-        // the line-info of LLVM
-        return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine() + 1,
-                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1,
-                        file);
-    }
-
-    SrcLocation SourceSpecMatcher::getExprStartLoc(
-        const SpecParser::SpecExpressionContext &exprCtx)
-    {
-        return SrcLocation(exprCtx.start->getLine(),
-                           exprCtx.start->getCharPositionInLine(), file);
     }
 }
