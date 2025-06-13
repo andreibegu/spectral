@@ -14,8 +14,10 @@ namespace sourcespec2ir
 {
 
     SwiftWrapperGenerator::SwiftWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : SourceWrapperGenerator(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
     }
 
@@ -62,13 +64,13 @@ namespace sourcespec2ir
         const auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
         // Manually handle some cases where the type is not correctly resolved.
-        // This is only required in simple examples, where the used type is not 
-        // used in the code itself. (e.g. Bool is used as a return type, 
+        // This is only required in simple examples, where the used type is not
+        // used in the code itself. (e.g. Bool is used as a return type,
         // but the code does not contain any local variables of type Bool.).
         if (srcType == "$sytD")
             return "Void";
         if (srcType == "$sSbD")
-            return "Bool"; 
+            return "Bool";
 
         return srcType;
     }
@@ -136,9 +138,9 @@ namespace sourcespec2ir
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const llvm::DIType *returnType, const std::string &expr)
     {
-        // TODO: We could also do the generation of the spec-lib functions using 
+        // TODO: We could also do the generation of the spec-lib functions using
         //       Swift-macros. However, that makes the compilation-process more
-        //       complicated, as the macros have to loaded in. 
+        //       complicated, as the macros have to loaded in.
         std::stringstream stream;
         stream << "// START - SpecLib-Functions \n";
 
@@ -187,7 +189,7 @@ namespace sourcespec2ir
                    << " { fatalError() } \n";
         }
 
-        // Determine which ADT-types have to be generated 
+        // Determine which ADT-types have to be generated
         // (using the user-provided declarations)
         llvm::SmallSet<std::string, 4> seqTypes;
         for (auto decl : specDeclarations)
@@ -197,7 +199,8 @@ namespace sourcespec2ir
                 declStr.ends_with(">"))
             {
                 auto typeStr = declStr.drop_front(SWIFT_SPEC_SEQ_DEF_MACRO_START.size())
-                                   .drop_back(SWIFT_SPEC_SEQ_DEF_MACRO_END.size()).str();
+                                   .drop_back(SWIFT_SPEC_SEQ_DEF_MACRO_END.size())
+                                   .str();
                 seqTypes.insert(typeStr);
             }
         }
@@ -221,26 +224,26 @@ namespace sourcespec2ir
                    << "     let i4: Int64 \n"
                    << "     let i5: Int64 \n"
 
-                    // Constructor for new sequence 
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    init() { fatalError() } \n"
-                    // Access element of sequence
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
-                    // Size of sequence
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func size() -> Int64 { fatalError() } \n"
-                    // Prepend element to sequence 
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
-                    // Equality of sequences
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
+                   // Constructor for new sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    init() { fatalError() } \n"
+                   // Access element of sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
+                   // Size of sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func size() -> Int64 { fatalError() } \n"
+                   // Prepend element to sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
+                   // Equality of sequences
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
 
                    << "} \n";
         }

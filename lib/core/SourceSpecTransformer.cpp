@@ -106,7 +106,7 @@ namespace sourcespec2ir
             matchedSpecs->merge(matchExternalContract(contractPath));
 
         // Generate the wrapper-functions:
-        wrapperGenerator = createWrapperGenerator(*specDeclarations);
+        wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
 
@@ -155,6 +155,8 @@ namespace sourcespec2ir
         // Generate metadata for specifications
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
+        for (const auto &contract : matchedSpecs->matchedExternalContracts)
+            encodeFunctionContractBlock(*contract); 
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
@@ -783,5 +785,9 @@ namespace sourcespec2ir
         return std::make_unique<IRBasedSourceSpecMatcher>(
             specParseTree, srcFilePath, irModule, &fam,
             outputConfig.printMatchingInfo, matchExternalOnly);
+    }
+
+    std::string SourceSpecTransformer::getSrcInPath() {
+        return srcInPath;
     }
 }

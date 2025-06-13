@@ -63,6 +63,9 @@ namespace sourcespec2ir
 
         if (irFunctions.empty() && !isExternal)
             throw utils::PallasException("Failed to match contract to function.");
+            
+        auto &targetVec = isExternal ? matchedSpecs->matchedExternalContracts
+                                     : matchedSpecs->matchedFContracts;
 
         for (auto *irFunction : irFunctions)
         {
@@ -74,7 +77,7 @@ namespace sourcespec2ir
             for (auto c : ctx->children)
                 visit(c);
 
-            matchedSpecs->matchedFContracts.push_back(std::move(contract));
+            targetVec.push_back(std::move(contract));
         }
 
         return 0;
@@ -187,16 +190,16 @@ namespace sourcespec2ir
     std::any SourceSpecMatcher::visitAssertStatement(
         SpecParser::AssertStatementContext *ctx)
     {
-        addToStmntBlock(Assert, ctx->specExpression(), 
-            utils::getLocFromCtx(ctx, file));
+        addToStmntBlock(Assert, ctx->specExpression(),
+                        utils::getLocFromCtx(ctx, file));
         return 0;
     }
 
     std::any SourceSpecMatcher::visitAssumeStatement(
         SpecParser::AssumeStatementContext *ctx)
     {
-        addToStmntBlock(Assume, ctx->specExpression(), 
-            utils::getLocFromCtx(ctx, file));
+        addToStmntBlock(Assume, ctx->specExpression(),
+                        utils::getLocFromCtx(ctx, file));
         return 0;
     }
 

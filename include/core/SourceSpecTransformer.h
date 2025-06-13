@@ -50,7 +50,8 @@ namespace sourcespec2ir
          * SourceSpecTransformer that can handle a specific language.
          */
         virtual std::unique_ptr<SourceWrapperGenerator> createWrapperGenerator(
-            const llvm::SmallVector<SpecDeclaration> &specDeclarations) = 0;
+            const llvm::SmallVector<SpecDeclaration> &specDeclarations,
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers) = 0;
 
         /**
          * Creates a new SpecMatcher. Uses the IR-based spec-matcher by default.
@@ -62,6 +63,8 @@ namespace sourcespec2ir
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
             SpecParser::FileContext *specParseTree, llvm::Module *irModule,
             std::string srcFilePath, bool matchExternalOnly);
+
+        std::string getSrcInPath();
 
     private:
         std::string srcInPath;
@@ -111,7 +114,7 @@ namespace sourcespec2ir
         void verifyModule(llvm::Module &module, const std::string msg);
 
         /**
-         * Runs the matching stage for external contracts on the given file. 
+         * Runs the matching stage for external contracts on the given file.
          */
         std::unique_ptr<MatchedSpecifications>
         matchExternalContract(const std::string &contractPath);

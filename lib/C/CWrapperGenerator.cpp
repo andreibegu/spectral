@@ -1,6 +1,5 @@
 #include "CWrapperGenerator.h"
 #include "SrcLookup.h"
-#include "PallasException.h"
 
 #include <sstream>
 
@@ -8,8 +7,10 @@ namespace sourcespec2ir
 {
 
     CWrapperGenerator::CWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : SourceWrapperGenerator(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations, 
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
     }
 

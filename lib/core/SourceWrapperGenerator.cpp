@@ -1,23 +1,31 @@
 #include "SourceWrapperGenerator.h"
 #include "PallasException.h"
+#include "FileUtils.h"
 
 #include <fstream>
 #include <map>
+#include <regex>
 #include <sstream>
-#include <system_error>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/InstrTypes.h>
 #include <llvm/Support/FileSystem.h>
 
 namespace sourcespec2ir
 {
 
     SourceWrapperGenerator::SourceWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : specDeclarations(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : srcInFile(srcInFile),
+          specDeclarations(specDeclarations),
+          wrapperMarkers(wrapperMarkers)
     {
     }
 
@@ -30,6 +38,9 @@ namespace sourcespec2ir
         // Create wrappers for function-contracts
         for (const auto &contract : matchedSpecs.matchedFContracts)
             wrapFunctionContractBlock(*contract, *matchedWrappers);
+        // Create wrappers for external contracts
+        for (const auto &contract : matchedSpecs.matchedExternalContracts)
+            wrapExternalContractBlock(*contract, *matchedWrappers);
         // Create wrappers for loop-invariants
         for (const auto &invBlock : matchedSpecs.matchedLoopInvariants)
             wrapLoopInvariantBlock(*invBlock, *matchedWrappers);
@@ -67,6 +78,105 @@ namespace sourcespec2ir
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
         }
     };
+
+    namespace
+    {
+
+        const sourcespec2ir::WrapperLocMarker *selectLocMarker(
+            const llvm::DIScope &scope,
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        {
+            // Filter for loc-markers that match the name of the scope
+            llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> matchingMarkers;
+            llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> wildcardMarkers;
+            for (auto &marker : wrapperMarkers)
+            {
+                if (marker.scopeMatchingStr.has_value())
+                {
+                    const std::regex matchRegex(*marker.scopeMatchingStr);
+                    if (std::regex_match(scope.getName().str(), matchRegex))
+                        matchingMarkers.push_back(&marker);
+                }
+                else
+                {
+                    // Treat markers without matching-string as wildcards
+                    wildcardMarkers.push_back(&marker);
+                }
+            }
+
+            if (matchingMarkers.size() == 1)
+                return matchingMarkers[0];
+            if (matchingMarkers.size() == 0 && wildcardMarkers.size() == 1)
+                return wildcardMarkers[0];
+            if (matchingMarkers.empty() && wildcardMarkers.empty())
+                return nullptr;
+
+            // TODO: How to handle multiple matching markers?
+            throw utils::PallasException(
+                "Wrapper generation: Ambiguous insert-location "
+                "for external contract ");
+        }
+
+        bool isParentScope(const llvm::DIScope *parent,
+                           const llvm::DIScope *child)
+        {
+            if (child == parent)
+                return true;
+            return isParentScope(parent, child->getScope());
+        }
+
+        llvm::DIScope *getClosestParentScope(
+            llvm::ArrayRef<llvm::DIScope *> children)
+        {
+            // TODO: Implement this in a less inefficient way!
+            if (children.empty())
+                return nullptr;
+            auto *currentParent = children[0]->getScope();
+            // Move up to the next parent-scope until we fine one that includes
+            // all child-scopes
+            while (currentParent != nullptr)
+            {
+                bool isParent = true;
+                for (auto *c : children)
+                {
+                    if (!isParentScope(currentParent, c))
+                    {
+                        isParent = false;
+                        break;
+                    }
+                }
+                if (isParent)
+                    return currentParent;
+                currentParent = currentParent->getScope();
+            }
+            return nullptr;
+        }
+    }
+
+    void SourceWrapperGenerator::wrapExternalContractBlock(
+        const MatchedFunctionContract &contract,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        // TODO: Handle the case when there is no debug-info
+        if (contract.function->getSubprogram() == nullptr ||
+            contract.function->getSubprogram()->getType() == nullptr)
+            throw utils::PallasException(
+                "Unable to get wrapper-arguments (missing dbg-info)");
+        auto argList = getSrcVariablesForFunction(*contract.function);
+        auto rType = contract.function->getSubprogram()->getType()->getTypeArray()[0];
+        auto loc = getExternalWrapperInsertLoc(contract);
+
+        // Wrap clauses of the contract
+        for (auto &stmnt : contract.statements)
+        {
+            auto wName = getNameForWrapperFunction();
+            auto wStr = getWrapperFunctionString(
+                argList->getArrayRef(), stmnt->expr, wName, rType);
+            matchedWrappers.fContractWrappers[stmnt.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wName, wStr, argList->getArrayRef(), loc);
+        }
+    }
 
     void SourceWrapperGenerator::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock,
@@ -323,6 +433,43 @@ namespace sourcespec2ir
             throw utils::PallasException("Cannot get line-info for function");
 
         return parentFunc->getSubprogram()->getLine();
+    }
+
+    size_t SourceWrapperGenerator::getExternalWrapperInsertLoc(
+        const MatchedFunctionContract &contract)
+    {
+        auto *pFunc = contract.function;
+
+        // If the function is located in the source file, proceed as with a
+        // non-external contract
+        if (pFunc->getSubprogram() != nullptr &&
+            utils::isFromFile(*pFunc->getSubprogram(), srcInFile)) 
+            return getWrapperInsertLoc(contract);
+
+        // Collect scopes of all call-sites
+        llvm::SmallVector<llvm::DIScope *> scopes;
+        for (auto *user : pFunc->users())
+        {
+            if (auto *call = llvm::dyn_cast<llvm::CallBase>(user))
+            {
+                auto *scope = call->getFunction()->getSubprogram();
+                if (scope == nullptr)
+                    throw utils::PallasException(
+                        "Wrapper generation: Failed to get scope from call-site");
+                scopes.push_back(scope);
+            }
+        }
+        // Find the closest parent-scope of all call sites
+        auto *parentScope = getClosestParentScope(scopes);
+        if (parentScope == nullptr)
+            throw utils::PallasException(
+                "Wrapper generation: Failed to get parent-scope for external contract");
+        // Find matching insertion-point marker
+        auto *insertMarker = selectLocMarker(*parentScope, wrapperMarkers);
+        if (insertMarker == nullptr)
+            throw utils::PallasException(
+                "Wrapper generation: Failed to get insert location for external contract");
+        return insertMarker->markerLoc.getStartLine();
     }
 
     std::string SourceWrapperGenerator::getNameForWrapperFunction()

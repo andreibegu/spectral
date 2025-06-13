@@ -5,6 +5,7 @@
 #include "wrapper/SrcLocation.h"
 #include "wrapper/SrcWrapperFunction.h"
 #include "wrapper/MatchedWrapperFunctions.h"
+#include "wrapper/WrapperLocMarker.h"
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -29,11 +30,13 @@ namespace sourcespec2ir
     public:
         /**
          * Generates a new wrapper-generator.
-         * The provided reference to the specDeclarations must remain valid for
-         * the lifetime of the SourceWrapperGenerator.
+         * The provided references to the specDeclarations and InsertLocations
+         * must remain valid for the lifetime of the SourceWrapperGenerator.
          */
         SourceWrapperGenerator(
-            const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations);
+            const std::string srcInFile,
+            const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers);
 
         virtual ~SourceWrapperGenerator() = default;
 
@@ -104,6 +107,22 @@ namespace sourcespec2ir
         size_t getWrapperInsertLoc(const MatchedSpecStatementBlock &stmntBlock);
 
         /**
+         * Return the line-number where the wrapper-functions for a given
+         * external contract should be inserted.
+         * The default-implementation uses the following rules to dertemine the 
+         * locations:
+         * - If the parent-function is located in the src-file, choose the same 
+         *      location as for a normal contract
+         * - Otherwise, determine the smallest DI-Scope that includes all calls 
+         *      to the parent-function. 
+         *      - Search for a unique insertion-marker that matches the name 
+         *        of the scope
+         *      - Search for a unique wildcard-marker 
+         */
+        size_t getExternalWrapperInsertLoc(
+            const MatchedFunctionContract &contract);
+
+        /**
          * Returns a new name for a wrapper-function.
          * The default-implementation simply increments a counter and appends it
          * to 'PALLAS_SPEC_'.
@@ -158,7 +177,9 @@ namespace sourcespec2ir
         getVarsForStatement(llvm::Instruction *inst);
 
     protected:
+        const std::string srcInFile;
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers;
 
         /**
          * Struct that represents a line of the source-file.
@@ -272,8 +293,17 @@ namespace sourcespec2ir
          * Creates a wrapping-function for every statement in the
          * given contract-block.
          */
-        void wrapFunctionContractBlock(const MatchedFunctionContract &contract,
-                                       MatchedWrapperFunctions &matchedWrappers);
+        void wrapFunctionContractBlock(
+            const MatchedFunctionContract &contract,
+            MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the
+         * given external contract-block.
+         */
+        void wrapExternalContractBlock(
+            const MatchedFunctionContract &contract,
+            MatchedWrapperFunctions &matchedWrappers);
 
         /**
          * Creates a wrapping-function for every statement in the

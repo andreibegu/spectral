@@ -1,5 +1,4 @@
 #include "CppWrapperGenerator.h"
-#include "PallasException.h"
 #include "SrcLookup.h"
 
 #include <sstream>
@@ -7,15 +6,17 @@
 namespace sourcespec2ir
 {
     CppWrapperGenerator::CppWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : SourceWrapperGenerator(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
     }
 
     std::string CppWrapperGenerator::getWrapperFunctionString(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const std::string &expr,
-        const std::string &functionName, 
+        const std::string &functionName,
         const llvm::DIType *returnType)
     {
         std::stringstream stream;
@@ -76,7 +77,7 @@ namespace sourcespec2ir
     void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
 
-        // Add content of the declaration-block to the file. 
+        // Add content of the declaration-block to the file.
         for (auto &decl : specDeclarations)
         {
             auto declStr = decl.content + ";";
