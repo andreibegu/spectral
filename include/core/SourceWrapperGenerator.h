@@ -176,6 +176,17 @@ namespace sourcespec2ir
         virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
         getVarsForStatement(llvm::Instruction *inst);
 
+        /**
+         * Some function-arguments are compiler-generated (e.g. this, self) 
+         * and should not be added the the signature of the wrapper function. 
+         * This function determines if this is the case for the given variable
+         * that is referenced by the given debug-intrinsic. 
+         * The default-implmenetation checks the 'DIFlagObjectPointer' flag and 
+         * if the assiciated value has the 'swiftself' attribute.
+         */
+        virtual bool isCompilerGeneratedVar(
+            const llvm::DbgVariableIntrinsic &intr);
+
     protected:
         const std::string srcInFile;
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;

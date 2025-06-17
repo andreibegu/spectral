@@ -90,7 +90,6 @@ namespace sourcespec2ir
         // Collect location-markers:
         WrapperLocCollector wLocCollector(*srcParseTree, srcInPath);
         auto wLocMarkers = wLocCollector.collectLocationMarkers();
-        // TODO: Do something smart with the location-markers
 
         // Match the specifications to the IR
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get(),
@@ -403,6 +402,7 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(*matchedWrappers->fContractWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
+        // TODO: Handle external contracts
         // Handle loop-invariants
         for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
         {

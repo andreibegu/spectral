@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
@@ -224,7 +225,7 @@ namespace sourcespec2ir
     SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
     {
         if (fun.isDeclaration())
-            throw utils::PallasException("Cannot variables for for declaration.");
+            throw utils::PallasException("Cannot determine variables for declaration.");
 
         // SetVector is used to keep insertion-order and prevent duplicates
         auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
@@ -235,6 +236,8 @@ namespace sourcespec2ir
             // Only consider calls to llvm intrinsics
             if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
             {
+                if (isCompilerGeneratedVar(*intrinsic))
+                    continue;
                 auto *srcVar = intrinsic->getVariable();
                 // Filter on function arguments
                 if (srcVar->getArg() != 0)
@@ -263,6 +266,8 @@ namespace sourcespec2ir
         {
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
+                if (isCompilerGeneratedVar(*intr))
+                    continue;
                 if (!domTree.dominates(intr, loopHeader))
                     continue;
                 auto *srcVar = intr->getVariable();
@@ -304,6 +309,8 @@ namespace sourcespec2ir
 
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
+                if (isCompilerGeneratedVar(*intr))
+                    continue;
                 // The instruction is a debug-intrinsic
                 if (!domTree.dominates(&*i, inst))
                     continue;
@@ -312,6 +319,35 @@ namespace sourcespec2ir
             }
         }
         return varSet;
+    }
+
+    namespace
+    {
+        bool isSwiftSelfArg(const llvm::DbgVariableIntrinsic &intr)
+        {
+            llvm::Value *val = nullptr;
+            if (auto *dbgDecl = llvm::dyn_cast<llvm::DbgDeclareInst>(&intr))
+                val = dbgDecl->getAddress();
+            if (auto *dbgVal = llvm::dyn_cast<llvm::DbgValueInst>(&intr))
+                val = dbgVal->getValue();
+
+            if (auto *arg = llvm::dyn_cast_if_present<llvm::Argument>(val))
+                return arg->hasSwiftSelfAttr();
+            return false;
+        }
+    }
+
+    bool SourceWrapperGenerator::isCompilerGeneratedVar(
+        const llvm::DbgVariableIntrinsic &intr)
+    {
+        auto *var = intr.getVariable();
+        if (var == nullptr)
+            throw utils::PallasException("Unable to get wrapper arguments (incomplete dbg-info)");
+        if (var->isObjectPointer())
+            return true;
+        if (isSwiftSelfArg(intr))
+            return true;
+        return false;
     }
 
     std::string SourceWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
@@ -442,9 +478,9 @@ namespace sourcespec2ir
 
         // If the function is located in the source file, proceed as with a
         // non-external contract
-        if (pFunc->getSubprogram() != nullptr &&
-            utils::isFromFile(*pFunc->getSubprogram(), srcInFile)) 
-            return getWrapperInsertLoc(contract);
+        //if (pFunc->getSubprogram() != nullptr &&
+        //    utils::isFromFile(*pFunc->getSubprogram(), srcInFile))
+        //    return getWrapperInsertLoc(contract);
 
         // Collect scopes of all call-sites
         llvm::SmallVector<llvm::DIScope *> scopes;

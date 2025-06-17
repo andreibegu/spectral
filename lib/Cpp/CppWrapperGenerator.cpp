@@ -20,6 +20,7 @@ namespace sourcespec2ir
         const llvm::DIType *returnType)
     {
         std::stringstream stream;
+        stream << "__attribute__((used)) \n";
         stream << " bool " << functionName << "(";
 
         // Construct arg-list
