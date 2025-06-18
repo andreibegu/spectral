@@ -40,7 +40,7 @@ namespace sourcespec2ir
         {
             if (it != srcVars.begin())
                 stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
+            const auto varName = getArgName(utils::getSrcVarName(**it));
             const auto varType = getSrcReprOfType((*it)->getType());
             stream << varName << ": " << varType;
         }
@@ -250,6 +250,13 @@ namespace sourcespec2ir
 
         stream << "// END - SpecLib-Functions \n";
         return stream.str();
+    }
+
+    std::string SwiftWrapperGenerator::getArgName(const std::string &origName)
+    {
+        if (origName == "self")
+            return "_self";
+        return origName;
     }
 
 }

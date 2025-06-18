@@ -111,9 +111,7 @@ namespace sourcespec2ir
          * external contract should be inserted.
          * The default-implementation uses the following rules to dertemine the 
          * locations:
-         * - If the parent-function is located in the src-file, choose the same 
-         *      location as for a normal contract
-         * - Otherwise, determine the smallest DI-Scope that includes all calls 
+         * - Determine the smallest DI-Scope that includes all calls 
          *      to the parent-function. 
          *      - Search for a unique insertion-marker that matches the name 
          *        of the scope
@@ -175,17 +173,6 @@ namespace sourcespec2ir
          */
         virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
         getVarsForStatement(llvm::Instruction *inst);
-
-        /**
-         * Some function-arguments are compiler-generated (e.g. this, self) 
-         * and should not be added the the signature of the wrapper function. 
-         * This function determines if this is the case for the given variable
-         * that is referenced by the given debug-intrinsic. 
-         * The default-implmenetation checks the 'DIFlagObjectPointer' flag and 
-         * if the assiciated value has the 'swiftself' attribute.
-         */
-        virtual bool isCompilerGeneratedVar(
-            const llvm::DbgVariableIntrinsic &intr);
 
     protected:
         const std::string srcInFile;

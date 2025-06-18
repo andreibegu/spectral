@@ -28,7 +28,7 @@ namespace sourcespec2ir
         {
             if (it != srcVars.begin())
                 stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
+            const auto varName = getNameForArg(utils::getSrcVarName(**it));
             const auto varType = getSrcReprOfType((*it)->getType());
             stream << varType << " " << varName;
         }
@@ -90,6 +90,14 @@ namespace sourcespec2ir
         // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include \"cpp_spec_lib.h\"", 0));
+    }
+
+    std::string CppWrapperGenerator::getNameForArg(const std::string &origName)
+    {
+        if (origName == "this"){
+            return "_this";
+        }
+        return origName;
     }
 
 }

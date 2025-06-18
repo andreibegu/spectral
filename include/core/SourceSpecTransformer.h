@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/DIBuilder.h>
@@ -65,6 +66,11 @@ namespace sourcespec2ir
             std::string srcFilePath, bool matchExternalOnly);
 
         std::string getSrcInPath();
+
+        /**
+         * Determines of the given argument is compiler-generated. 
+         */
+        virtual bool isCompilerGeneratedArg(const llvm::Argument &arg);
 
     private:
         std::string srcInPath;
@@ -201,6 +207,13 @@ namespace sourcespec2ir
          */
         void removeDuplicateDefinitions(const llvm::Module &origModule,
                                         llvm::Module &moduleWithWrappers);
+
+        /**
+         * Removes compiler-generated arguments from the wrapper-functions
+         * (e.g. `this` in C++ methods or `self` from Swift methods)
+         */
+        void pruneWrapperArgs(llvm::Module &irModule,
+                              llvm::ArrayRef<SrcWrapperFunction *> wrappers);
 
         /**
          * Adds the functions that belong to the given set of wrapper-functions

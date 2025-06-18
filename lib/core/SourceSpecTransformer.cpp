@@ -2,9 +2,12 @@
 #include <vector>
 
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
+#include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
@@ -22,6 +25,7 @@
 #include "SourceSpecTransformer.h"
 #include "SpecDeclarationCollector.h"
 #include "IrSpecConstants.h"
+#include "IRUtils.h"
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
@@ -122,12 +126,15 @@ namespace sourcespec2ir
         // while linking.
         removeDuplicateDefinitions(*irModule, *moduleWithWrappers);
 
+        // Apply mem2reg to new module
+        promoteMemToReg(*moduleWithWrappers);
+
+        // Remove compiler-generated arguments from the wrapper-functions!
+        pruneWrapperArgs(*moduleWithWrappers, *wrappers);
+
         // Add all generated wrapper to the llvm.used-list of the module
         // to ensure that they are copied over during linking.
         markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
-
-        // Apply mem2reg to new module
-        promoteMemToReg(*moduleWithWrappers);
 
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers),
@@ -155,7 +162,7 @@ namespace sourcespec2ir
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
         for (const auto &contract : matchedSpecs->matchedExternalContracts)
-            encodeFunctionContractBlock(*contract); 
+            encodeFunctionContractBlock(*contract);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
@@ -176,7 +183,7 @@ namespace sourcespec2ir
         writeToFile(*irModule, outPath);
     }
 
-    std::unique_ptr<MatchedSpecifications> 
+    std::unique_ptr<MatchedSpecifications>
     SourceSpecTransformer::matchExternalContract(const std::string &contractPath)
     {
         auto parser = std::make_unique<SpecParserWrapper>(contractPath);
@@ -698,6 +705,74 @@ namespace sourcespec2ir
         }
     }
 
+    bool SourceSpecTransformer::isCompilerGeneratedArg(const llvm::Argument &arg)
+    {
+        // Check for self-arg of swift
+        if (arg.hasSwiftSelfAttr())
+            return true;
+        // Check if the dbg-info has the DIFlagObjectPointer-attribute
+        auto argIdx = arg.getArgNo();
+        auto *wSProg = arg.getParent()->getSubprogram();
+        auto argDIType = wSProg->getType()->getTypeArray()[argIdx + 1];
+        if (argDIType->isObjectPointer())
+            return true;
+        return false;
+    }
+
+    void SourceSpecTransformer::pruneWrapperArgs(
+        llvm::Module &irModule, llvm::ArrayRef<SrcWrapperFunction *> wrappers)
+    {
+        for (auto *wrapper : wrappers)
+        {
+            auto wFunc = utils::getFunctionBySrcName(irModule, wrapper->name);
+            if (wFunc == nullptr)
+                throw utils::PallasException("Failed to get wrapper-function");
+
+            // Collect compiler-generated arguments
+            llvm::SmallSet<llvm::Argument *, 2> genArgs;
+            llvm::SmallSet<unsigned, 2> argIdxs;
+            for (auto &arg : wFunc->args())
+            {
+                if (isCompilerGeneratedArg(arg))
+                {
+                    genArgs.insert(&arg);
+                    argIdxs.insert(arg.getArgNo() + 1);
+                }
+            }
+            if (genArgs.empty())
+                return;
+
+            // TODO: Check that compiler-generated args are only at front and back
+
+            // Collect & remove dbg-intrinscs that refer to generated args
+            llvm::SmallVector<llvm::DbgVariableIntrinsic *, 2> intrToDelete;
+            for (auto i = inst_begin(wFunc), end = inst_end(wFunc); i != end; ++i)
+            {
+                if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
+                {
+                    auto *var = intr->getVariable();
+                    if (var->isParameter() && argIdxs.contains(var->getArg()))
+                        intrToDelete.push_back(intr);
+                }
+            }
+            while (!intrToDelete.empty())
+                intrToDelete.pop_back_val()->eraseFromParent();
+
+            // Check that compiler-generated args are no longer used in the function
+            for (auto *arg : genArgs)
+                if (!arg->use_empty())
+                    throw utils::PallasException(
+                        "Failed to prune wrapper function (use of generated arg)");
+
+            // Make sure that the wrapper is not referenced in the modules used-list
+            llvm::removeFromUsedLists(*wFunc->getParent(), 
+                [wFunc](llvm::Constant *C) { return C == wFunc; });
+
+            // Remove compiler-generated args from function
+            utils::removeArgsFromWrapper(wFunc, genArgs);
+        }
+    }
+
     void SourceSpecTransformer::markWrapperFunctionsAsUsed(
         llvm::Module &module, llvm::ArrayRef<SrcWrapperFunction *> wrappers)
     {
@@ -787,7 +862,8 @@ namespace sourcespec2ir
             outputConfig.printMatchingInfo, matchExternalOnly);
     }
 
-    std::string SourceSpecTransformer::getSrcInPath() {
+    std::string SourceSpecTransformer::getSrcInPath()
+    {
         return srcInPath;
     }
 }

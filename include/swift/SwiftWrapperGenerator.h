@@ -44,6 +44,8 @@ namespace sourcespec2ir
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const llvm::DIType *returnType,
             const std::string &expr);
+
+        std::string getArgName(const std::string &origName);
     };
 
 }

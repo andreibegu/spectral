@@ -36,6 +36,10 @@ namespace sourcespec2ir
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
+
+    private:
+        // Used to resolve conflicts of var-names with reserved keywords.
+        std::string getNameForArg(const std::string &origName);
     };
 
 }
