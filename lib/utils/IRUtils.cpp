@@ -8,7 +8,10 @@
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/DIBuilder.h>
+#include <llvm/IR/Metadata.h>
 #include <llvm/IR/Module.h>
 
 namespace sourcespec2ir::utils
@@ -83,11 +86,63 @@ namespace sourcespec2ir::utils
         wFunc->getAllMetadata(oldMD);
         for (auto [KindID, Node] : oldMD)
             newFunc->addMetadata(KindID, *Node);
-        
-        // TODO: Make sure that the DISubprogram debug-info is adapted!
-        auto *sProg = newFunc->getSubprogram();
 
+        // Adapt the type of the DISubprogram
+        llvm::DIBuilder diBuilder(*wFunc->getParent());
+        auto *oldSProg = wFunc->getSubprogram();
+        auto *oldSProgType = wFunc->getSubprogram()->getType();
 
+        llvm::SmallVector<llvm::Metadata *> newSProgTypeArr;
+        for (auto [idx, t] : llvm::enumerate(oldSProgType->getTypeArray()))
+        {
+            if (idx == 0 ||                                     // Return-type
+                !argsToRemove.contains(wFunc->getArg(idx - 1))) // Arg-types
+            {
+                newSProgTypeArr.push_back(t);
+            }
+        }
+        auto *newSProgType = diBuilder.createSubroutineType(
+            diBuilder.getOrCreateTypeArray(newSProgTypeArr),
+            oldSProgType->getFlags(),
+            oldSProgType->getCC());
+        newFunc->getSubprogram()->replaceType(newSProgType);
+
+        // Build new DISubprogram
+        // TODO: Change type and remove declaration-flag
+        //       or change the type of the declarartion
+        /*
+        auto *newSProg = diBuilder.createFunction(
+            oldSProg->getScope(),
+            oldSProg->getName(),
+            oldSProg->getLinkageName(),
+            oldSProg->getFile(),
+            oldSProg->getLine(),
+            newSProgType,
+            oldSProg->getScopeLine(),
+            oldSProg->getFlags(),
+            oldSProg->getSPFlags(),
+            oldSProg->getTemplateParams(),
+            nullptr, // Set declaration to null
+            oldSProg->getThrownTypes(),
+            oldSProg->getAnnotations(),
+            oldSProg->getTargetFuncName()
+        );
+        newFunc->setSubprogram(newSProg);
+        */
+
+        // If the subprog has a declaration, change type of that as well
+        // Because it is usually not distinct, we cannot use replaceType
+        // TODO: Cleanup all refrences to the old declaration-SProg
+        //if (auto *diDecl = sProg->getDeclaration()) {
+            
+            // auto newDeclSProg = diDecl->clone();
+            // newDeclSProg->replaceType(newSProgType);
+            // diDecl->replaceAllUsesWith(
+            //    llvm::MDNode::replaceWithPermanent(std::move(newDeclSProg)));
+            // diDecl->replaceType(newSProgType);
+        // }
+
+        diBuilder.finalize();
         wFunc->eraseFromParent();
     }
 }
