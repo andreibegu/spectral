@@ -87,7 +87,7 @@ namespace sourcespec2ir
             const llvm::DIScope &scope,
             const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
         {
-            // Filter for loc-markers that match the name of the scope
+            // Filter for loc-markers that match the name of the scope?
             llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> matchingMarkers;
             llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> wildcardMarkers;
             for (auto &marker : wrapperMarkers)
@@ -121,9 +121,17 @@ namespace sourcespec2ir
         bool isParentScope(const llvm::DIScope *parent,
                            const llvm::DIScope *child)
         {
+            if (child == nullptr)
+                return false; 
             if (child == parent)
-                return true;
-            return isParentScope(parent, child->getScope());
+                return true; 
+            // We first walk up the scope chain. Once we reach the end without 
+            // finding a parent, we resort to the file-field of the child. 
+            // E.g. DICompositeTypes often have no parent-scope, but a parent-file.
+            if (child->getScope() != nullptr)
+                return isParentScope(parent, child->getScope());
+            else 
+                return isParentScope(parent, child->getFile());
         }
 
         llvm::DIScope *getClosestParentScope(
@@ -148,7 +156,10 @@ namespace sourcespec2ir
                 }
                 if (isParent)
                     return currentParent;
-                currentParent = currentParent->getScope();
+                if (currentParent->getScope() != nullptr) 
+                    currentParent = currentParent->getScope();
+                else 
+                    currentParent = currentParent->getFile();
             }
             return nullptr;
         }

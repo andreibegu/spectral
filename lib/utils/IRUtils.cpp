@@ -88,9 +88,9 @@ namespace sourcespec2ir::utils
             newFunc->addMetadata(KindID, *Node);
 
         // Adapt the type of the DISubprogram
-        llvm::DIBuilder diBuilder(*wFunc->getParent());
         auto *oldSProg = wFunc->getSubprogram();
         auto *oldSProgType = wFunc->getSubprogram()->getType();
+        llvm::DIBuilder diBuilder(*wFunc->getParent(), true, oldSProg->getUnit());
 
         llvm::SmallVector<llvm::Metadata *> newSProgTypeArr;
         for (auto [idx, t] : llvm::enumerate(oldSProgType->getTypeArray()))
@@ -128,7 +128,7 @@ namespace sourcespec2ir::utils
             oldSProg->getTargetFuncName()
         );
         newFunc->setSubprogram(newSProg);
-        */
+        //*/
 
         // If the subprog has a declaration, change type of that as well
         // Because it is usually not distinct, we cannot use replaceType
