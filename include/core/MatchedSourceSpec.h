@@ -53,6 +53,13 @@ namespace sourcespec2ir
         }
     };
 
+    enum ContractType
+    {
+        Normal,
+        External,
+        Generated
+    };
+
     /**
      * A struct that represents a function contract-block
      *  that has been matched to an IR-function.
@@ -63,11 +70,14 @@ namespace sourcespec2ir
         llvm::Function *function;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
+        ContractType type;
         bool isPure = false;
         bool isAssumed = false;
 
-        MatchedFunctionContract(llvm::Function *function, const SrcRange &srcLoc)
-            : function(function), srcLoc(srcLoc)
+        MatchedFunctionContract(
+            llvm::Function *function,
+            const SrcRange &srcLoc, const ContractType &type)
+            : function(function), srcLoc(srcLoc), type(type)
         {
         }
 
@@ -175,8 +185,6 @@ namespace sourcespec2ir
     {
         llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>>
             matchedFContracts;
-        llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>>
-            matchedExternalContracts;
         llvm::SmallVector<std::unique_ptr<MatchedLoopInvariantBlock>>
             matchedLoopInvariants;
         llvm::SmallVector<std::unique_ptr<MatchedSpecStatementBlock>>
@@ -184,7 +192,6 @@ namespace sourcespec2ir
 
         MatchedSpecifications()
             : matchedFContracts(),
-              matchedExternalContracts(),
               matchedLoopInvariants(),
               matchedStmntBlocks()
         {

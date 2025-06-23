@@ -237,7 +237,7 @@ namespace sourcespec2ir
     }
 
     llvm::SmallVector<llvm::Function *>
-    IRBasedSourceSpecMatcher::matchExternalContract(
+    IRBasedSourceSpecMatcher::matchFContract(
         const std::string matchingStr, const bool isSrcName, SrcRange loc)
     {
         if (isSrcName)

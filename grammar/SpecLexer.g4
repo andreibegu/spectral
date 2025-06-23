@@ -4,7 +4,6 @@ lexer grammar SpecLexer;
 SPEC_START: '/*@' -> mode(SPEC);
 OTHER: . -> skip;
 
-
 // Specification-mode
 mode SPEC;
 SPEC_END: '@*/' -> mode(DEFAULT_MODE); 
@@ -16,9 +15,11 @@ ASSUME: 'assume';
 DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 PURE: 'pure';
-EXTERNAL: 'external';
-CONTRACT: 'contract';
 ASSUMED: 'assumed';
+CONTRACT: 'contract';
+FOR: 'for';
+EXTERNAL: 'external';
+GENERATED: 'generated';
 IR: 'ir';
 SRC: 'src';
 WRAPPER_LOC: 'wrapper location';

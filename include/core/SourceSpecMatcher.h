@@ -45,23 +45,23 @@ namespace sourcespec2ir
         bool matchExternalOnly;
 
         /**
-         * Given the mapping-string of an external contract, this method
-         * determines if the contract can be matched to some functions in the
-         * module and returns a list of pointers to those functions.
+         * Matches a function-contract based on a provided matching-string.
+         * Given the matching-string this method determines the functions in the
+         * module whose names match to the provided matching-string. 
          * The flag 'isSrcName' determines if the name should be interpreted as
          *  source- or ir-name.
          *
          * The default-implementation only supports source-level matching
-         * strings  and interprets them as a regular expression that matches on
-         * the names of functions in the module.
+         * strings and interprets them as a regular expressions that match on
+         * the function's name.
          */
-        virtual llvm::SmallVector<llvm::Function *> matchExternalContract(
+        virtual llvm::SmallVector<llvm::Function *> matchFContract(
             const std::string matchingStr, const bool isSrcName,
             SrcRange loc) = 0;
 
         /**
-         * Given the location of a specContractBlock in the source-file,
-         * this method returns the name of the funcion that the specification
+         * Given the location of a contract-block in the source-file,
+         * this method returns the name of the function that the specification
          * refers to.
          */
         virtual llvm::Function *matchFContract(SrcRange loc) = 0;

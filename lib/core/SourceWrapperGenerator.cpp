@@ -38,17 +38,24 @@ namespace sourcespec2ir
 
         // Create wrappers for function-contracts
         for (const auto &contract : matchedSpecs.matchedFContracts)
-            wrapFunctionContractBlock(*contract, *matchedWrappers);
-        // Create wrappers for external contracts
-        for (const auto &contract : matchedSpecs.matchedExternalContracts)
-            wrapExternalContractBlock(*contract, *matchedWrappers);
+        {
+            switch (contract->type)
+            {
+            case Normal:
+                wrapFunctionContractBlock(*contract, *matchedWrappers);
+                break;
+            case External:
+            case Generated:
+                wrapExternalContractBlock(*contract, *matchedWrappers);
+            }
+        }
         // Create wrappers for loop-invariants
         for (const auto &invBlock : matchedSpecs.matchedLoopInvariants)
             wrapLoopInvariantBlock(*invBlock, *matchedWrappers);
         // Create wrappers for blocks of specification-statements
         for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
             wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
-
+            
         return matchedWrappers;
     }
 
@@ -122,15 +129,15 @@ namespace sourcespec2ir
                            const llvm::DIScope *child)
         {
             if (child == nullptr)
-                return false; 
+                return false;
             if (child == parent)
-                return true; 
-            // We first walk up the scope chain. Once we reach the end without 
-            // finding a parent, we resort to the file-field of the child. 
+                return true;
+            // We first walk up the scope chain. Once we reach the end without
+            // finding a parent, we resort to the file-field of the child.
             // E.g. DICompositeTypes often have no parent-scope, but a parent-file.
             if (child->getScope() != nullptr)
                 return isParentScope(parent, child->getScope());
-            else 
+            else
                 return isParentScope(parent, child->getFile());
         }
 
@@ -156,9 +163,9 @@ namespace sourcespec2ir
                 }
                 if (isParent)
                     return currentParent;
-                if (currentParent->getScope() != nullptr) 
+                if (currentParent->getScope() != nullptr)
                     currentParent = currentParent->getScope();
-                else 
+                else
                     currentParent = currentParent->getFile();
             }
             return nullptr;

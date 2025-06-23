@@ -161,8 +161,6 @@ namespace sourcespec2ir
         // Generate metadata for specifications
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
-        for (const auto &contract : matchedSpecs->matchedExternalContracts)
-            encodeFunctionContractBlock(*contract);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
