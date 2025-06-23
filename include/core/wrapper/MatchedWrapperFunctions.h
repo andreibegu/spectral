@@ -33,6 +33,12 @@ namespace sourcespec2ir
          * Returns a vector that contains pointers to all wrapper-functions.
          */
         std::unique_ptr<llvm::SmallVector<SrcWrapperFunction *>> getWrappers();
+
+        /**
+         * Returns a vector with pointers to all wrapper-functions that belong
+         * to an external contract.
+         */
+        llvm::SmallVector<SrcWrapperFunction *> getExternalWrappers();
     };
 }
 

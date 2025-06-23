@@ -129,8 +129,10 @@ namespace sourcespec2ir
         // Apply mem2reg to new module
         promoteMemToReg(*moduleWithWrappers);
 
-        // Remove compiler-generated arguments from the wrapper-functions!
-        pruneWrapperArgs(*moduleWithWrappers, *wrappers);
+        // Remove compiler-generated arguments from wrapper-functions
+        // that belong to an external function.
+        auto extWrappers = matchedWrappers->getExternalWrappers();
+        pruneWrapperArgs(*moduleWithWrappers, extWrappers);
 
         // Add all generated wrapper to the llvm.used-list of the module
         // to ensure that they are copied over during linking.
@@ -718,7 +720,8 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::pruneWrapperArgs(
-        llvm::Module &irModule, llvm::ArrayRef<SrcWrapperFunction *> wrappers)
+        llvm::Module &irModule, 
+        llvm::ArrayRef<SrcWrapperFunction *> wrappers)
     {
         for (auto *wrapper : wrappers)
         {

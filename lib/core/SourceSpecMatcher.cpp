@@ -131,8 +131,9 @@ namespace sourcespec2ir
         if (!contract)
             assert("No contract set while adding statement");
         auto exprStr = utils::getExprAsStr(*expr);
+        auto extContr = contract->type == External;
         auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, utils::getExprStartLoc(*expr, file));
+            type, exprStr, loc, utils::getExprStartLoc(*expr, file), extContr);
         contract->addStatement(std::move(stmnt));
     }
 

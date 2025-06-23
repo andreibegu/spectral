@@ -9,8 +9,8 @@ namespace sourcespec2ir
     {
     }
 
-    std::unique_ptr<llvm::SmallVector<SrcWrapperFunction *>> 
-    MatchedWrapperFunctions::getWrappers() 
+    std::unique_ptr<llvm::SmallVector<SrcWrapperFunction *>>
+    MatchedWrapperFunctions::getWrappers()
     {
         auto wrappers = std::make_unique<llvm::SmallVector<SrcWrapperFunction *>>();
         for (auto &[contr, wrapper] : fContractWrappers)
@@ -19,6 +19,16 @@ namespace sourcespec2ir
             wrappers->push_back(wrapper.get());
         for (auto &[stmnt, wrapper] : statementWrappers)
             wrappers->push_back(wrapper.get());
+        return wrappers;
+    }
+
+    llvm::SmallVector<SrcWrapperFunction *>
+    MatchedWrapperFunctions::getExternalWrappers()
+    {
+        llvm::SmallVector<SrcWrapperFunction *> wrappers;
+        for (auto &[contr, wrapper] : fContractWrappers)
+            if (contr->isExternal)
+                wrappers.push_back(wrapper.get());
         return wrappers;
     }
 
