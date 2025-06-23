@@ -38,24 +38,14 @@ namespace sourcespec2ir
 
         // Create wrappers for function-contracts
         for (const auto &contract : matchedSpecs.matchedFContracts)
-        {
-            switch (contract->type)
-            {
-            case Normal:
-                wrapFunctionContractBlock(*contract, *matchedWrappers);
-                break;
-            case External:
-            case Generated:
-                wrapExternalContractBlock(*contract, *matchedWrappers);
-            }
-        }
+            wrapFunctionContractBlock(*contract, *matchedWrappers);
         // Create wrappers for loop-invariants
         for (const auto &invBlock : matchedSpecs.matchedLoopInvariants)
             wrapLoopInvariantBlock(*invBlock, *matchedWrappers);
         // Create wrappers for blocks of specification-statements
         for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
             wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
-            
+
         return matchedWrappers;
     }
 
@@ -63,38 +53,38 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        const auto parentFunction = contract.function;
-        llvm::DIType *parentRetType = nullptr;
-        if (parentFunction->getSubprogram() != nullptr &&
-            parentFunction->getSubprogram()->getType() != nullptr)
-        {
-            parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
-        }
+        // TODO: Handle the case when there is no debug-info
+        if (contract.function->getSubprogram() == nullptr ||
+            contract.function->getSubprogram()->getType() == nullptr)
+            throw utils::PallasException(
+                "Unable to get wrapper-arguments (missing dbg-info)");
 
-        auto argList = getSrcVariablesForFunction(*parentFunction);
-        // Get insert-position for wrapper-functions
-        auto insertPos = getWrapperInsertLoc(contract);
+        const auto pFunc = contract.function;
+        auto argList = getSrcVariablesForFunction(*pFunc);
+        auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+        auto insertPos = (contract.type == Normal)
+                             ? getWrapperInsertLoc(contract)
+                             : getExternalWrapperInsertLoc(contract);
 
-        // Wrap specification statements
+        // Wrap clauses of the contract
         for (auto &stmnt : contract.statements)
         {
-            auto wrapperName = getNameForWrapperFunction();
-            auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName, parentRetType);
+            auto wName = getNameForWrapperFunction();
+            auto wStr = getWrapperFunctionString(
+                argList->getArrayRef(), stmnt->expr, wName, rType);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+                    wName, wStr, argList->getArrayRef(), insertPos);
         }
     };
 
     namespace
     {
-
         const sourcespec2ir::WrapperLocMarker *selectLocMarker(
             const llvm::DIScope &scope,
             const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
         {
-            // Filter for loc-markers that match the name of the scope?
+            // Filter for loc-markers that match the name of the scope
             llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> matchingMarkers;
             llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> wildcardMarkers;
             for (auto &marker : wrapperMarkers)
@@ -170,32 +160,9 @@ namespace sourcespec2ir
             }
             return nullptr;
         }
+
     }
 
-    void SourceWrapperGenerator::wrapExternalContractBlock(
-        const MatchedFunctionContract &contract,
-        MatchedWrapperFunctions &matchedWrappers)
-    {
-        // TODO: Handle the case when there is no debug-info
-        if (contract.function->getSubprogram() == nullptr ||
-            contract.function->getSubprogram()->getType() == nullptr)
-            throw utils::PallasException(
-                "Unable to get wrapper-arguments (missing dbg-info)");
-        auto argList = getSrcVariablesForFunction(*contract.function);
-        auto rType = contract.function->getSubprogram()->getType()->getTypeArray()[0];
-        auto loc = getExternalWrapperInsertLoc(contract);
-
-        // Wrap clauses of the contract
-        for (auto &stmnt : contract.statements)
-        {
-            auto wName = getNameForWrapperFunction();
-            auto wStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wName, rType);
-            matchedWrappers.fContractWrappers[stmnt.get()] =
-                std::make_unique<SrcWrapperFunction>(
-                    wName, wStr, argList->getArrayRef(), loc);
-        }
-    }
 
     void SourceWrapperGenerator::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock,
@@ -426,6 +393,7 @@ namespace sourcespec2ir
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedFunctionContract &contract)
     {
+        // TODO: It might be more robust to insert at the location of the contract, not at location of function.
         return contract.function->getSubprogram()->getLine();
     }
 
@@ -454,31 +422,60 @@ namespace sourcespec2ir
         return parentFunc->getSubprogram()->getLine();
     }
 
+    namespace
+    {
+        llvm::SmallVector<llvm::DIScope *> getCallsiteScopes(
+            const llvm::Function &func)
+        {
+            llvm::SmallVector<llvm::DIScope *> scopes;
+            for (auto *user : func.users())
+            {
+                if (auto *call = llvm::dyn_cast<llvm::CallBase>(user))
+                {
+                    auto *scope = call->getFunction()->getSubprogram();
+                    if (scope == nullptr)
+                        throw utils::PallasException(
+                            "Wrapper generation: Failed to get scope from call-site");
+                    scopes.push_back(scope);
+                }
+            }
+            return scopes;
+        }
+
+    }
+
     size_t SourceWrapperGenerator::getExternalWrapperInsertLoc(
         const MatchedFunctionContract &contract)
     {
-        auto *pFunc = contract.function;
+        auto contrFile = utils::makeAbsPath(contract.srcLoc.getFile());
+        // Contract in src-file --> Place at location of contract
+        if (contrFile == srcInFile)
+            return contract.srcLoc.getStartLine();
 
-        // Collect scopes of all call-sites
-        llvm::SmallVector<llvm::DIScope *> scopes;
-        for (auto *user : pFunc->users())
+        auto *pFunc = contract.function;
+        // Contract in external file --> Location based on marker-annotations
+        llvm::DIScope *insertScope = nullptr;
+        if (contract.type == Generated)
         {
-            if (auto *call = llvm::dyn_cast<llvm::CallBase>(user))
-            {
-                auto *scope = call->getFunction()->getSubprogram();
-                if (scope == nullptr)
-                    throw utils::PallasException(
-                        "Wrapper generation: Failed to get scope from call-site");
-                scopes.push_back(scope);
-            }
+            // Insert into scope of parent-func
+            insertScope = pFunc->getSubprogram() != nullptr
+                              ? pFunc->getSubprogram()->getScope()
+                              : nullptr;
         }
-        // Find the closest parent-scope of all call sites
-        auto *parentScope = getClosestParentScope(scopes);
-        if (parentScope == nullptr)
+        else if (contract.type == External)
+        {
+            // Collect scopes of all call-sites
+            auto scopes = getCallsiteScopes(*pFunc);
+            // Find the closest parent-scope of all call sites
+            insertScope = getClosestParentScope(scopes);
+        }
+
+        if (insertScope == nullptr)
             throw utils::PallasException(
-                "Wrapper generation: Failed to get parent-scope for external contract");
+                "Wrapper generation: Failed to get insert-scope for contract");
+
         // Find matching insertion-point marker
-        auto *insertMarker = selectLocMarker(*parentScope, wrapperMarkers);
+        auto *insertMarker = selectLocMarker(*insertScope, wrapperMarkers);
         if (insertMarker == nullptr)
             throw utils::PallasException(
                 "Wrapper generation: Failed to get insert location for external contract");

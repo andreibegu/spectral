@@ -108,14 +108,8 @@ namespace sourcespec2ir
 
         /**
          * Return the line-number where the wrapper-functions for a given
-         * external contract should be inserted.
-         * The default-implementation uses the following rules to dertemine the 
-         * locations:
-         * - Determine the smallest DI-Scope that includes all calls 
-         *      to the parent-function. 
-         *      - Search for a unique insertion-marker that matches the name 
-         *        of the scope
-         *      - Search for a unique wildcard-marker 
+         * contract that is mapped to an external or generated function 
+         * should be inserted.
          */
         size_t getExternalWrapperInsertLoc(
             const MatchedFunctionContract &contract);
@@ -292,14 +286,6 @@ namespace sourcespec2ir
          * given contract-block.
          */
         void wrapFunctionContractBlock(
-            const MatchedFunctionContract &contract,
-            MatchedWrapperFunctions &matchedWrappers);
-
-        /**
-         * Creates a wrapping-function for every statement in the
-         * given external contract-block.
-         */
-        void wrapExternalContractBlock(
             const MatchedFunctionContract &contract,
             MatchedWrapperFunctions &matchedWrappers);
 
