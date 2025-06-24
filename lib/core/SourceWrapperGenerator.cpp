@@ -1,6 +1,7 @@
 #include "SourceWrapperGenerator.h"
 #include "PallasException.h"
 #include "FileUtils.h"
+#include "IRUtils.h"
 
 #include <fstream>
 #include <map>
@@ -162,7 +163,6 @@ namespace sourcespec2ir
         }
 
     }
-
 
     void SourceWrapperGenerator::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock,
@@ -393,14 +393,13 @@ namespace sourcespec2ir
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedFunctionContract &contract)
     {
-        // TODO: It might be more robust to insert at the location of the contract, not at location of function.
-        return contract.function->getSubprogram()->getLine();
+        return utils::getDeclSubprog(*contract.function)->getLine();
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedLoopInvariantBlock &invBlock)
     {
-        return invBlock.parentFunction->getSubprogram()->getLine();
+        return utils::getDeclSubprog(*invBlock.parentFunction)->getLine();
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
@@ -418,8 +417,7 @@ namespace sourcespec2ir
         auto parentFunc = instr->getParent()->getParent();
         if (parentFunc->getSubprogram() == nullptr)
             throw utils::PallasException("Cannot get line-info for function");
-
-        return parentFunc->getSubprogram()->getLine();
+        return utils::getDeclSubprog(*parentFunc)->getLine();
     }
 
     namespace
@@ -458,8 +456,9 @@ namespace sourcespec2ir
         if (contract.type == Generated)
         {
             // Insert into scope of parent-func
-            insertScope = pFunc->getSubprogram() != nullptr
-                              ? pFunc->getSubprogram()->getScope()
+            auto sProg = utils::getDeclSubprog(*pFunc);
+            insertScope = sProg != nullptr
+                              ? sProg->getScope()
                               : nullptr;
         }
         else if (contract.type == External)
