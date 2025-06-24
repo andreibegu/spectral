@@ -2,10 +2,10 @@
 
 namespace sourcespec2ir::utils
 {
-    std::string getExprAsStr(const SpecParser::SpecExpressionContext &eCtx)
+    std::string getCtxAsStr(const antlr4::ParserRuleContext &argCtx)
     {
-        auto startToken = eCtx.start;
-        auto stopToken = eCtx.stop;
+        auto startToken = argCtx.start;
+        auto stopToken = argCtx.stop;
         auto charStream = startToken->getTokenSource()->getInputStream();
 
         antlr4::misc::Interval i(startToken->getStartIndex(),

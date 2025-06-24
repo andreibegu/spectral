@@ -3,6 +3,7 @@
 #include "ParsingUtils.h"
 
 #include <cassert>
+#include <optional>
 
 namespace sourcespec2ir
 {
@@ -40,6 +41,22 @@ namespace sourcespec2ir
             }
             return Normal;
         }
+
+        WrapperSignature getWrapperSignature(
+            SpecParser::WrapperSigClauseContext &ctx)
+        {
+            WrapperSignature sig;
+            // Extract arguments
+            auto *argClause = ctx.wrapperArgClause();
+            for (auto *arg : argClause->argExpr())
+            {
+                sig.addArg(utils::getCtxAsStr(*arg));
+            }
+            // Extract return-type
+            auto *retClause = ctx.wrapperRetClause();
+            sig.retTy = utils::getCtxAsStr(*retClause->specExpression());
+            return sig;
+        }
     }
 
     std::any SourceSpecMatcher::visitSpecContractBlock(
@@ -50,13 +67,20 @@ namespace sourcespec2ir
 
         auto loc = utils::getLocFromCtx(ctx, file);
         auto type = getContractType(*ctx);
-        bool hasMappingClause = ctx->specMappingClause() != nullptr;
+        auto *mappingClause = ctx->specMappingClause();
+        bool hasMappingClause = mappingClause != nullptr;
+        bool hasSigClause = hasMappingClause &&
+                            mappingClause->wrapperSigClause() != nullptr;
         bool isAssumed = hasMappingClause &&
-                         ctx->specMappingClause()->ASSUMED() != nullptr;
+                         mappingClause->ASSUMED() != nullptr;
 
         if (matchExternalOnly && type == Normal)
             throw utils::PallasException(
                 "Encountered non-external contract in contract-file.");
+
+        if (type != External && hasSigClause)
+            throw utils::PallasException("Specification of wrapper-signature "
+                                         "is only allowed for external contracts.");
 
         if (isAssumed)
             throw utils::PallasException(
@@ -66,9 +90,8 @@ namespace sourcespec2ir
         if (type == External || type == Generated)
         {
             // Match using matching-string
-            auto *mappingClause = ctx->specMappingClause();
             bool isSrcMapping = mappingClause->SRC() != nullptr;
-            auto matchingStr = utils::getExprAsStr(*mappingClause->specExpression());
+            auto matchingStr = utils::getCtxAsStr(*mappingClause->specExpression());
             irFunctions = matchFContract(matchingStr, isSrcMapping, loc);
         }
         else
@@ -82,12 +105,17 @@ namespace sourcespec2ir
         if (irFunctions.empty() && !hasMappingClause)
             throw utils::PallasException("Failed to match contract to function.");
 
+        std::optional<WrapperSignature> sig = std::nullopt;
+        if (hasSigClause)
+            sig = getWrapperSignature(*mappingClause->wrapperSigClause());
+
         for (auto *irFunction : irFunctions)
         {
             // Create new matched contract
             contract = std::make_unique<MatchedFunctionContract>(
                 irFunction, loc, type);
             contract->isAssumed = isAssumed;
+            contract->wrapperSignature = sig;
 
             // Add all statements to the contract by traversing the children
             for (auto c : ctx->children)
@@ -130,7 +158,7 @@ namespace sourcespec2ir
     {
         if (!contract)
             assert("No contract set while adding statement");
-        auto exprStr = utils::getExprAsStr(*expr);
+        auto exprStr = utils::getCtxAsStr(*expr);
         auto extContr = contract->type == External;
         auto stmnt = std::make_unique<MatchedFContractStatement>(
             type, exprStr, loc, utils::getExprStartLoc(*expr, file), extContr);
@@ -166,7 +194,7 @@ namespace sourcespec2ir
         // Collect the individual invariants from the invariant-block
         for (auto *inv : ctx->specLoopInvariant())
         {
-            auto stringRepr = utils::getExprAsStr(*inv->specExpression());
+            auto stringRepr = utils::getCtxAsStr(*inv->specExpression());
             auto exprLoc = utils::getExprStartLoc(*inv->specExpression(), file);
             auto invLoc = utils::getLocFromCtx(inv, file);
             invBlock->addInvariant(
@@ -226,7 +254,7 @@ namespace sourcespec2ir
     {
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
-        auto exprStr = utils::getExprAsStr(*expr);
+        auto exprStr = utils::getCtxAsStr(*expr);
         auto stmnt = std::make_unique<MatchedSpecStatement>(
             type, exprStr, loc, utils::getExprStartLoc(*expr, file));
         stmntBlock->addStatement(std::move(stmnt));

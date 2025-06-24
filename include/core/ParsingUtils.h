@@ -8,15 +8,11 @@
 
 namespace sourcespec2ir::utils
 {
-    // TODO: Merge this with the SpecParserWrapper and get rid of the file-args.
-
     /**
-     * Retrieving the textual representation of the specification
-     * expressions using getText() removes the whitespaces.
-     * This method returns the full textual representatoin including
-     * whitespaces by using the underlying token-stream.
+     * Returns the textual representation of the given parser-rule 
+     * including whitespace.
      */
-    std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
+    std::string getCtxAsStr(const antlr4::ParserRuleContext &argCtx);
 
     /**
      * Extracts the source-location from a given parser-rule context and

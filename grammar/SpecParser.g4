@@ -25,8 +25,12 @@ specContractClause
     ;
 
 specMappingClause
-    : ('assumed'? 'contract' 'for' ('external' | 'generated') ('ir' | 'src')? specExpression SPEC_EXPR_END );
-    //    : ('external' 'assumed'? 'contract' ('ir' | 'src')? specExpression SPEC_EXPR_END )
+    : 'assumed'? 'contract' 'for' ('external' | 'generated') ('ir' | 'src')? specExpression SPEC_EXPR_END wrapperSigClause?;
+
+/* Specification of signature for external contracts */
+wrapperSigClause: wrapperArgClause wrapperRetClause;
+wrapperArgClause: 'args' argExpr* SPEC_EXPR_END;
+wrapperRetClause: 'returns' specExpression SPEC_EXPR_END;
 
 specPureFlag
     : 'pure' SPEC_EXPR_END # pureFlag;
@@ -44,6 +48,7 @@ specDeclaration
     : ('declare' specExpression SPEC_EXPR_END) # declarationClause
     ;
 
+argExpr: (~WRAPPER_ARG_SEP)+ ; 
 specExpression: (~SPEC_EXPR_END)+ ;
 
 nonSpec: (~(SPEC_START | SPEC_END))*;

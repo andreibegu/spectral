@@ -21,7 +21,7 @@ namespace sourcespec2ir
         SpecParser::DeclarationClauseContext *ctx)
     {
         auto *specExpr = ctx->specExpression();
-        auto declStr = utils::getExprAsStr(*specExpr);
+        auto declStr = utils::getCtxAsStr(*specExpr);
         declarations->push_back(
             SpecDeclaration(declStr, specExpr->start->getLine()));
         return 0;

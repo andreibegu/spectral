@@ -10,6 +10,8 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Metadata.h>
 
+#include <optional>
+
 namespace sourcespec2ir
 {
 
@@ -63,6 +65,13 @@ namespace sourcespec2ir
         Generated
     };
 
+    struct WrapperSignature {
+        llvm::SmallVector<std::string> args;
+        std::string retTy;
+
+        inline void addArg(const std::string &arg) { args.push_back(arg); }
+    };
+
     /**
      * A struct that represents a function contract-block
      *  that has been matched to an IR-function.
@@ -76,7 +85,8 @@ namespace sourcespec2ir
         const ContractType type;
         bool isPure = false;
         bool isAssumed = false;
-
+        std::optional<WrapperSignature> wrapperSignature = std::nullopt;
+        
         MatchedFunctionContract(
             llvm::Function *function,
             const SrcRange &srcLoc, const ContractType &type)

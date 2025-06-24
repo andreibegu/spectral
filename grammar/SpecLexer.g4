@@ -23,7 +23,10 @@ GENERATED: 'generated';
 IR: 'ir';
 SRC: 'src';
 WRAPPER_LOC: 'wrapper location';
+ARGS: 'args';
+RETURNS: 'returns';
 
+WRAPPER_ARG_SEP: ',';
 SPEC_EXPR_END: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);
 Newline: ( '\r' '\n'? | '\n') -> channel(HIDDEN);
