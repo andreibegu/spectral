@@ -24,16 +24,18 @@ namespace sourcespec2ir
         stream << " bool " << functionName << "(";
 
         // Construct arg-list
+        bool firstArg = true;
         for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
         {
             // Skip the 'this' argument as it gets added implicitly
             const auto varName = utils::getSrcVarName(**it);
             if (varName == "this")
                 continue;
-            if (it != srcVars.begin())
+            if (!firstArg)
                 stream << ", ";
             const auto varType = getSrcReprOfType((*it)->getType());
             stream << varType << " " << varName;
+            firstArg = false;
         }
         stream << ")";
 

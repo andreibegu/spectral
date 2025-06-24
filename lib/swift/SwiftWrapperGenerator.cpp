@@ -36,16 +36,18 @@ namespace sourcespec2ir
         stream << "func " << functionName << "(";
 
         // Construct arg-list
+        bool firstArg = true;
         for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
         {
             const auto varName = utils::getSrcVarName(**it);
             // Skip 'self'-arg as it gets added implicitly
             if (varName == "self")
                 continue;
-            if (it != srcVars.begin())
+            if (!firstArg)
                 stream << ", ";
             const auto varType = getSrcReprOfType((*it)->getType());
             stream << varName << ": " << varType;
+            firstArg = false;
         }
         stream << ") -> Bool ";
 
