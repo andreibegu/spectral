@@ -54,7 +54,7 @@ namespace sourcespec2ir
             }
             // Extract return-type
             auto *retClause = ctx.wrapperRetClause();
-            sig.retTy = utils::getCtxAsStr(*retClause->specExpression());
+            sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
             return sig;
         }
     }

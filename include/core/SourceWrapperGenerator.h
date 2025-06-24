@@ -6,6 +6,7 @@
 #include "wrapper/SrcWrapperFunction.h"
 #include "wrapper/MatchedWrapperFunctions.h"
 #include "wrapper/WrapperLocMarker.h"
+#include "wrapper/WrapperSignature.h"
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -188,6 +189,19 @@ namespace sourcespec2ir
             {
             }
         };
+
+        /**
+         * Build a wrapper-signature based on the given DILocalVariables that 
+         * represent the arguments and the given DIType that represents the 
+         * return-type.
+         * Frontends can override this to influence the construction of the 
+         * wrapper-function's signature.
+         */
+        /*
+        virtual WrapperSignature buildWrapperSignature(
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const llvm::DIType *returnType = nullptr);
+        */
 
         /**
          * Adds a const-qualifier to the given base-type.

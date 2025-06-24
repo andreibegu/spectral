@@ -2,6 +2,7 @@
 #define PALLAS_MATCHEDSOURCESPEC_H
 
 #include "wrapper/SrcLocation.h"
+#include "wrapper/WrapperSignature.h"
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/LoopInfo.h>
@@ -63,13 +64,6 @@ namespace sourcespec2ir
         Normal,
         External,
         Generated
-    };
-
-    struct WrapperSignature {
-        llvm::SmallVector<std::string> args;
-        std::string retTy;
-
-        inline void addArg(const std::string &arg) { args.push_back(arg); }
     };
 
     /**

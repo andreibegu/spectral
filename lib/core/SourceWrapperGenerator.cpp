@@ -335,6 +335,15 @@ namespace sourcespec2ir
         return nSpaceStr + typeName;
     }
 
+    /*
+    WrapperSignature buildWrapperSignature(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const llvm::DIType *returnType = nullptr)
+    {
+
+    }
+    */
+
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)
     {
         auto nSpace = llvm::dyn_cast_or_null<llvm::DINamespace>(scope);
