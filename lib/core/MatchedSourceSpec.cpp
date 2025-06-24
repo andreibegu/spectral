@@ -10,9 +10,6 @@ namespace sourcespec2ir
         matchedFContracts.append(
             std::make_move_iterator(specs2->matchedFContracts.begin()),
             std::make_move_iterator(specs2->matchedFContracts.end()));
-        matchedExternalContracts.append(
-            std::make_move_iterator(specs2->matchedExternalContracts.begin()),
-            std::make_move_iterator(specs2->matchedExternalContracts.end()));
         matchedLoopInvariants.append(
             std::make_move_iterator(specs2->matchedLoopInvariants.begin()),
             std::make_move_iterator(specs2->matchedLoopInvariants.end()));

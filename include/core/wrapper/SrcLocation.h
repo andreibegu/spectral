@@ -22,6 +22,7 @@ namespace sourcespec2ir
 
         inline size_t getLine() const { return line; }
         inline size_t getColumn() const { return column; }
+        inline const std::string &getFile() const { return file; }
     };
 
     /**
@@ -40,6 +41,7 @@ namespace sourcespec2ir
         inline size_t getStartCol() const { return startLoc.getColumn(); }
         inline size_t getEndLine() const { return endLoc.getLine(); }
         inline size_t getEndCol() const { return endLoc.getColumn(); }
+        inline const std::string &getFile() const { return startLoc.getFile(); }
     };
 }
 

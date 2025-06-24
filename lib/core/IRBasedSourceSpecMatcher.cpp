@@ -3,6 +3,7 @@
 #include "PallasException.h"
 #include "SrcLookup.h"
 #include "FileUtils.h"
+#include "IRUtils.h"
 
 #include <regex>
 #include <stdexcept>
@@ -113,7 +114,7 @@ namespace sourcespec2ir
         for (auto &f : irModule->getFunctionList())
         {
             // Get location-information
-            auto diSubprog = f.getSubprogram();
+            auto diSubprog = utils::getDeclSubprog(f);
             if (diSubprog != nullptr)
             {
                 if (!isFromMainFile(*diSubprog))
@@ -132,7 +133,7 @@ namespace sourcespec2ir
 
                 // Check if function occurs after contract and is closer than current closest function.
                 if (line > endLine &&
-                    (closestFunction == nullptr || line < closestFunction->getSubprogram()->getLine()))
+                    (closestFunction == nullptr || line < utils::getDeclSubprog(*closestFunction)->getLine()))
                 {
                     closestFunction = &f;
                 }
@@ -167,7 +168,7 @@ namespace sourcespec2ir
 
         // Check that the closest function does not occur on the same line as
         // other functions. In this case, the matching would be ambiguous
-        auto closestLine = closestFunction->getSubprogram()->getLine();
+        auto closestLine = utils::getDeclSubprog(*closestFunction)->getLine();
         if (lineToFunc[closestLine].size() > 1)
         {
             throw utils::PallasException(
@@ -180,11 +181,11 @@ namespace sourcespec2ir
         // TODO: Is this strictly nessessary? Based on the above algorithm,
         // there should never be an instruction between contract and matched
         // function.
-        auto fLine = closestFunction->getSubprogram()->getLine();
+        // auto fLine = getSProgForFunc(*closestFunction)->getLine();
         for (auto &f : irModule->getFunctionList())
         {
             // Skip artificial functions
-            auto sProg = f.getSubprogram();
+            auto sProg = utils::getDeclSubprog(f);
             if (sProg != nullptr && isArtificial(sProg))
                 continue;
 
@@ -196,12 +197,12 @@ namespace sourcespec2ir
                     continue;
                 const auto iLine = dbgLoc.getLine();
                 auto isDebugIntrinsic = llvm::isa<llvm::DbgVariableIntrinsic>(&*it);
-                if (iLine >= endLine && iLine < fLine)
+                if (iLine >= endLine && iLine < closestLine)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction between contract and function.");
                 }
-                else if (iLine >= endLine && iLine == fLine && !isDebugIntrinsic)
+                else if (iLine >= endLine && iLine == closestLine && !isDebugIntrinsic)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction on the same line as the function.");
@@ -217,7 +218,7 @@ namespace sourcespec2ir
             for (auto dbgExpr : dbgExpressions)
             {
                 const auto gLine = dbgExpr->getVariable()->getLine();
-                if (gLine >= endLine && gLine <= fLine)
+                if (gLine >= endLine && gLine <= closestLine)
                 {
                     throw utils::PallasException(
                         "Encountered a global variable between contract and function.");
@@ -237,21 +238,19 @@ namespace sourcespec2ir
     }
 
     llvm::SmallVector<llvm::Function *>
-    IRBasedSourceSpecMatcher::matchExternalContract(
+    IRBasedSourceSpecMatcher::matchFContract(
         const std::string matchingStr, const bool isSrcName, SrcRange loc)
     {
-        if (isSrcName)
-        {
-            throw utils::PallasException(
-                "Matching of external contracts using a source-level name is "
-                "unsupported by the default-implementation.");
-        }
-
         llvm::SmallVector<llvm::Function *> results;
         const std::regex matchRegex(matchingStr);
         for (auto &f : irModule->functions())
         {
-            if (std::regex_match(f.getName().str(), matchRegex))
+            if (isSrcName && f.getSubprogram() == nullptr)
+                continue;
+            auto name = isSrcName ? f.getSubprogram()->getName().str()
+                                  : f.getName().str();
+
+            if (std::regex_match(name, matchRegex))
             {
                 results.push_back(&f);
                 if (printMatchingInfo)
@@ -260,7 +259,6 @@ namespace sourcespec2ir
                         utils::getSrcNameOfFunction(f));
             }
         }
-
         return results;
     }
 
@@ -365,7 +363,7 @@ namespace sourcespec2ir
         unsigned int parentStartLine = 0;
         for (auto &f : *irModule)
         {
-            if (auto subprog = f.getSubprogram())
+            if (auto subprog = utils::getDeclSubprog(f))
             {
                 // Skip functions that are not in the main-file.
                 if (!isFromMainFile(*subprog))

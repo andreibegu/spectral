@@ -36,7 +36,7 @@ namespace sourcespec2ir
     protected:
         llvm::Function *matchFContract(SrcRange loc) override;
 
-        llvm::SmallVector<llvm::Function *> matchExternalContract(
+        llvm::SmallVector<llvm::Function *> matchFContract(
             const std::string matchingStr, const bool isSrcName,
             SrcRange loc) override;
 

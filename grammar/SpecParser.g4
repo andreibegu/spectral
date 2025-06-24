@@ -11,7 +11,7 @@ spec
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
-specContractBlock: SPEC_START specExternalClause? specPureFlag? specContractClause+ SPEC_END;
+specContractBlock: SPEC_START specMappingClause? specPureFlag? specContractClause+ SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
@@ -24,8 +24,9 @@ specContractClause
     | ('ensures'  specExpression SPEC_EXPR_END) # ensuresClause
     ;
 
-specExternalClause
-    : ('external' 'assumed'? 'contract' ('ir' | 'src')? specExpression SPEC_EXPR_END );
+specMappingClause
+    : ('assumed'? 'contract' 'for' ('external' | 'generated') ('ir' | 'src')? specExpression SPEC_EXPR_END );
+    //    : ('external' 'assumed'? 'contract' ('ir' | 'src')? specExpression SPEC_EXPR_END )
 
 specPureFlag
     : 'pure' SPEC_EXPR_END # pureFlag;

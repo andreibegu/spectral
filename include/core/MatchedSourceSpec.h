@@ -44,13 +44,23 @@ namespace sourcespec2ir
         SrcRange srcLoc;
         // The start-position of the statements expression in the source-file.
         SrcLocation exprLoc;
+        bool isExternal;
 
         MatchedFContractStatement(ContractStatementType type, std::string expr,
                                   const SrcRange &srcLoc,
-                                  const SrcLocation &exprLoc)
-            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
+                                  const SrcLocation &exprLoc,
+                                  bool isExternal)
+            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc),
+              isExternal(isExternal)
         {
         }
+    };
+
+    enum ContractType
+    {
+        Normal,
+        External,
+        Generated
     };
 
     /**
@@ -63,11 +73,14 @@ namespace sourcespec2ir
         llvm::Function *function;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
+        const ContractType type;
         bool isPure = false;
         bool isAssumed = false;
 
-        MatchedFunctionContract(llvm::Function *function, const SrcRange &srcLoc)
-            : function(function), srcLoc(srcLoc)
+        MatchedFunctionContract(
+            llvm::Function *function,
+            const SrcRange &srcLoc, const ContractType &type)
+            : function(function), srcLoc(srcLoc), type(type)
         {
         }
 
@@ -175,8 +188,6 @@ namespace sourcespec2ir
     {
         llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>>
             matchedFContracts;
-        llvm::SmallVector<std::unique_ptr<MatchedFunctionContract>>
-            matchedExternalContracts;
         llvm::SmallVector<std::unique_ptr<MatchedLoopInvariantBlock>>
             matchedLoopInvariants;
         llvm::SmallVector<std::unique_ptr<MatchedSpecStatementBlock>>
@@ -184,7 +195,6 @@ namespace sourcespec2ir
 
         MatchedSpecifications()
             : matchedFContracts(),
-              matchedExternalContracts(),
               matchedLoopInvariants(),
               matchedStmntBlocks()
         {

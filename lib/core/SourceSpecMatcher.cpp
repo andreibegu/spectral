@@ -25,6 +25,23 @@ namespace sourcespec2ir
         return std::move(matchedSpecs);
     }
 
+    namespace
+    {
+        ContractType getContractType(SpecParser::SpecContractBlockContext &ctx)
+        {
+            if (auto *mappingClause = ctx.specMappingClause())
+            {
+                if (mappingClause->EXTERNAL() != nullptr)
+                    return External;
+                else if (mappingClause->GENERATED() != nullptr)
+                    return Generated;
+                else
+                    throw utils::PallasException("Invalid contract type!");
+            }
+            return Normal;
+        }
+    }
+
     std::any SourceSpecMatcher::visitSpecContractBlock(
         SpecParser::SpecContractBlockContext *ctx)
     {
@@ -32,11 +49,12 @@ namespace sourcespec2ir
         assert(contract == nullptr);
 
         auto loc = utils::getLocFromCtx(ctx, file);
-        bool isExternal = ctx->specExternalClause() != nullptr;
-        bool isAssumed = isExternal &&
-                         ctx->specExternalClause()->ASSUMED() != nullptr;
+        auto type = getContractType(*ctx);
+        bool hasMappingClause = ctx->specMappingClause() != nullptr;
+        bool isAssumed = hasMappingClause &&
+                         ctx->specMappingClause()->ASSUMED() != nullptr;
 
-        if (matchExternalOnly && !isExternal)
+        if (matchExternalOnly && type == Normal)
             throw utils::PallasException(
                 "Encountered non-external contract in contract-file.");
 
@@ -45,39 +63,37 @@ namespace sourcespec2ir
                 "Assumed is currently not supported for external contracts.");
 
         llvm::SmallVector<llvm::Function *> irFunctions;
-        if (isExternal)
+        if (type == External || type == Generated)
         {
-            // Match external contract to function
-            auto *externalClause = ctx->specExternalClause();
-            bool isSrcMapping = externalClause->SRC() != nullptr;
-            auto matchingStr = utils::getExprAsStr(*externalClause->specExpression());
-            irFunctions = matchExternalContract(matchingStr, isSrcMapping, loc);
+            // Match using matching-string
+            auto *mappingClause = ctx->specMappingClause();
+            bool isSrcMapping = mappingClause->SRC() != nullptr;
+            auto matchingStr = utils::getExprAsStr(*mappingClause->specExpression());
+            irFunctions = matchFContract(matchingStr, isSrcMapping, loc);
         }
         else
         {
-            // Match contract to function
+            // Match based on src-location
             auto *irFunction = matchFContract(loc);
             if (irFunction != nullptr)
                 irFunctions.push_back(irFunction);
         }
 
-        if (irFunctions.empty() && !isExternal)
+        if (irFunctions.empty() && !hasMappingClause)
             throw utils::PallasException("Failed to match contract to function.");
-            
-        auto &targetVec = isExternal ? matchedSpecs->matchedExternalContracts
-                                     : matchedSpecs->matchedFContracts;
 
         for (auto *irFunction : irFunctions)
         {
             // Create new matched contract
-            contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
+            contract = std::make_unique<MatchedFunctionContract>(
+                irFunction, loc, type);
             contract->isAssumed = isAssumed;
 
             // Add all statements to the contract by traversing the children
             for (auto c : ctx->children)
                 visit(c);
 
-            targetVec.push_back(std::move(contract));
+            matchedSpecs->matchedFContracts.push_back(std::move(contract));
         }
 
         return 0;
@@ -115,8 +131,9 @@ namespace sourcespec2ir
         if (!contract)
             assert("No contract set while adding statement");
         auto exprStr = utils::getExprAsStr(*expr);
+        auto extContr = contract->type == External;
         auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, utils::getExprStartLoc(*expr, file));
+            type, exprStr, loc, utils::getExprStartLoc(*expr, file), extContr);
         contract->addStatement(std::move(stmnt));
     }
 

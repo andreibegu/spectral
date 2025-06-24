@@ -133,16 +133,28 @@ namespace sourcespec2ir::utils
         // If the subprog has a declaration, change type of that as well
         // Because it is usually not distinct, we cannot use replaceType
         // TODO: Cleanup all refrences to the old declaration-SProg
-        //if (auto *diDecl = sProg->getDeclaration()) {
-            
-            // auto newDeclSProg = diDecl->clone();
-            // newDeclSProg->replaceType(newSProgType);
-            // diDecl->replaceAllUsesWith(
-            //    llvm::MDNode::replaceWithPermanent(std::move(newDeclSProg)));
-            // diDecl->replaceType(newSProgType);
+        // if (auto *diDecl = sProg->getDeclaration()) {
+
+        // auto newDeclSProg = diDecl->clone();
+        // newDeclSProg->replaceType(newSProgType);
+        // diDecl->replaceAllUsesWith(
+        //    llvm::MDNode::replaceWithPermanent(std::move(newDeclSProg)));
+        // diDecl->replaceType(newSProgType);
         // }
 
         diBuilder.finalize();
         wFunc->eraseFromParent();
+    }
+
+    llvm::DISubprogram *getDeclSubprog(const llvm::Function &f)
+    {
+        if (auto *sProg = f.getSubprogram())
+        {
+            if (auto sProgDecl = sProg->getDeclaration())
+                return sProgDecl;
+            else
+                return sProg;
+        }
+        return nullptr;
     }
 }
