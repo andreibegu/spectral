@@ -241,18 +241,16 @@ namespace sourcespec2ir
     IRBasedSourceSpecMatcher::matchFContract(
         const std::string matchingStr, const bool isSrcName, SrcRange loc)
     {
-        if (isSrcName)
-        {
-            throw utils::PallasException(
-                "Matching of external contracts using a source-level name is "
-                "unsupported by the default-implementation.");
-        }
-
         llvm::SmallVector<llvm::Function *> results;
         const std::regex matchRegex(matchingStr);
         for (auto &f : irModule->functions())
         {
-            if (std::regex_match(f.getName().str(), matchRegex))
+            if (isSrcName && f.getSubprogram() == nullptr)
+                continue;
+            auto name = isSrcName ? f.getSubprogram()->getName().str()
+                                  : f.getName().str();
+
+            if (std::regex_match(name, matchRegex))
             {
                 results.push_back(&f);
                 if (printMatchingInfo)
