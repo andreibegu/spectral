@@ -3,6 +3,7 @@
 #include "FileUtils.h"
 #include "IRUtils.h"
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <regex>
@@ -501,6 +502,13 @@ namespace sourcespec2ir
         // Do nothing. Subclasses can overwrite this
     }
 
+
+    namespace {
+        inline bool isInsertLine(const std::string &line) {
+            return std::all_of(line.begin(), line.end(), isspace);
+        }
+    }
+
     std::vector<SourceWrapperGenerator::SrcLine>::iterator
     SourceWrapperGenerator::findInsertPos(
         const size_t srcLineNumber, std::vector<SrcLine> &srcLines)
@@ -513,7 +521,7 @@ namespace sourcespec2ir
         // Move back in the vector to find the first blank line above
         // the insert-position
         while (currentLine != srcLines.begin() &&
-               !currentLine->content.empty())
+               !isInsertLine(currentLine->content))
             currentLine--;
 
         return currentLine;
