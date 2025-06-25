@@ -18,10 +18,9 @@ namespace sourcespec2ir
             const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers);
 
         std::string getWrapperFunctionString(
-            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const WrapperSignature &sig,
             const std::string &expr,
-            const std::string &functionName,
-            const llvm::DIType *returnType) override;
+            const std::string &functionName) override;
 
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;

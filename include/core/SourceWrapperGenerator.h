@@ -61,10 +61,9 @@ namespace sourcespec2ir
          * specifices the return-type of this function.
          */
         virtual std::string getWrapperFunctionString(
-            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const WrapperSignature &sig,
             const std::string &expr,
-            const std::string &functionName,
-            const llvm::DIType *returnType = nullptr) = 0;
+            const std::string &functionName) = 0;
 
         /**
          * For a given SrcWrapperFunction, return the line- and column-offset
@@ -109,7 +108,7 @@ namespace sourcespec2ir
 
         /**
          * Return the line-number where the wrapper-functions for a given
-         * contract that is mapped to an external or generated function 
+         * contract that is mapped to an external or generated function
          * should be inserted.
          */
         size_t getExternalWrapperInsertLoc(
@@ -191,17 +190,22 @@ namespace sourcespec2ir
         };
 
         /**
-         * Build a wrapper-signature based on the given DILocalVariables that 
-         * represent the arguments and the given DIType that represents the 
+         * Build a wrapper-signature based on the given DILocalVariables that
+         * represent the arguments and the given DIType that represents the
          * return-type.
-         * Frontends can override this to influence the construction of the 
+         * Frontends can override this to influence the construction of the
          * wrapper-function's signature.
          */
-        /*
-        virtual WrapperSignature buildWrapperSignature(
+        virtual WrapperSignature getWrapperSignature(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
             const llvm::DIType *returnType = nullptr);
-        */
+
+        /**
+         * Build a string-representation of an argument from a string of the 
+         * arguments type and name. 
+         */
+        virtual std::string buildArgStr(const std::string &type,
+                                        const std::string &name);
 
         /**
          * Adds a const-qualifier to the given base-type.

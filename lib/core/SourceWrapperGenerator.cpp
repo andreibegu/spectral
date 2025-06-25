@@ -2,6 +2,7 @@
 #include "PallasException.h"
 #include "FileUtils.h"
 #include "IRUtils.h"
+#include "SrcLookup.h"
 
 #include <algorithm>
 #include <fstream>
@@ -55,15 +56,30 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        // TODO: Handle the case when there is no debug-info
-        if (contract.function->getSubprogram() == nullptr ||
-            contract.function->getSubprogram()->getType() == nullptr)
-            throw utils::PallasException(
-                "Unable to get wrapper-arguments (missing dbg-info)");
-
         const auto pFunc = contract.function;
-        auto argList = getSrcVariablesForFunction(*pFunc);
-        auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+
+        // Get Wrapper-signature 
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
+        std::optional<WrapperSignature> sig = std::nullopt;
+        if (contract.type == External && contract.wrapperSignature.has_value())
+        {
+            // Get signature that was explicitly defined in contract
+            sig = contract.wrapperSignature.value();
+            // TODO: Handle encoding of args in this case.
+            argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        }
+        else if (pFunc->getSubprogram() != nullptr &&
+                 pFunc->getSubprogram()->getType() != nullptr)
+        {
+            // Construct signature from debug-info
+            argList = getSrcVariablesForFunction(*pFunc);
+            auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+            sig = getWrapperSignature(argList->getArrayRef(), rType);
+        }
+
+        if (!sig.has_value())
+            throw utils::PallasException("Unable to get signature for wrapper");
+
         auto insertPos = (contract.type == Normal)
                              ? getWrapperInsertLoc(contract)
                              : getExternalWrapperInsertLoc(contract);
@@ -72,8 +88,7 @@ namespace sourcespec2ir
         for (auto &stmnt : contract.statements)
         {
             auto wName = getNameForWrapperFunction();
-            auto wStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wName, rType);
+            auto wStr = getWrapperFunctionString(sig.value(), stmnt->expr, wName);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wName, wStr, argList->getArrayRef(), insertPos);
@@ -178,8 +193,9 @@ namespace sourcespec2ir
         for (auto &inv : invBlock.invariants)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), inv->expr, wrapperName);
+                wSig, inv->expr, wrapperName);
             matchedWrappers.loopInvWrappers[inv.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -199,8 +215,9 @@ namespace sourcespec2ir
         for (auto &stmnt : stmntBlock.statements)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName);
+                wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -336,14 +353,32 @@ namespace sourcespec2ir
         return nSpaceStr + typeName;
     }
 
-    /*
-    WrapperSignature buildWrapperSignature(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const llvm::DIType *returnType = nullptr)
+    std::string SourceWrapperGenerator::buildArgStr(const std::string &type,
+                                                    const std::string &name)
     {
-
+        return type + " " + name;
     }
-    */
+
+    WrapperSignature SourceWrapperGenerator::getWrapperSignature(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const llvm::DIType *returnType)
+    {
+        WrapperSignature sig;
+        for (auto *var : srcVars)
+        {
+            const auto varName = utils::getSrcVarName(*var);
+            const auto varType = getSrcReprOfType(var->getType());
+            const auto varStr = buildArgStr(varType, varName);
+            sig.addArg(varStr);
+        }
+
+        if (returnType != nullptr)
+        {
+            sig.parentRetTy = getSrcReprOfType(returnType);
+        }
+
+        return sig;
+    }
 
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)
     {
@@ -502,9 +537,10 @@ namespace sourcespec2ir
         // Do nothing. Subclasses can overwrite this
     }
 
-
-    namespace {
-        inline bool isInsertLine(const std::string &line) {
+    namespace
+    {
+        inline bool isInsertLine(const std::string &line)
+        {
             return std::all_of(line.begin(), line.end(), isspace);
         }
     }
