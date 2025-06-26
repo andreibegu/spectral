@@ -352,7 +352,9 @@ namespace sourcespec2ir
         }
 
         auto contractMDNode = llvm::MDTuple::get(*irContext, contractMDNodes);
-        parentFunction->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractMDNode);
+        auto label = contract.type == External ? PALLAS_EXT_FUN_CONTRACT_BLOCK
+                                               : PALLAS_FUN_CONTRACT_BLOCK;
+        parentFunction->setMetadata(label, contractMDNode);
     }
 
     llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(
@@ -402,6 +404,10 @@ namespace sourcespec2ir
         // Handle function-contracts
         for (auto &contr : matchedSpecs.matchedFContracts)
         {
+            // TODO: Also enable location-rewriting for external contracts!
+            if (contr->type == External)
+                continue;
+
             auto cu = getCUForFunc(contr->function);
             auto scopeFile = getFileForFunc(contr->function);
             auto scope = getScopeForFunc(contr->function);
@@ -720,7 +726,7 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::pruneWrapperArgs(
-        llvm::Module &irModule, 
+        llvm::Module &irModule,
         llvm::ArrayRef<SrcWrapperFunction *> wrappers)
     {
         for (auto *wrapper : wrappers)
@@ -766,8 +772,9 @@ namespace sourcespec2ir
                         "Failed to prune wrapper function (use of generated arg)");
 
             // Make sure that the wrapper is not referenced in the modules used-list
-            llvm::removeFromUsedLists(*wFunc->getParent(), 
-                [wFunc](llvm::Constant *C) { return C == wFunc; });
+            llvm::removeFromUsedLists(*wFunc->getParent(),
+                                      [wFunc](llvm::Constant *C)
+                                      { return C == wFunc; });
 
             // Remove compiler-generated args from function
             utils::removeArgsFromWrapper(wFunc, genArgs);
