@@ -14,6 +14,7 @@
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Instruction.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
@@ -254,18 +255,18 @@ namespace sourcespec2ir
          * The default-implementation does nothing.
          * Can be overridden by subclasses to apply constomizations.
          */
-        virtual void modifySrcWithWrappers(std::vector<SrcLine> &srcLines);
+        virtual void modifySrcWithWrappers(std::list<SrcLine> &srcLines);
 
         /**
-         * Given a line-number in the original source-file and a vector of lines
+         * Given a line-number in the original source-file and a list of lines
          * that represents the modified source-file, this function determines
          * the position where a piece of code (e.g. a wrapper-function) should
          * be inserted.
          * The default-implementation selects the first empty line above the
          * given line number of the source-file.
          */
-        std::vector<SrcLine>::iterator findInsertPos(
-            const size_t srcLineNumber, std::vector<SrcLine> &srcLines);
+        std::list<SrcLine>::iterator findInsertPos(
+            const size_t srcLineNumber, std::list<SrcLine> &srcLines);
 
         /**
          * Inserts the given string into the vector of lines at the given index.
@@ -273,8 +274,8 @@ namespace sourcespec2ir
          * is added before the content.
          */
         void insertLines(
-            std::vector<SrcLine> &lines, const std::string &content,
-            std::vector<SrcLine>::iterator currentLine);
+            std::list<SrcLine> &lines, const std::string &content,
+            std::list<SrcLine>::iterator currentLine);
 
     private:
         /* Counter for generating names for the specification functions.
@@ -291,13 +292,13 @@ namespace sourcespec2ir
         /**
          * Reads the given source-file and converts it into a vector of lines.
          */
-        std::unique_ptr<std::vector<SrcLine>> readSrcFile(std::string filePath);
+        std::unique_ptr<std::list<SrcLine>> readSrcFile(std::string filePath);
 
         /**
          * Writes the given vector of lines into a file at the given location.
          */
         void writeSrcFile(const std::string &filePath,
-                          const std::vector<SrcLine> &lines);
+                          const std::list<SrcLine> &lines);
 
         /**
          * Creates a wrapping-function for every statement in the

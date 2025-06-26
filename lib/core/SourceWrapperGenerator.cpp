@@ -532,7 +532,7 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::modifySrcWithWrappers(
-        std::vector<SrcLine> &srcLines)
+        std::list<SrcLine> &srcLines)
     {
         // Do nothing. Subclasses can overwrite this
     }
@@ -545,9 +545,9 @@ namespace sourcespec2ir
         }
     }
 
-    std::vector<SourceWrapperGenerator::SrcLine>::iterator
+    std::list<SourceWrapperGenerator::SrcLine>::iterator
     SourceWrapperGenerator::findInsertPos(
-        const size_t srcLineNumber, std::vector<SrcLine> &srcLines)
+        const size_t srcLineNumber, std::list<SrcLine> &srcLines)
     {
         // Find the index of the line of the insert-position in the vector
         auto currentLine = srcLines.begin();
@@ -585,14 +585,14 @@ namespace sourcespec2ir
         writeSrcFile(outPath, *sourceLines);
     }
 
-    std::unique_ptr<std::vector<SourceWrapperGenerator::SrcLine>>
+    std::unique_ptr<std::list<SourceWrapperGenerator::SrcLine>>
     SourceWrapperGenerator::readSrcFile(std::string filePath)
     {
         std::ifstream inStream(filePath);
         if (!inStream.is_open())
             throw utils::PallasException("Failed to read source-file during wrapping-stage");
 
-        auto lineVec = std::make_unique<std::vector<SrcLine>>();
+        auto lineVec = std::make_unique<std::list<SrcLine>>();
         size_t currentLineNo = 1;
         std::string currentLine = "";
         while (getline(inStream, currentLine))
@@ -605,7 +605,7 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::writeSrcFile(const std::string &filePath,
-                                              const std::vector<SrcLine> &lines)
+                                              const std::list<SrcLine> &lines)
     {
         // If the file already exists, delete it to avoid a situation where
         // writing fails, but an old, existing file is read.
@@ -625,17 +625,17 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::insertLines(
-        std::vector<SrcLine> &lines, const std::string &content,
-        std::vector<SrcLine>::iterator insertLine)
+        std::list<SrcLine> &lines, const std::string &content,
+        std::list<SrcLine>::iterator insertLine)
     {
         // Construct vector that contains the lines of the content
         std::stringstream contentStream(content);
         std::string currentCLine;
-        std::vector<SrcLine> contentVec;
-        contentVec.push_back(SrcLine("", 0));
+        std::list<SrcLine> contentList;
+        contentList.push_back(SrcLine("", 0));
         while (std::getline(contentStream, currentCLine))
-            contentVec.push_back(SrcLine(currentCLine, 0));
+            contentList.push_back(SrcLine(currentCLine, 0));
         // Insert content of vector
-        lines.insert(insertLine, contentVec.begin(), contentVec.end());
+        lines.insert(insertLine, contentList.begin(), contentList.end());
     }
 }

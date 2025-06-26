@@ -72,7 +72,7 @@ namespace sourcespec2ir
         return typedefName;
     }
 
-    void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void CWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
         // Add content of the declaration-block to the file. 
         for (auto &decl : specDeclarations)

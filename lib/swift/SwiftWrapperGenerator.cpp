@@ -100,7 +100,7 @@ namespace sourcespec2ir
         return baseType;
     }
 
-    void SwiftWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void SwiftWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
         // Add include for the specification-module to the top of the
         // generated file.

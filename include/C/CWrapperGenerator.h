@@ -30,7 +30,7 @@ namespace sourcespec2ir
         std::string addPointer(const std::string &baseType) override;
         std::string addTypedef(const std::string &baseType,
                                const std::string &typedefName) override;
-        void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
+        void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
     };
 
 }

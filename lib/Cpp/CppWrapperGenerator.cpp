@@ -78,7 +78,7 @@ namespace sourcespec2ir
         return parentNamespace + childNamespace + "::";
     }
 
-    void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void CppWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
 
         // Add content of the declaration-block to the file.

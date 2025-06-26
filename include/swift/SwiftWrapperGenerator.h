@@ -36,7 +36,7 @@ namespace sourcespec2ir
         std::string addConst(const std::string &baseType) override;
         std::string addTypedef(const std::string &baseType,
                                const std::string &typedefName) override;
-        void modifySrcWithWrappers(std::vector<SrcLine> &srcLines) override;
+        void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
 
         std::string buildArgStr(const std::string &type,
                                 const std::string &name) override;
