@@ -41,22 +41,6 @@ namespace sourcespec2ir
             }
             return Normal;
         }
-
-        WrapperSignature getWrapperSignature(
-            SpecParser::WrapperSigClauseContext &ctx)
-        {
-            WrapperSignature sig;
-            // Extract arguments
-            auto *argClause = ctx.wrapperArgClause();
-            for (auto *arg : argClause->argExpr())
-            {
-                sig.addArg(utils::getCtxAsStr(*arg));
-            }
-            // Extract return-type
-            auto *retClause = ctx.wrapperRetClause();
-            sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
-            return sig;
-        }
     }
 
     std::any SourceSpecMatcher::visitSpecContractBlock(
@@ -134,6 +118,23 @@ namespace sourcespec2ir
             throw utils::PallasException("Encountered pure-flag without contract.");
         contract->isPure = true;
         return 0;
+    }
+
+    WrapperSignature SourceSpecMatcher::getWrapperSignature(
+        SpecParser::WrapperSigClauseContext &ctx)
+    {
+        WrapperSignature sig;
+        // Use visitor to turn arg-list into vector.
+        auto *argList = ctx.wrapperArgClause()->wrapperArgList();
+        while (argList != nullptr) {
+            sig.addArg(utils::getCtxAsStr(*argList->argExpr()));
+            argList = argList->wrapperArgList();
+        }
+
+        // Extract return-type
+        auto *retClause = ctx.wrapperRetClause();
+        sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
+        return sig;
     }
 
     std::any SourceSpecMatcher::visitRequiresClause(

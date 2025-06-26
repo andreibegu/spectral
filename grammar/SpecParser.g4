@@ -29,7 +29,11 @@ specMappingClause
 
 /* Specification of signature for external contracts */
 wrapperSigClause: wrapperArgClause wrapperRetClause;
-wrapperArgClause: 'args' argExpr* SPEC_EXPR_END;
+wrapperArgClause: 'args' wrapperArgList? SPEC_EXPR_END;
+wrapperArgList
+    :  argExpr
+    | (argExpr WRAPPER_ARG_SEP wrapperArgList)
+    ;
 wrapperRetClause: 'returns' specExpression SPEC_EXPR_END;
 
 specPureFlag
@@ -48,7 +52,7 @@ specDeclaration
     : ('declare' specExpression SPEC_EXPR_END) # declarationClause
     ;
 
-argExpr: (~WRAPPER_ARG_SEP)+ ; 
+argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+ ; 
 specExpression: (~SPEC_EXPR_END)+ ;
 
 nonSpec: (~(SPEC_START | SPEC_END))*;

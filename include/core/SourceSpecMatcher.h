@@ -6,6 +6,7 @@
 #include "SpecParserBaseVisitor.h"
 #include "wrapper/SrcLocation.h"
 
+#include <optional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -47,7 +48,7 @@ namespace sourcespec2ir
         /**
          * Matches a function-contract based on a provided matching-string.
          * Given the matching-string this method determines the functions in the
-         * module whose names match to the provided matching-string. 
+         * module whose names match to the provided matching-string.
          * The flag 'isSrcName' determines if the name should be interpreted as
          *  source- or ir-name.
          *
@@ -105,6 +106,7 @@ namespace sourcespec2ir
             SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(
             SpecParser::EnsuresClauseContext *ctx) override;
+
         // Visitor for loop-invariants
         std::any visitSpecLoopInvariantBlock(
             SpecParser::SpecLoopInvariantBlockContext *ctx) override;
@@ -126,6 +128,9 @@ namespace sourcespec2ir
         void addToStmntBlock(SpecStatementType type,
                              SpecParser::SpecExpressionContext *expr,
                              const SrcRange &loc);
+
+        WrapperSignature getWrapperSignature(
+            SpecParser::WrapperSigClauseContext &ctx);
     };
 
 }
