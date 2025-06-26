@@ -31,7 +31,7 @@ namespace sourcespec2ir
             if (pDISubprog != nullptr)
                 return pDISubprog->getName().str();
             else
-                return "";
+                return f.getName().str();
         }
 
         std::string getSrcVarName(const llvm::DILocalVariable &var)
