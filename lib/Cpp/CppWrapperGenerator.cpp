@@ -14,10 +14,9 @@ namespace sourcespec2ir
     }
 
     std::string CppWrapperGenerator::getWrapperFunctionString(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const WrapperSignature &sig,
         const std::string &expr,
-        const std::string &functionName,
-        const llvm::DIType *returnType)
+        const std::string &functionName)
     {
         std::stringstream stream;
         stream << "__attribute__((used)) \n";
@@ -25,16 +24,15 @@ namespace sourcespec2ir
 
         // Construct arg-list
         bool firstArg = true;
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
-        {
+        for (auto &arg : sig.args)
+        // for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        { 
             // Skip the 'this' argument as it gets added implicitly
-            const auto varName = utils::getSrcVarName(**it);
-            if (varName == "this")
-                continue;
+            if (arg.ends_with(" this")) 
+                continue; 
             if (!firstArg)
                 stream << ", ";
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varType << " " << varName;
+            stream << arg;
             firstArg = false;
         }
         stream << ")";
@@ -80,7 +78,7 @@ namespace sourcespec2ir
         return parentNamespace + childNamespace + "::";
     }
 
-    void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void CppWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
 
         // Add content of the declaration-block to the file.

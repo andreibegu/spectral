@@ -5,6 +5,7 @@ Function-contracts are encoded by attaching a metadata-node to the corresponding
 The node is labeled as `!pallas.fcontract` and consists of a MD-tuple that consists of:
 - a reference to a MD-tuple that encodes the location in the source-file
 - a boolean value that specifies if the contract is marked as pure
+- a boolean value that specifies if the contract should be assumed and not checked against the implementation. 
 - followed by a list of the clauses of the contract. 
 
 The individual clauses of the contract are encoded as metadata-tuples that consist of 
@@ -45,7 +46,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 [...]
 
 ; Encoding of the contract
-!111 = !{!112, i1 false, !113, !117}
+!111 = !{!112, i1 false, i1 false, !113, !117}
 !112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 4, i64 1}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
 !114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26}

@@ -22,31 +22,27 @@ namespace sourcespec2ir
     }
 
     std::string SwiftWrapperGenerator::getWrapperFunctionString(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const WrapperSignature &sig,
         const std::string &expr,
-        const std::string &functionName,
-        const llvm::DIType *returnType)
+        const std::string &functionName)
     {
 
         // Generate the required functions for the specification-library
-        const auto specFuncs = generateSpecLibFunctions(srcVars, returnType,
-                                                        expr);
+        const auto specFuncs = generateSpecLibFunctions(sig, expr);
 
         std::stringstream stream;
         stream << "func " << functionName << "(";
 
         // Construct arg-list
         bool firstArg = true;
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        for (auto &arg : sig.args)
         {
-            const auto varName = utils::getSrcVarName(**it);
             // Skip 'self'-arg as it gets added implicitly
-            if (varName == "self")
+            if (arg.ends_with(" self"))
                 continue;
             if (!firstArg)
                 stream << ", ";
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varName << ": " << varType;
+            stream << arg;
             firstArg = false;
         }
         stream << ") -> Bool ";
@@ -60,6 +56,12 @@ namespace sourcespec2ir
         stream << "\n";
 
         return stream.str();
+    }
+
+    std::string SwiftWrapperGenerator::buildArgStr(const std::string &type,
+                                                    const std::string &name)
+    {
+        return name + ": " + type;
     }
 
     std::string SwiftWrapperGenerator::getSrcReprOfType(
@@ -98,7 +100,7 @@ namespace sourcespec2ir
         return baseType;
     }
 
-    void SwiftWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void SwiftWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
         // Add include for the specification-module to the top of the
         // generated file.
@@ -137,11 +139,22 @@ namespace sourcespec2ir
             }
         }
 
+        std::string getTypeFromArg(const std::string &arg)
+        {
+            // Split arg at the ':' into name and type
+            auto splitIdx = arg.find(':');
+            if (splitIdx == std::string::npos)
+                throw utils::PallasException(
+                    "Failed to get type from wrapper-argument: " + arg);
+            auto tyStr = arg.substr(splitIdx + 1);
+            // Strip leading spaces
+            return tyStr.erase(0, tyStr.find_first_not_of(" "));
+        }
+
     }
 
     std::string SwiftWrapperGenerator::generateSpecLibFunctions(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const llvm::DIType *returnType, const std::string &expr)
+        const WrapperSignature &sig, const std::string &expr)
     {
         // TODO: We could also do the generation of the spec-lib functions using
         //       Swift-macros. However, that makes the compilation-process more
@@ -150,11 +163,11 @@ namespace sourcespec2ir
         stream << "// START - SpecLib-Functions \n";
 
         // Generate function for result
-        if (returnType != nullptr)
+        if (sig.parentRetTy.has_value())
         {
             // The spec-function is only a placeholder and not executed.
             // So we just throw a fatal error to get it to compile.
-            const auto retTypeStr = getSrcReprOfType(returnType);
+            const auto &retTypeStr = sig.parentRetTy.value();
             if (retTypeStr != "Void")
             {
                 stream << "@inline(never) \n";
@@ -166,8 +179,8 @@ namespace sourcespec2ir
 
         // Build a set of the argument-types to avoid duplicates
         llvm::SmallSet<std::string, 8> types;
-        for (auto var : srcVars)
-            types.insert(getSrcReprOfType(var->getType()));
+        for (auto &arg : sig.args)
+            types.insert(getTypeFromArg(arg));
         for (auto type : types)
         {
             // Generate function for old

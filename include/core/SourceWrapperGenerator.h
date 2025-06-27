@@ -6,6 +6,7 @@
 #include "wrapper/SrcWrapperFunction.h"
 #include "wrapper/MatchedWrapperFunctions.h"
 #include "wrapper/WrapperLocMarker.h"
+#include "wrapper/WrapperSignature.h"
 #include "SpecDeclaration.h"
 
 #include <llvm/ADT/ArrayRef.h>
@@ -13,6 +14,7 @@
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Instruction.h>
 
+#include <list>
 #include <map>
 #include <memory>
 #include <string>
@@ -60,10 +62,9 @@ namespace sourcespec2ir
          * specifices the return-type of this function.
          */
         virtual std::string getWrapperFunctionString(
-            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const WrapperSignature &sig,
             const std::string &expr,
-            const std::string &functionName,
-            const llvm::DIType *returnType = nullptr) = 0;
+            const std::string &functionName) = 0;
 
         /**
          * For a given SrcWrapperFunction, return the line- and column-offset
@@ -108,7 +109,7 @@ namespace sourcespec2ir
 
         /**
          * Return the line-number where the wrapper-functions for a given
-         * contract that is mapped to an external or generated function 
+         * contract that is mapped to an external or generated function
          * should be inserted.
          */
         size_t getExternalWrapperInsertLoc(
@@ -190,6 +191,24 @@ namespace sourcespec2ir
         };
 
         /**
+         * Build a wrapper-signature based on the given DILocalVariables that
+         * represent the arguments and the given DIType that represents the
+         * return-type.
+         * Frontends can override this to influence the construction of the
+         * wrapper-function's signature.
+         */
+        virtual WrapperSignature getWrapperSignature(
+            const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+            const llvm::DIType *returnType = nullptr);
+
+        /**
+         * Build a string-representation of an argument from a string of the 
+         * arguments type and name. 
+         */
+        virtual std::string buildArgStr(const std::string &type,
+                                        const std::string &name);
+
+        /**
          * Adds a const-qualifier to the given base-type.
          */
         virtual std::string addConst(const std::string &baseType);
@@ -236,18 +255,18 @@ namespace sourcespec2ir
          * The default-implementation does nothing.
          * Can be overridden by subclasses to apply constomizations.
          */
-        virtual void modifySrcWithWrappers(std::vector<SrcLine> &srcLines);
+        virtual void modifySrcWithWrappers(std::list<SrcLine> &srcLines);
 
         /**
-         * Given a line-number in the original source-file and a vector of lines
+         * Given a line-number in the original source-file and a list of lines
          * that represents the modified source-file, this function determines
          * the position where a piece of code (e.g. a wrapper-function) should
          * be inserted.
          * The default-implementation selects the first empty line above the
          * given line number of the source-file.
          */
-        std::vector<SrcLine>::iterator findInsertPos(
-            const size_t srcLineNumber, std::vector<SrcLine> &srcLines);
+        std::list<SrcLine>::iterator findInsertPos(
+            const size_t srcLineNumber, std::list<SrcLine> &srcLines);
 
         /**
          * Inserts the given string into the vector of lines at the given index.
@@ -255,8 +274,8 @@ namespace sourcespec2ir
          * is added before the content.
          */
         void insertLines(
-            std::vector<SrcLine> &lines, const std::string &content,
-            std::vector<SrcLine>::iterator currentLine);
+            std::list<SrcLine> &lines, const std::string &content,
+            std::list<SrcLine>::iterator currentLine);
 
     private:
         /* Counter for generating names for the specification functions.
@@ -273,13 +292,13 @@ namespace sourcespec2ir
         /**
          * Reads the given source-file and converts it into a vector of lines.
          */
-        std::unique_ptr<std::vector<SrcLine>> readSrcFile(std::string filePath);
+        std::unique_ptr<std::list<SrcLine>> readSrcFile(std::string filePath);
 
         /**
          * Writes the given vector of lines into a file at the given location.
          */
         void writeSrcFile(const std::string &filePath,
-                          const std::vector<SrcLine> &lines);
+                          const std::list<SrcLine> &lines);
 
         /**
          * Creates a wrapping-function for every statement in the

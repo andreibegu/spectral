@@ -2,7 +2,9 @@
 #include "PallasException.h"
 #include "FileUtils.h"
 #include "IRUtils.h"
+#include "SrcLookup.h"
 
+#include <algorithm>
 #include <fstream>
 #include <map>
 #include <regex>
@@ -54,15 +56,30 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        // TODO: Handle the case when there is no debug-info
-        if (contract.function->getSubprogram() == nullptr ||
-            contract.function->getSubprogram()->getType() == nullptr)
-            throw utils::PallasException(
-                "Unable to get wrapper-arguments (missing dbg-info)");
-
         const auto pFunc = contract.function;
-        auto argList = getSrcVariablesForFunction(*pFunc);
-        auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+
+        // Get Wrapper-signature 
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
+        std::optional<WrapperSignature> sig = std::nullopt;
+        if (contract.type == External && contract.wrapperSignature.has_value())
+        {
+            // Get signature that was explicitly defined in contract
+            sig = contract.wrapperSignature.value();
+            // TODO: Handle encoding of args in this case.
+            argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        }
+        else if (pFunc->getSubprogram() != nullptr &&
+                 pFunc->getSubprogram()->getType() != nullptr)
+        {
+            // Construct signature from debug-info
+            argList = getSrcVariablesForFunction(*pFunc);
+            auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+            sig = getWrapperSignature(argList->getArrayRef(), rType);
+        }
+
+        if (!sig.has_value())
+            throw utils::PallasException("Unable to get signature for wrapper");
+
         auto insertPos = (contract.type == Normal)
                              ? getWrapperInsertLoc(contract)
                              : getExternalWrapperInsertLoc(contract);
@@ -71,8 +88,7 @@ namespace sourcespec2ir
         for (auto &stmnt : contract.statements)
         {
             auto wName = getNameForWrapperFunction();
-            auto wStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wName, rType);
+            auto wStr = getWrapperFunctionString(sig.value(), stmnt->expr, wName);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wName, wStr, argList->getArrayRef(), insertPos);
@@ -177,8 +193,9 @@ namespace sourcespec2ir
         for (auto &inv : invBlock.invariants)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), inv->expr, wrapperName);
+                wSig, inv->expr, wrapperName);
             matchedWrappers.loopInvWrappers[inv.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -198,8 +215,9 @@ namespace sourcespec2ir
         for (auto &stmnt : stmntBlock.statements)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName);
+                wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -333,6 +351,33 @@ namespace sourcespec2ir
         auto nSpaceStr = getSrcNamespace(type->getScope());
 
         return nSpaceStr + typeName;
+    }
+
+    std::string SourceWrapperGenerator::buildArgStr(const std::string &type,
+                                                    const std::string &name)
+    {
+        return type + " " + name;
+    }
+
+    WrapperSignature SourceWrapperGenerator::getWrapperSignature(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const llvm::DIType *returnType)
+    {
+        WrapperSignature sig;
+        for (auto *var : srcVars)
+        {
+            const auto varName = utils::getSrcVarName(*var);
+            const auto varType = getSrcReprOfType(var->getType());
+            const auto varStr = buildArgStr(varType, varName);
+            sig.addArg(varStr);
+        }
+
+        if (returnType != nullptr)
+        {
+            sig.parentRetTy = getSrcReprOfType(returnType);
+        }
+
+        return sig;
     }
 
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)
@@ -487,14 +532,22 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::modifySrcWithWrappers(
-        std::vector<SrcLine> &srcLines)
+        std::list<SrcLine> &srcLines)
     {
         // Do nothing. Subclasses can overwrite this
     }
 
-    std::vector<SourceWrapperGenerator::SrcLine>::iterator
+    namespace
+    {
+        inline bool isInsertLine(const std::string &line)
+        {
+            return std::all_of(line.begin(), line.end(), isspace);
+        }
+    }
+
+    std::list<SourceWrapperGenerator::SrcLine>::iterator
     SourceWrapperGenerator::findInsertPos(
-        const size_t srcLineNumber, std::vector<SrcLine> &srcLines)
+        const size_t srcLineNumber, std::list<SrcLine> &srcLines)
     {
         // Find the index of the line of the insert-position in the vector
         auto currentLine = srcLines.begin();
@@ -504,7 +557,7 @@ namespace sourcespec2ir
         // Move back in the vector to find the first blank line above
         // the insert-position
         while (currentLine != srcLines.begin() &&
-               !currentLine->content.empty())
+               !isInsertLine(currentLine->content))
             currentLine--;
 
         return currentLine;
@@ -532,14 +585,14 @@ namespace sourcespec2ir
         writeSrcFile(outPath, *sourceLines);
     }
 
-    std::unique_ptr<std::vector<SourceWrapperGenerator::SrcLine>>
+    std::unique_ptr<std::list<SourceWrapperGenerator::SrcLine>>
     SourceWrapperGenerator::readSrcFile(std::string filePath)
     {
         std::ifstream inStream(filePath);
         if (!inStream.is_open())
             throw utils::PallasException("Failed to read source-file during wrapping-stage");
 
-        auto lineVec = std::make_unique<std::vector<SrcLine>>();
+        auto lineVec = std::make_unique<std::list<SrcLine>>();
         size_t currentLineNo = 1;
         std::string currentLine = "";
         while (getline(inStream, currentLine))
@@ -552,7 +605,7 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::writeSrcFile(const std::string &filePath,
-                                              const std::vector<SrcLine> &lines)
+                                              const std::list<SrcLine> &lines)
     {
         // If the file already exists, delete it to avoid a situation where
         // writing fails, but an old, existing file is read.
@@ -572,17 +625,17 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::insertLines(
-        std::vector<SrcLine> &lines, const std::string &content,
-        std::vector<SrcLine>::iterator insertLine)
+        std::list<SrcLine> &lines, const std::string &content,
+        std::list<SrcLine>::iterator insertLine)
     {
         // Construct vector that contains the lines of the content
         std::stringstream contentStream(content);
         std::string currentCLine;
-        std::vector<SrcLine> contentVec;
-        contentVec.push_back(SrcLine("", 0));
+        std::list<SrcLine> contentList;
+        contentList.push_back(SrcLine("", 0));
         while (std::getline(contentStream, currentCLine))
-            contentVec.push_back(SrcLine(currentCLine, 0));
+            contentList.push_back(SrcLine(currentCLine, 0));
         // Insert content of vector
-        lines.insert(insertLine, contentVec.begin(), contentVec.end());
+        lines.insert(insertLine, contentList.begin(), contentList.end());
     }
 }

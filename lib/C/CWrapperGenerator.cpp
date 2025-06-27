@@ -15,10 +15,9 @@ namespace sourcespec2ir
     }
 
     std::string CWrapperGenerator::getWrapperFunctionString(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const WrapperSignature &sig,
         const std::string &expr,
-        const std::string &functionName,
-        const llvm::DIType *returnType)
+        const std::string &functionName)
     {
         std::stringstream stream;
 
@@ -30,13 +29,14 @@ namespace sourcespec2ir
         stream << "bool " << functionName << " (";
 
         // Argument-list
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        bool isFirst = true;
+        for (auto &arg : sig.args)
+        //for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
         {
-            if (it != srcVars.begin())
+            if (!isFirst)
                 stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varType << " " << varName;
+            stream << arg;
+            isFirst = false;
         }
         stream << ")";
 
@@ -72,7 +72,7 @@ namespace sourcespec2ir
         return typedefName;
     }
 
-    void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void CWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
         // Add content of the declaration-block to the file. 
         for (auto &decl : specDeclarations)

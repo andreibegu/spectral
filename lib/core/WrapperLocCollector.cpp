@@ -33,7 +33,7 @@ namespace sourcespec2ir
         auto *sExpr = ctx->specExpression();
         std::optional<std::string> matchingStr = std::nullopt;
         if (ctx->specExpression() != nullptr)
-            matchingStr = std::make_optional(utils::getExprAsStr(*sExpr));
+            matchingStr = std::make_optional(utils::getCtxAsStr(*sExpr));
 
         wrapperLocations->push_back(
             WrapperLocMarker(matchingStr, locRange));
