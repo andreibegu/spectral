@@ -3,7 +3,7 @@
 
 // CHECK: double @foo(
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
-// CHECK: [[contractMD]] = !{{{![0-9]+}}, i1 true, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
+// CHECK: [[contractMD]] = !{{{![0-9]+}}, i1 true, i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
 
 /*@
 pure;

@@ -66,10 +66,6 @@ namespace sourcespec2ir
             throw utils::PallasException("Specification of wrapper-signature "
                                          "is only allowed for external contracts.");
 
-        if (isAssumed)
-            throw utils::PallasException(
-                "Assumed is currently not supported for external contracts.");
-
         llvm::SmallVector<llvm::Function *> irFunctions;
         if (type == External || type == Generated)
         {

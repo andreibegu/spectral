@@ -343,6 +343,11 @@ namespace sourcespec2ir
             llvm::ConstantInt::getBool(*irContext, contract.isPure));
         contractMDNodes.push_back(pureFlagConst);
 
+        // Add assumed-flag
+        auto assumedFlagConst = llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::getBool(*irContext, contract.isAssumed));
+        contractMDNodes.push_back(assumedFlagConst);
+
         // Transform specification statements
         for (auto &matchedStmnt : contract.statements)
         {

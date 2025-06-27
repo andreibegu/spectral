@@ -16,6 +16,6 @@ func bar (a: Double) -> Double {
 // CHECK-SAME: !pallas.fcontract [[contrMD:![0-9]+]]
 
 // COM: Check that the contract is well-formed
-// CHECK: [[contrMD]] = !{[[sLoc:![0-9]+]], i1 true, {{![0-9]+}}}
+// CHECK: [[contrMD]] = !{[[sLoc:![0-9]+]], i1 true, i1 false, {{![0-9]+}}}
 
 // CHECK-DAG: [[sLoc]] = !{!"pallas.srcLoc",
