@@ -24,6 +24,7 @@
 #include "IRBasedSourceSpecMatcher.h"
 #include "SourceSpecTransformer.h"
 #include "SpecDeclarationCollector.h"
+#include "FileUtils.h"
 #include "IrSpecConstants.h"
 #include "IRUtils.h"
 #include "MetadataUtils.h"
@@ -403,24 +404,54 @@ namespace sourcespec2ir
         return llvm::MDNode::get(*irContext, mdElems);
     }
 
+    llvm::DICompileUnit *SourceSpecTransformer::getCompileUnit(
+        const std::string &path)
+    {
+        llvm::DIBuilder builder(*irModule);
+        auto *file = builder.createFile(path, "");
+        auto *cu = builder.createCompileUnit(
+            0,          // lang
+            file,       // file
+            "spectral", // producer
+            false,      // isOptimized
+            "",         // flags
+            0           // runtime-version
+        );
+        builder.finalize();
+        return cu;
+    }
+
     void SourceSpecTransformer::rewriteWrapperLocations(
         const MatchedSpecifications &matchedSpecs)
     {
         // Handle function-contracts
         for (auto &contr : matchedSpecs.matchedFContracts)
         {
-            // TODO: Also enable location-rewriting for external contracts!
-            if (contr->type == External)
-                continue;
+            auto contrPath = utils::makeAbsPath(contr->srcLoc.getFile());
+            bool externalFile =
+                contrPath != utils::makeAbsPath(getSrcInPath());
 
-            auto cu = getCUForFunc(contr->function);
-            auto scopeFile = getFileForFunc(contr->function);
-            auto scope = getScopeForFunc(contr->function);
+            llvm::DICompileUnit *cu = nullptr;
+            llvm::DIFile *scopeFile = nullptr;
+            llvm::DIScope *scope = nullptr;
+            if (externalFile)
+            {
+                // For contracts in external files, point scopes to that file
+                cu = getCompileUnit(contrPath);
+                scopeFile = cu->getFile();
+                scope = cu->getFile();
+            }
+            else
+            {
+                // Otherwise, point to scope, ... of the parent function.
+                cu = getCUForFunc(contr->function);
+                scopeFile = getFileForFunc(contr->function);
+                scope = getScopeForFunc(contr->function);
+            }
             for (auto &stmnt : contr->statements)
                 rewriteWrapperLocations(*matchedWrappers->fContractWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
-        // TODO: Handle external contracts
         // Handle loop-invariants
         for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
         {
@@ -455,7 +486,7 @@ namespace sourcespec2ir
         if (irWrapperF == nullptr)
             throw utils::PallasException("Failed to get wrapper-function by name");
 
-        auto oldSProg = irWrapperF->getSubprogram();
+        auto *oldSProg = irWrapperF->getSubprogram();
         auto oldFLine = oldSProg->getLine(); // Needed to calculate new positions for instructions
         llvm::DIBuilder diBuilder(*irModule, true, cu);
 
@@ -813,6 +844,10 @@ namespace sourcespec2ir
 
     llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
     {
+        llvm::DIBuilder builder(*irModule);
+        auto *file = builder.createFile(
+            utils::makeAbsPath(srcLoc.getFile()), "");
+        builder.finalize();
         auto *nTy = llvm::Type::getInt64Ty(*irContext);
 
         llvm::SmallVector<llvm::Metadata *> mdElems = {
@@ -824,7 +859,8 @@ namespace sourcespec2ir
             llvm::ConstantAsMetadata::get(
                 llvm::ConstantInt::get(nTy, srcLoc.endLoc.line)),
             llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column))};
+                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column)),
+            file};
 
         return llvm::MDTuple::get(*irContext, mdElems);
     }
