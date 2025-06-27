@@ -250,6 +250,11 @@ namespace sourcespec2ir
          * wrappers should be saved.
          */
         std::string getPathForSourceWithWrappers();
+
+        /**
+         * Get a DICompileUnit for the given path. 
+         */
+        llvm::DICompileUnit *getCompileUnit(const std::string &path);
     };
 
 }

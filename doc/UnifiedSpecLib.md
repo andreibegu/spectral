@@ -47,13 +47,14 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 
 ; Encoding of the contract
 !111 = !{!112, i1 false, i1 false, !113, !117}
-!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 4, i64 1}
+!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 4, i64 1, !120}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
-!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26}
+!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26, !120}
 !115 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 5, type: !20)
 !116 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 5, type: !20)
 !117 = !{!"pallas.ensures", !118, ptr @_Z13PALLAS_SPEC_1ii, !115, !116}
-!118 = !{!"pallas.srcLoc", i64 3, i64 1, i64 3, i64 43}
+!118 = !{!"pallas.srcLoc", i64 3, i64 1, i64 3, i64 43, !120}
+!120 = !DIFile(filename: "/path/filename.c", directory: "")
 ```
 
 ## Loop invariants
@@ -107,8 +108,9 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !dbg !
 !125 = distinct !{!125, !117, !126, !127, !128}
 ; Encoding of invariant
 !128 = !{!"pallas.loopInv", !129, !130}
-!129 = !{!"pallas.srcLoc", i64 2, i64 5, i64 4, i64 26}
+!129 = !{!"pallas.srcLoc", i64 2, i64 5, i64 4, i64 26, !150}
 !130 = !{!131, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
+!150 = !DIFile(filename: "/path/filename.c", directory: "")
 ```
 
 ## Specification-statements
@@ -158,6 +160,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
 
 [...]
 
+!100 = !DIFile(filename: "/path/filename.c", directory: "")
 !111 = !DILocalVariable(name: "a", arg: 1, scope: !106, file: !107, line: 1, type: !20)
 !113 = !DILocalVariable(name: "b", arg: 2, scope: !106, file: !107, line: 1, type: !20)
 !115 = !DILocalVariable(name: "i", scope: !106, file: !107, line: 2, type: !20)
@@ -165,7 +168,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
 
 ; Encoding of the statement-block
 !122 = !{!123, !124}
-!123 = !{!"pallas.srcLoc", i64 3, i64 5, i64 5, i64 5}
+!123 = !{!"pallas.srcLoc", i64 3, i64 5, i64 5, i64 5, !100}
 !124 = !{!"pallas.assume", !125, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
 
@@ -211,10 +214,11 @@ define dso_local noundef zeroext i1 @_Z13PALLAS_SPEC_0ii(i32 noundef %0, i32 nou
   ret i1 %7, !dbg !133
 }
 
+!100 = !DIFile(filename: "/path/filename.c", directory: "")
 !111 = !{!112, i1 false, !113}
-!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 3, i64 1}
+!112 = !{!"pallas.srcLoc", i64 1, i64 1, i64 3, i64 1, !100}
 !113 = !{!"pallas.requires", !114, ptr @_Z13PALLAS_SPEC_0ii, !115, !116}
-!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26}
+!114 = !{!"pallas.srcLoc", i64 2, i64 1, i64 2, i64 26, !100}
 !126 = !{!""}
 ```
 
@@ -234,6 +238,7 @@ A source-location-tuple cosists of:
 - An integer that corresponds to the start-column
 - An integer that corresponds to the end-line
 - An integer that corresponds to the end-column
+- A DIFile metadata node that corresponds to the source-file 
 
 Line- and coumn-numbers both start at 1 in order to be consistent with the numbering used by LLVM.
 The start-line and -column point to the position before the first parser-token of the specification-construct.
