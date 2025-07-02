@@ -7,8 +7,9 @@
 namespace sourcespec2ir
 {
     WrapperLocCollector::WrapperLocCollector(
-        SpecParser::FileContext &specParseTree, const std::string &file)
-        : specParseTree(specParseTree), file(file)
+        SpecParser::FileContext &specParseTree, const std::string &file,
+        const std::string &md5Checksum)
+        : specParseTree(specParseTree), file(file), md5Checksum(md5Checksum)
     {
     }
 
@@ -28,7 +29,7 @@ namespace sourcespec2ir
         assert(wrapperLocations != nullptr);
 
         // Get location of the annotation
-        auto locRange = utils::getLocFromCtx(ctx, file);
+        auto locRange = utils::getLocFromCtx(ctx, file, md5Checksum);
         // Get text of the matching string
         auto *sExpr = ctx->specExpression();
         std::optional<std::string> matchingStr = std::nullopt;

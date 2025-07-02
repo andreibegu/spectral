@@ -19,7 +19,8 @@ namespace sourcespec2ir::utils
      * returns it as a SrcRange.
      */
     SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx,
-                           const std::string &file);
+                           const std::string &file, 
+                           const std::string &md5Checksum);
 
     /**
      * Returns the location in the source-file where the given expression
@@ -27,7 +28,7 @@ namespace sourcespec2ir::utils
      */
     SrcLocation getExprStartLoc(
         const SpecParser::SpecExpressionContext &exprCtx,
-        const std::string &file);
+        const std::string &file, const std::string &md5Checksum);
 }
 
 #endif // PALLAS_PARSINGUTILS_H

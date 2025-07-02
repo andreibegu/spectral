@@ -9,7 +9,7 @@ namespace sourcespec2ir
     namespace utils
     {
         /**
-         * Uses llvm::sys::fs::make_absolute to turn the given path 
+         * Uses llvm::sys::fs::make_absolute to turn the given path
          * into an absolute path.
          */
         std::string makeAbsPath(std::string path);
@@ -20,6 +20,11 @@ namespace sourcespec2ir
          */
         bool isFromFile(const llvm::DISubprogram &sProg,
                         const std::string &file);
+
+        /**
+         * Calculates an md5 checksum for the file at the given path.
+         */
+        std::string getChecksumForFile(const std::string &path);
     }
 
 }

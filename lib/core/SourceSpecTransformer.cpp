@@ -15,6 +15,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Path.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
@@ -83,6 +84,7 @@ namespace sourcespec2ir
             promoteMemToReg(*irModule);
 
         // Parse the source-file to extract the specifications
+        auto inFileChecksum = utils::getChecksumForFile(srcInPath);
         auto parser = std::make_unique<SpecParserWrapper>(srcInPath);
         auto srcParseTree = parser->getSrcParseTree();
         if (!srcParseTree)
@@ -93,7 +95,8 @@ namespace sourcespec2ir
         auto specDeclarations = declCollector.collectDeclarations();
 
         // Collect location-markers:
-        WrapperLocCollector wLocCollector(*srcParseTree, srcInPath);
+        WrapperLocCollector wLocCollector(*srcParseTree, srcInPath,
+                                          inFileChecksum);
         auto wLocMarkers = wLocCollector.collectLocationMarkers();
 
         // Match the specifications to the IR
@@ -845,8 +848,11 @@ namespace sourcespec2ir
     llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
     {
         llvm::DIBuilder builder(*irModule);
-        auto *file = builder.createFile(
-            utils::makeAbsPath(srcLoc.getFile()), "");
+        auto absPath = utils::makeAbsPath(srcLoc.getFile());
+        llvm::StringRef checksumStr = srcLoc.getMD5();
+        llvm::DIFile::ChecksumInfo checksum(
+            llvm::DIFile::ChecksumKind::CSK_MD5, checksumStr);
+        auto *file = builder.createFile(absPath, "", checksum);
         builder.finalize();
         auto *nTy = llvm::Type::getInt64Ty(*irContext);
 

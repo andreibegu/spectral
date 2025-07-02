@@ -15,7 +15,7 @@ float bar (float x) {
 
 // COM: MD-Nodes of the contract have location-info 
 
-// CHECK-DAG: [[fileMD:![0-9]+]] = !DIFile(filename: "{{.*}}fcontract_src_loc.c", directory: "")
+// CHECK-DAG: [[fileMD:![0-9]+]] = !DIFile(filename: "{{.*}}fcontract_src_loc.c", directory: "", checksumkind: CSK_MD5, checksum: "
 
 // CHECK-DAG: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
 // CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 5, i64 1, i64 7, i64 1, [[fileMD]]}

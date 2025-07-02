@@ -42,6 +42,7 @@ namespace sourcespec2ir
     protected:
         SpecParser::FileContext *specParseTree;
         const std::string file;
+        std::string md5Checksum;
         llvm::Module *irModule;
         bool matchExternalOnly;
 
@@ -83,6 +84,19 @@ namespace sourcespec2ir
          * If the spec-block cannot be matched, an exception it thrown.
          */
         virtual llvm::Instruction *matchStatementBlock(SrcRange loc) = 0;
+
+        /**
+         * Returns a SrcRang for the given ParserRuleContext.
+         * Sets file and checksum to the file that is opened by this matcher.
+         */
+        SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
+
+        /**
+         * Returns the location in the file opened by this matcher
+         * where the given expression starts.
+         */
+        SrcLocation getExprStartLoc(
+            const SpecParser::SpecExpressionContext &exprCtx);
 
     private:
         // Struct in which the matched specifications are collected.
@@ -131,6 +145,7 @@ namespace sourcespec2ir
 
         WrapperSignature getWrapperSignature(
             SpecParser::WrapperSigClauseContext &ctx);
+
     };
 
 }

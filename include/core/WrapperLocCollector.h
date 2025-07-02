@@ -21,7 +21,8 @@ namespace sourcespec2ir
     {
     public:
         WrapperLocCollector(SpecParser::FileContext &specParseTree,
-                            const std::string &file);
+                            const std::string &file, 
+                            const std::string &md5Checksum);
 
         std::unique_ptr<llvm::SmallVector<WrapperLocMarker>>
         collectLocationMarkers();
@@ -29,6 +30,7 @@ namespace sourcespec2ir
     private:
         SpecParser::FileContext &specParseTree;
         const std::string file;
+        const std::string md5Checksum;
         std::unique_ptr<llvm::SmallVector<WrapperLocMarker>> wrapperLocations;
 
         // Overwritten visitor-methods

@@ -1,4 +1,5 @@
 #include "FileUtils.h"
+#include "PallasException.h"
 
 #include <llvm/ADT/SmallString.h>
 #include <llvm/Support/FileSystem.h>
@@ -38,5 +39,16 @@ namespace sourcespec2ir::utils
         }
 
         return fPath == specFilePath;
+    }
+
+    
+    std::string getChecksumForFile(const std::string &path)
+    {
+        auto absPath = utils::makeAbsPath(path);
+        auto md5Res = llvm::sys::fs::md5_contents(absPath);
+        if (!md5Res)
+            throw utils::PallasException(
+                "Failed to get checksum for file at: " + path);
+        return md5Res.get().digest().str().str();
     }
 }
