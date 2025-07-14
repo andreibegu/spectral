@@ -5,6 +5,7 @@
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
@@ -410,10 +411,20 @@ namespace sourcespec2ir
     llvm::DICompileUnit *SourceSpecTransformer::getCompileUnit(
         const std::string &path)
     {
+        // TODO: Find a better way to set the language
+        unsigned int lang = 0;
+        if (path.ends_with(".h")) {
+            lang = llvm::dwarf::DW_LANG_C;
+        } else if (path.ends_with(".hpp")) {
+            lang = llvm::dwarf::DW_LANG_C_plus_plus;
+        } else if (path.ends_with(".swift")) {
+            lang = llvm::dwarf::DW_LANG_Swift;
+        }
+
         llvm::DIBuilder builder(*irModule);
         auto *file = builder.createFile(path, "");
         auto *cu = builder.createCompileUnit(
-            0,          // lang
+            lang,       // lang
             file,       // file
             "spectral", // producer
             false,      // isOptimized

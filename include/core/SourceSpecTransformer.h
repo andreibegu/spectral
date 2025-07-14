@@ -68,7 +68,7 @@ namespace sourcespec2ir
         std::string getSrcInPath();
 
         /**
-         * Determines of the given argument is compiler-generated. 
+         * Determines of the given argument is compiler-generated.
          */
         virtual bool isCompilerGeneratedArg(const llvm::Argument &arg);
 
@@ -252,7 +252,7 @@ namespace sourcespec2ir
         std::string getPathForSourceWithWrappers();
 
         /**
-         * Get a DICompileUnit for the given path. 
+         * Get a DICompileUnit for the given path.
          */
         llvm::DICompileUnit *getCompileUnit(const std::string &path);
     };

@@ -38,7 +38,7 @@ namespace sourcespec2ir
 
         llvm::SmallVector<llvm::Function *> matchFContract(
             const std::string matchingStr, const bool isSrcName,
-            SrcRange loc) override;
+            SrcRange loc, const bool isGenerated) override;
 
         std::pair<llvm::Function *, llvm::Loop *> matchLoopInvBlock(
             SrcRange loc) override;

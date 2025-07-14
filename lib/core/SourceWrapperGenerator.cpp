@@ -491,8 +491,9 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract)
     {
         auto contrFile = utils::makeAbsPath(contract.srcLoc.getFile());
+        auto absSrcFile = utils::makeAbsPath(srcInFile);
         // Contract in src-file --> Place at location of contract
-        if (contrFile == srcInFile)
+        if (contrFile == absSrcFile)
             return contract.srcLoc.getStartLine();
 
         auto *pFunc = contract.function;

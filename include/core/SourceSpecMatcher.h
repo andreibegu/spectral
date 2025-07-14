@@ -59,7 +59,7 @@ namespace sourcespec2ir
          */
         virtual llvm::SmallVector<llvm::Function *> matchFContract(
             const std::string matchingStr, const bool isSrcName,
-            SrcRange loc) = 0;
+            SrcRange loc, const bool isGenerated) = 0;
 
         /**
          * Given the location of a contract-block in the source-file,

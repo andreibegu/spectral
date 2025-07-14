@@ -74,7 +74,8 @@ namespace sourcespec2ir
             // Match using matching-string
             bool isSrcMapping = mappingClause->SRC() != nullptr;
             auto matchingStr = utils::getCtxAsStr(*mappingClause->specExpression());
-            irFunctions = matchFContract(matchingStr, isSrcMapping, loc);
+            irFunctions = matchFContract(matchingStr, isSrcMapping, loc, 
+                type == Generated);
         }
         else
         {
