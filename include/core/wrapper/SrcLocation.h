@@ -15,14 +15,17 @@ namespace sourcespec2ir
         const size_t line;
         const size_t column;
         const std::string file;
+        const std::string md5Checksum;
 
-        SrcLocation(size_t line, size_t column, std::string file);
+        SrcLocation(const size_t line, const size_t column, 
+            const std::string &file, const std::string &md5Checksum);
         SrcLocation(const SrcLocation &baseLoc, size_t colOffset,
-                    std::string file);
+                    const std::string &file, const std::string &md5Checksum);
 
         inline size_t getLine() const { return line; }
         inline size_t getColumn() const { return column; }
         inline const std::string &getFile() const { return file; }
+        inline const std::string &getMD5() const { return md5Checksum; }
     };
 
     /**
@@ -34,14 +37,16 @@ namespace sourcespec2ir
         const SrcLocation startLoc;
         const SrcLocation endLoc;
 
-        SrcRange(size_t startLine, size_t startColumn,
-                 size_t endLine, size_t endColumn, std::string file);
+        SrcRange(const size_t startLine, const size_t startColumn,
+                 const size_t endLine, const size_t endColumn, 
+                 const std::string &file, const std::string &md5Checksum);
 
         inline size_t getStartLine() const { return startLoc.getLine(); }
         inline size_t getStartCol() const { return startLoc.getColumn(); }
         inline size_t getEndLine() const { return endLoc.getLine(); }
         inline size_t getEndCol() const { return endLoc.getColumn(); }
         inline const std::string &getFile() const { return startLoc.getFile(); }
+        inline const std::string &getMD5() const { return startLoc.getMD5(); }
     };
 }
 

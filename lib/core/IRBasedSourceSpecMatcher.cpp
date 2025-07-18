@@ -42,10 +42,11 @@ namespace
     }
 
     void printExternalContractMatchingInfo(size_t startLine, size_t endLine,
-                                           std::string fName)
+                                           std::string fName, bool isGenerated)
     {
         auto locStr = getLocationString(startLine, endLine);
-        llvm::outs() << "Matched external contract at " << locStr
+        auto cType = isGenerated ? "generated" : "external";
+        llvm::outs() << "Matched " << cType << " contract at " << locStr
                      << " to " << fName << "\n";
     }
 
@@ -147,7 +148,7 @@ namespace sourcespec2ir
                 // a warning. This is not directly an error but could lead to
                 // incorrectly matched contracts if the line-info for a relevant
                 // function is missing
-                if (!f.isIntrinsic() && printMatchingInfo)
+                if (!f.isIntrinsic() && !f.isDeclaration() && printMatchingInfo)
                 {
                     llvm::outs()
                         << "WARNING: Unable to determine line for function "
@@ -239,7 +240,8 @@ namespace sourcespec2ir
 
     llvm::SmallVector<llvm::Function *>
     IRBasedSourceSpecMatcher::matchFContract(
-        const std::string matchingStr, const bool isSrcName, SrcRange loc)
+        const std::string matchingStr, const bool isSrcName, SrcRange loc, 
+        const bool isGenerated)
     {
         llvm::SmallVector<llvm::Function *> results;
         const std::regex matchRegex(matchingStr);
@@ -256,7 +258,7 @@ namespace sourcespec2ir
                 if (printMatchingInfo)
                     printExternalContractMatchingInfo(
                         loc.getStartLine(), loc.getEndLine(),
-                        utils::getSrcNameOfFunction(f));
+                        utils::getSrcNameOfFunction(f), isGenerated);
             }
         }
         return results;

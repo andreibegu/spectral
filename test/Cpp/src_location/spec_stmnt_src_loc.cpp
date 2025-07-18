@@ -12,13 +12,15 @@ int bar (int x) {
 // CHECK: !pallas.stmntBlock [[mdStmntBlock:![0-9]+]]
 
 // COM: MD-node of the statement-block has location-info
-// CHECK: [[mdStmntBlock]] = !{[[stmntBlockLoc:![0-9]+]], [[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
-// CHECK-DAG: [[stmntBlockLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 7, i64 28}
+// CHECK-DAG: [[fileMD:![0-9]+]] = !DIFile(filename: "{{.*}}spec_stmnt_src_loc.cpp", directory: "", checksumkind: CSK_MD5, checksum: "
+
+// CHECK-DAG: [[mdStmntBlock]] = !{[[stmntBlockLoc:![0-9]+]], [[assumeMD:![0-9]+]], [[assertMD:![0-9]+]]}
+// CHECK-DAG: [[stmntBlockLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 7, i64 28, [[fileMD]]}
 
 // COM: MD-Node of the assume-statement has location-info
 // CHECK-DAG: [[assumeMD]] = !{!"pallas.assume", [[assumeLoc:![0-9]+]], ptr @ 
-// CHECK-DAG: [[assumeLoc]] = !{!"pallas.srcLoc", i64 6, i64 9, i64 6, i64 21}
+// CHECK-DAG: [[assumeLoc]] = !{!"pallas.srcLoc", i64 6, i64 9, i64 6, i64 21, [[fileMD]]}
 
 // COM: MD-Node of the assert-statement has location-info
 // CHECK-DAG: [[assertMD]] = !{!"pallas.assert", [[assertLoc:![0-9]+]], ptr @ 
-// CHECK-DAG: [[assertLoc]] = !{!"pallas.srcLoc", i64 7, i64 9, i64 7, i64 26}
+// CHECK-DAG: [[assertLoc]] = !{!"pallas.srcLoc", i64 7, i64 9, i64 7, i64 26, [[fileMD]]}

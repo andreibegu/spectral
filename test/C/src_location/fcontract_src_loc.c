@@ -14,11 +14,14 @@ float bar (float x) {
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
 // COM: MD-Nodes of the contract have location-info 
-// CHECK: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
-// CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 5, i64 1, i64 7, i64 1}
+
+// CHECK-DAG: [[fileMD:![0-9]+]] = !DIFile(filename: "{{.*}}fcontract_src_loc.c", directory: "", checksumkind: CSK_MD5, checksum: "
+
+// CHECK-DAG: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[reqMD:![0-9]+]], [[ensMD:![0-9]+]]}
+// CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 5, i64 1, i64 7, i64 1, [[fileMD]]}
 
 // CHECK-DAG: [[reqMD]] = !{!"pallas.requires", [[reqLoc:![0-9]+]], 
-// CHECK-DAG: [[reqLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 6, i64 19}
+// CHECK-DAG: [[reqLoc]] = !{!"pallas.srcLoc", i64 6, i64 5, i64 6, i64 19, [[fileMD]]}
 
 // CHECK-DAG: [[ensMD]] = !{!"pallas.ensures", [[ensLoc:![0-9]+]], 
-// CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", i64 6, i64 21, i64 6, i64 35}
+// CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", i64 6, i64 21, i64 6, i64 35, [[fileMD]]}

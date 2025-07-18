@@ -5,6 +5,7 @@
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
@@ -15,6 +16,7 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/Path.h>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Transforms/IPO/FunctionImport.h>
 #include <llvm/Transforms/Utils/Mem2Reg.h>
 #include <llvm/Transforms/Utils/ModuleUtils.h>
@@ -83,6 +85,7 @@ namespace sourcespec2ir
             promoteMemToReg(*irModule);
 
         // Parse the source-file to extract the specifications
+        auto inFileChecksum = utils::getChecksumForFile(srcInPath);
         auto parser = std::make_unique<SpecParserWrapper>(srcInPath);
         auto srcParseTree = parser->getSrcParseTree();
         if (!srcParseTree)
@@ -93,7 +96,8 @@ namespace sourcespec2ir
         auto specDeclarations = declCollector.collectDeclarations();
 
         // Collect location-markers:
-        WrapperLocCollector wLocCollector(*srcParseTree, srcInPath);
+        WrapperLocCollector wLocCollector(*srcParseTree, srcInPath,
+                                          inFileChecksum);
         auto wLocMarkers = wLocCollector.collectLocationMarkers();
 
         // Match the specifications to the IR
@@ -407,10 +411,20 @@ namespace sourcespec2ir
     llvm::DICompileUnit *SourceSpecTransformer::getCompileUnit(
         const std::string &path)
     {
+        // TODO: Find a better way to set the language
+        unsigned int lang = 0;
+        if (path.ends_with(".h")) {
+            lang = llvm::dwarf::DW_LANG_C;
+        } else if (path.ends_with(".hpp")) {
+            lang = llvm::dwarf::DW_LANG_C_plus_plus;
+        } else if (path.ends_with(".swift")) {
+            lang = llvm::dwarf::DW_LANG_Swift;
+        }
+
         llvm::DIBuilder builder(*irModule);
         auto *file = builder.createFile(path, "");
         auto *cu = builder.createCompileUnit(
-            0,          // lang
+            lang,       // lang
             file,       // file
             "spectral", // producer
             false,      // isOptimized
@@ -845,8 +859,11 @@ namespace sourcespec2ir
     llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
     {
         llvm::DIBuilder builder(*irModule);
-        auto *file = builder.createFile(
-            utils::makeAbsPath(srcLoc.getFile()), "");
+        auto absPath = utils::makeAbsPath(srcLoc.getFile());
+        llvm::StringRef checksumStr = srcLoc.getMD5();
+        llvm::DIFile::ChecksumInfo checksum(
+            llvm::DIFile::ChecksumKind::CSK_MD5, checksumStr);
+        auto *file = builder.createFile(absPath, "", checksum);
         builder.finalize();
         auto *nTy = llvm::Type::getInt64Ty(*irContext);
 
