@@ -2,6 +2,7 @@
 #define PALLAS_MATCHEDSOURCESPEC_H
 
 #include "wrapper/SrcLocation.h"
+#include "wrapper/WrapperSignature.h"
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Analysis/LoopInfo.h>
@@ -9,6 +10,8 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/Metadata.h>
+
+#include <optional>
 
 namespace sourcespec2ir
 {
@@ -42,15 +45,25 @@ namespace sourcespec2ir
         std::string expr;
         // The location of the contract statement in the source-file
         SrcRange srcLoc;
-        // The start-position of the statements expression in the source-file. 
+        // The start-position of the statements expression in the source-file.
         SrcLocation exprLoc;
+        bool isExternal;
 
         MatchedFContractStatement(ContractStatementType type, std::string expr,
-                                  const SrcRange &srcLoc, 
-                                  const SrcLocation &exprLoc)
-            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
+                                  const SrcRange &srcLoc,
+                                  const SrcLocation &exprLoc,
+                                  bool isExternal)
+            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc),
+              isExternal(isExternal)
         {
         }
+    };
+
+    enum ContractType
+    {
+        Normal,
+        External,
+        Generated
     };
 
     /**
@@ -63,10 +76,15 @@ namespace sourcespec2ir
         llvm::Function *function;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
+        const ContractType type;
         bool isPure = false;
-
-        MatchedFunctionContract(llvm::Function *function, const SrcRange &srcLoc)
-            : function(function), srcLoc(srcLoc)
+        bool isAssumed = false;
+        std::optional<WrapperSignature> wrapperSignature = std::nullopt;
+        
+        MatchedFunctionContract(
+            llvm::Function *function,
+            const SrcRange &srcLoc, const ContractType &type)
+            : function(function), srcLoc(srcLoc), type(type)
         {
         }
 
@@ -84,10 +102,10 @@ namespace sourcespec2ir
     {
         std::string expr;
         SrcRange srcLoc;
-        // The start-position of the invariant's expression in the source-file. 
+        // The start-position of the invariant's expression in the source-file.
         SrcLocation exprLoc;
 
-        MatchedLoopInvariant(std::string expr, const SrcRange &srcLoc, 
+        MatchedLoopInvariant(std::string expr, const SrcRange &srcLoc,
                              const SrcLocation &exprLoc)
             : expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
         {
@@ -132,7 +150,7 @@ namespace sourcespec2ir
         std::string expr;
         // The start- and end-position of the statement in the source-file
         SrcRange srcLoc;
-        // The start-position of the expression in the source-file. 
+        // The start-position of the expression in the source-file.
         SrcLocation exprLoc;
 
         MatchedSpecStatement(SpecStatementType type, std::string expr,
@@ -153,7 +171,7 @@ namespace sourcespec2ir
         llvm::SmallVector<std::unique_ptr<MatchedSpecStatement>> statements;
         SrcRange srcLoc;
 
-        MatchedSpecStatementBlock(llvm::Instruction *inst, const SrcRange &srcLoc) 
+        MatchedSpecStatementBlock(llvm::Instruction *inst, const SrcRange &srcLoc)
             : inst(inst), srcLoc(srcLoc)
         {
         }
@@ -185,6 +203,11 @@ namespace sourcespec2ir
               matchedStmntBlocks()
         {
         }
+
+        /**
+         * Adds the specifications from 'specs2' to this object.
+         */
+        void merge(std::unique_ptr<MatchedSpecifications> specs2);
     };
 
 }

@@ -1,23 +1,35 @@
 #include "SourceWrapperGenerator.h"
 #include "PallasException.h"
+#include "FileUtils.h"
+#include "IRUtils.h"
+#include "SrcLookup.h"
 
+#include <algorithm>
 #include <fstream>
 #include <map>
+#include <regex>
 #include <sstream>
-#include <system_error>
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/Argument.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
+#include <llvm/IR/Instruction.h>
+#include <llvm/IR/InstrTypes.h>
 #include <llvm/Support/FileSystem.h>
 
 namespace sourcespec2ir
 {
 
     SourceWrapperGenerator::SourceWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : specDeclarations(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : srcInFile(srcInFile),
+          specDeclarations(specDeclarations),
+          wrapperMarkers(wrapperMarkers)
     {
     }
 
@@ -44,29 +56,129 @@ namespace sourcespec2ir
         const MatchedFunctionContract &contract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        const auto parentFunction = contract.function;
-        llvm::DIType *parentRetType = nullptr;
-        if (parentFunction->getSubprogram() != nullptr &&
-            parentFunction->getSubprogram()->getType() != nullptr)
+        const auto pFunc = contract.function;
+
+        // Get Wrapper-signature 
+        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
+        std::optional<WrapperSignature> sig = std::nullopt;
+        if (contract.type == External && contract.wrapperSignature.has_value())
         {
-            parentRetType = parentFunction->getSubprogram()->getType()->getTypeArray()[0];
+            // Get signature that was explicitly defined in contract
+            sig = contract.wrapperSignature.value();
+            // TODO: Handle encoding of args in this case.
+            argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        }
+        else if (pFunc->getSubprogram() != nullptr &&
+                 pFunc->getSubprogram()->getType() != nullptr)
+        {
+            // Construct signature from debug-info
+            argList = getSrcVariablesForFunction(*pFunc);
+            auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
+            sig = getWrapperSignature(argList->getArrayRef(), rType);
         }
 
-        auto argList = getSrcVariablesForFunction(*parentFunction);
-        // Get insert-position for wrapper-functions
-        auto insertPos = getWrapperInsertLoc(contract);
+        if (!sig.has_value())
+            throw utils::PallasException("Unable to get signature for wrapper");
 
-        // Wrap specification statements
+        auto insertPos = (contract.type == Normal)
+                             ? getWrapperInsertLoc(contract)
+                             : getExternalWrapperInsertLoc(contract);
+
+        // Wrap clauses of the contract
         for (auto &stmnt : contract.statements)
         {
-            auto wrapperName = getNameForWrapperFunction();
-            auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName, parentRetType);
+            auto wName = getNameForWrapperFunction();
+            auto wStr = getWrapperFunctionString(sig.value(), stmnt->expr, wName);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+                    wName, wStr, argList->getArrayRef(), insertPos);
         }
     };
+
+    namespace
+    {
+        const sourcespec2ir::WrapperLocMarker *selectLocMarker(
+            const llvm::DIScope &scope,
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        {
+            // Filter for loc-markers that match the name of the scope
+            llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> matchingMarkers;
+            llvm::SmallVector<const sourcespec2ir::WrapperLocMarker *> wildcardMarkers;
+            for (auto &marker : wrapperMarkers)
+            {
+                if (marker.scopeMatchingStr.has_value())
+                {
+                    const std::regex matchRegex(*marker.scopeMatchingStr);
+                    if (std::regex_match(scope.getName().str(), matchRegex))
+                        matchingMarkers.push_back(&marker);
+                }
+                else
+                {
+                    // Treat markers without matching-string as wildcards
+                    wildcardMarkers.push_back(&marker);
+                }
+            }
+
+            if (matchingMarkers.size() == 1)
+                return matchingMarkers[0];
+            if (matchingMarkers.size() == 0 && wildcardMarkers.size() == 1)
+                return wildcardMarkers[0];
+            if (matchingMarkers.empty() && wildcardMarkers.empty())
+                return nullptr;
+
+            // TODO: How to handle multiple matching markers?
+            throw utils::PallasException(
+                "Wrapper generation: Ambiguous insert-location "
+                "for external contract ");
+        }
+
+        bool isParentScope(const llvm::DIScope *parent,
+                           const llvm::DIScope *child)
+        {
+            if (child == nullptr)
+                return false;
+            if (child == parent)
+                return true;
+            // We first walk up the scope chain. Once we reach the end without
+            // finding a parent, we resort to the file-field of the child.
+            // E.g. DICompositeTypes often have no parent-scope, but a parent-file.
+            if (child->getScope() != nullptr)
+                return isParentScope(parent, child->getScope());
+            else
+                return isParentScope(parent, child->getFile());
+        }
+
+        llvm::DIScope *getClosestParentScope(
+            llvm::ArrayRef<llvm::DIScope *> children)
+        {
+            // TODO: Implement this in a less inefficient way!
+            if (children.empty())
+                return nullptr;
+            auto *currentParent = children[0]->getScope();
+            // Move up to the next parent-scope until we fine one that includes
+            // all child-scopes
+            while (currentParent != nullptr)
+            {
+                bool isParent = true;
+                for (auto *c : children)
+                {
+                    if (!isParentScope(currentParent, c))
+                    {
+                        isParent = false;
+                        break;
+                    }
+                }
+                if (isParent)
+                    return currentParent;
+                if (currentParent->getScope() != nullptr)
+                    currentParent = currentParent->getScope();
+                else
+                    currentParent = currentParent->getFile();
+            }
+            return nullptr;
+        }
+
+    }
 
     void SourceWrapperGenerator::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock,
@@ -81,8 +193,9 @@ namespace sourcespec2ir
         for (auto &inv : invBlock.invariants)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), inv->expr, wrapperName);
+                wSig, inv->expr, wrapperName);
             matchedWrappers.loopInvWrappers[inv.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -102,8 +215,9 @@ namespace sourcespec2ir
         for (auto &stmnt : stmntBlock.statements)
         {
             auto wrapperName = getNameForWrapperFunction();
+            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
-                argList->getArrayRef(), stmnt->expr, wrapperName);
+                wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
@@ -114,7 +228,7 @@ namespace sourcespec2ir
     SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
     {
         if (fun.isDeclaration())
-            throw utils::PallasException("Cannot variables for for declaration.");
+            throw utils::PallasException("Cannot determine variables for declaration.");
 
         // SetVector is used to keep insertion-order and prevent duplicates
         auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
@@ -239,6 +353,33 @@ namespace sourcespec2ir
         return nSpaceStr + typeName;
     }
 
+    std::string SourceWrapperGenerator::buildArgStr(const std::string &type,
+                                                    const std::string &name)
+    {
+        return type + " " + name;
+    }
+
+    WrapperSignature SourceWrapperGenerator::getWrapperSignature(
+        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const llvm::DIType *returnType)
+    {
+        WrapperSignature sig;
+        for (auto *var : srcVars)
+        {
+            const auto varName = utils::getSrcVarName(*var);
+            const auto varType = getSrcReprOfType(var->getType());
+            const auto varStr = buildArgStr(varType, varName);
+            sig.addArg(varStr);
+        }
+
+        if (returnType != nullptr)
+        {
+            sig.parentRetTy = getSrcReprOfType(returnType);
+        }
+
+        return sig;
+    }
+
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)
     {
         auto nSpace = llvm::dyn_cast_or_null<llvm::DINamespace>(scope);
@@ -297,13 +438,13 @@ namespace sourcespec2ir
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedFunctionContract &contract)
     {
-        return contract.function->getSubprogram()->getLine();
+        return utils::getDeclSubprog(*contract.function)->getLine();
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedLoopInvariantBlock &invBlock)
     {
-        return invBlock.parentFunction->getSubprogram()->getLine();
+        return utils::getDeclSubprog(*invBlock.parentFunction)->getLine();
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
@@ -321,8 +462,69 @@ namespace sourcespec2ir
         auto parentFunc = instr->getParent()->getParent();
         if (parentFunc->getSubprogram() == nullptr)
             throw utils::PallasException("Cannot get line-info for function");
+        return utils::getDeclSubprog(*parentFunc)->getLine();
+    }
 
-        return parentFunc->getSubprogram()->getLine();
+    namespace
+    {
+        llvm::SmallVector<llvm::DIScope *> getCallsiteScopes(
+            const llvm::Function &func)
+        {
+            llvm::SmallVector<llvm::DIScope *> scopes;
+            for (auto *user : func.users())
+            {
+                if (auto *call = llvm::dyn_cast<llvm::CallBase>(user))
+                {
+                    auto *scope = call->getFunction()->getSubprogram();
+                    if (scope == nullptr)
+                        throw utils::PallasException(
+                            "Wrapper generation: Failed to get scope from call-site");
+                    scopes.push_back(scope);
+                }
+            }
+            return scopes;
+        }
+
+    }
+
+    size_t SourceWrapperGenerator::getExternalWrapperInsertLoc(
+        const MatchedFunctionContract &contract)
+    {
+        auto contrFile = utils::makeAbsPath(contract.srcLoc.getFile());
+        auto absSrcFile = utils::makeAbsPath(srcInFile);
+        // Contract in src-file --> Place at location of contract
+        if (contrFile == absSrcFile)
+            return contract.srcLoc.getStartLine();
+
+        auto *pFunc = contract.function;
+        // Contract in external file --> Location based on marker-annotations
+        llvm::DIScope *insertScope = nullptr;
+        if (contract.type == Generated)
+        {
+            // Insert into scope of parent-func
+            auto sProg = utils::getDeclSubprog(*pFunc);
+            insertScope = sProg != nullptr
+                              ? sProg->getScope()
+                              : nullptr;
+        }
+        else if (contract.type == External)
+        {
+            // Collect scopes of all call-sites
+            auto scopes = getCallsiteScopes(*pFunc);
+            // Find the closest parent-scope of all call sites
+            insertScope = getClosestParentScope(scopes);
+        }
+
+        if (insertScope == nullptr)
+            throw utils::PallasException(
+                "Wrapper generation: Failed to get insert-scope for contract");
+
+        // Find matching insertion-point marker
+        auto *insertMarker = selectLocMarker(*insertScope, wrapperMarkers);
+        if (insertMarker == nullptr)
+            throw utils::PallasException(
+                "Wrapper generation: Failed to get insert location for external contract");
+        return insertMarker->markerLoc.getStartLine();
     }
 
     std::string SourceWrapperGenerator::getNameForWrapperFunction()
@@ -331,14 +533,22 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::modifySrcWithWrappers(
-        std::vector<SrcLine> &srcLines)
+        std::list<SrcLine> &srcLines)
     {
         // Do nothing. Subclasses can overwrite this
     }
 
-    std::vector<SourceWrapperGenerator::SrcLine>::iterator
+    namespace
+    {
+        inline bool isInsertLine(const std::string &line)
+        {
+            return std::all_of(line.begin(), line.end(), isspace);
+        }
+    }
+
+    std::list<SourceWrapperGenerator::SrcLine>::iterator
     SourceWrapperGenerator::findInsertPos(
-        const size_t srcLineNumber, std::vector<SrcLine> &srcLines)
+        const size_t srcLineNumber, std::list<SrcLine> &srcLines)
     {
         // Find the index of the line of the insert-position in the vector
         auto currentLine = srcLines.begin();
@@ -348,7 +558,7 @@ namespace sourcespec2ir
         // Move back in the vector to find the first blank line above
         // the insert-position
         while (currentLine != srcLines.begin() &&
-               !currentLine->content.empty())
+               !isInsertLine(currentLine->content))
             currentLine--;
 
         return currentLine;
@@ -376,14 +586,14 @@ namespace sourcespec2ir
         writeSrcFile(outPath, *sourceLines);
     }
 
-    std::unique_ptr<std::vector<SourceWrapperGenerator::SrcLine>>
+    std::unique_ptr<std::list<SourceWrapperGenerator::SrcLine>>
     SourceWrapperGenerator::readSrcFile(std::string filePath)
     {
         std::ifstream inStream(filePath);
         if (!inStream.is_open())
             throw utils::PallasException("Failed to read source-file during wrapping-stage");
 
-        auto lineVec = std::make_unique<std::vector<SrcLine>>();
+        auto lineVec = std::make_unique<std::list<SrcLine>>();
         size_t currentLineNo = 1;
         std::string currentLine = "";
         while (getline(inStream, currentLine))
@@ -396,7 +606,7 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::writeSrcFile(const std::string &filePath,
-                                              const std::vector<SrcLine> &lines)
+                                              const std::list<SrcLine> &lines)
     {
         // If the file already exists, delete it to avoid a situation where
         // writing fails, but an old, existing file is read.
@@ -416,17 +626,17 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::insertLines(
-        std::vector<SrcLine> &lines, const std::string &content,
-        std::vector<SrcLine>::iterator insertLine)
+        std::list<SrcLine> &lines, const std::string &content,
+        std::list<SrcLine>::iterator insertLine)
     {
         // Construct vector that contains the lines of the content
         std::stringstream contentStream(content);
         std::string currentCLine;
-        std::vector<SrcLine> contentVec;
-        contentVec.push_back(SrcLine("", 0));
+        std::list<SrcLine> contentList;
+        contentList.push_back(SrcLine("", 0));
         while (std::getline(contentStream, currentCLine))
-            contentVec.push_back(SrcLine(currentCLine, 0));
+            contentList.push_back(SrcLine(currentCLine, 0));
         // Insert content of vector
-        lines.insert(insertLine, contentVec.begin(), contentVec.end());
+        lines.insert(insertLine, contentList.begin(), contentList.end());
     }
 }

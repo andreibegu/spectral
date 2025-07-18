@@ -6,7 +6,9 @@
 #include "SpecParserBaseVisitor.h"
 #include "wrapper/SrcLocation.h"
 
+#include <optional>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <llvm/ADT/SmallVector.h>
@@ -29,7 +31,8 @@ namespace sourcespec2ir
     {
     public:
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                          llvm::Module *irModule);
+                          const std::string file,
+                          llvm::Module *irModule, bool matchExternalOnly);
 
         virtual ~SourceSpecMatcher() = default;
 
@@ -38,16 +41,32 @@ namespace sourcespec2ir
 
     protected:
         SpecParser::FileContext *specParseTree;
+        const std::string file;
+        std::string md5Checksum;
         llvm::Module *irModule;
+        bool matchExternalOnly;
 
         /**
-         * Given the location of a specContractBlock in the source-file,
-         * this method returns the name of the funcion that the specification
-         * refers to.
-         * TODO: Check if it makes more sense to return a pointer to the
-         *       function instead of the name.
+         * Matches a function-contract based on a provided matching-string.
+         * Given the matching-string this method determines the functions in the
+         * module whose names match to the provided matching-string.
+         * The flag 'isSrcName' determines if the name should be interpreted as
+         *  source- or ir-name.
+         *
+         * The default-implementation only supports source-level matching
+         * strings and interprets them as a regular expressions that match on
+         * the function's name.
          */
-        virtual std::string matchFContract(SrcRange loc) = 0;
+        virtual llvm::SmallVector<llvm::Function *> matchFContract(
+            const std::string matchingStr, const bool isSrcName,
+            SrcRange loc, const bool isGenerated) = 0;
+
+        /**
+         * Given the location of a contract-block in the source-file,
+         * this method returns the name of the function that the specification
+         * refers to.
+         */
+        virtual llvm::Function *matchFContract(SrcRange loc) = 0;
 
         /**
          * Given the location of a specification-block of loop-invariants,
@@ -65,6 +84,19 @@ namespace sourcespec2ir
          * If the spec-block cannot be matched, an exception it thrown.
          */
         virtual llvm::Instruction *matchStatementBlock(SrcRange loc) = 0;
+
+        /**
+         * Returns a SrcRang for the given ParserRuleContext.
+         * Sets file and checksum to the file that is opened by this matcher.
+         */
+        SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
+
+        /**
+         * Returns the location in the file opened by this matcher
+         * where the given expression starts.
+         */
+        SrcLocation getExprStartLoc(
+            const SpecParser::SpecExpressionContext &exprCtx);
 
     private:
         // Struct in which the matched specifications are collected.
@@ -88,6 +120,7 @@ namespace sourcespec2ir
             SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(
             SpecParser::EnsuresClauseContext *ctx) override;
+
         // Visitor for loop-invariants
         std::any visitSpecLoopInvariantBlock(
             SpecParser::SpecLoopInvariantBlockContext *ctx) override;
@@ -102,34 +135,17 @@ namespace sourcespec2ir
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
-                            SpecParser::SpecExpressionContext *expr, 
+                            SpecParser::SpecExpressionContext *expr,
                             const SrcRange &loc);
 
         // Adds a statement to the current block of specification-statements
         void addToStmntBlock(SpecStatementType type,
-                             SpecParser::SpecExpressionContext *expr, 
+                             SpecParser::SpecExpressionContext *expr,
                              const SrcRange &loc);
 
-        /**
-         * Retrieving the textual representation of the specification
-         * expressions using getText() removes the whitespaces.
-         * This method returns the full textual representatoin including
-         * whitespaces by using the underlying token-stream.
-         */
-        std::string getExprAsStr(const SpecParser::SpecExpressionContext &exprCtx);
+        WrapperSignature getWrapperSignature(
+            SpecParser::WrapperSigClauseContext &ctx);
 
-        /**
-         * Extracts the source-location from a given parser-rule context and
-         * returns it as a SrcRange. 
-         */
-        SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx);
-
-        /**
-         * Returns the location in the source-file where the given expression 
-         * starts. 
-         */
-        SrcLocation getExprStartLoc(
-            const SpecParser::SpecExpressionContext &exprCtx);
     };
 
 }
