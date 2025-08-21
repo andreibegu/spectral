@@ -2,6 +2,7 @@
 #define PALLAS_IRTYPEREPRESENTATION_H
 
 #include <memory>
+#include <string>
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SmallVector.h>
@@ -85,6 +86,12 @@ namespace sourcespec2ir
          * check if it represents a return by sret-parameter.
          */
         bool isReturnByParam() const;
+
+        /**
+         * Return a string-representation of this IRTypeRepresentation. 
+         * E.g. used in the naming of functions from the specification-library.
+         */
+        std::string asString() const;
 
         /**
          * Equality-operator
