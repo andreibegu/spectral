@@ -25,18 +25,28 @@ namespace sourcespec2ir
         // in wrapper-functions
         stream << "#pragma clang diagnostic push \n";
         stream << "#pragma clang diagnostic error \"-Wall\" \n";
+        // stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
+        stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
 
         stream << "bool " << functionName << " (";
 
         // Argument-list
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        if (srcVars.empty())
         {
-            if (it != srcVars.begin())
-                stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varType << " " << varName;
+            stream << "void";
         }
+        else
+        {
+            for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+            {
+                if (it != srcVars.begin())
+                    stream << ", ";
+                const auto varName = utils::getSrcVarName(**it);
+                const auto varType = getSrcReprOfType((*it)->getType());
+                stream << varType << " " << varName;
+            }
+        }
+
         stream << ")";
 
         // Construct body:
@@ -73,7 +83,7 @@ namespace sourcespec2ir
 
     void CWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
     {
-        // Add content of the declaration-block to the file. 
+        // Add content of the declaration-block to the file.
         for (auto &decl : specDeclarations)
         {
             auto declStr = decl.content + ";";
