@@ -25,7 +25,7 @@ namespace sourcespec2ir
         // in wrapper-functions
         stream << "#pragma clang diagnostic push \n";
         stream << "#pragma clang diagnostic error \"-Wall\" \n";
-        // stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
+        stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
         stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
 
         stream << "bool " << functionName << " (";
