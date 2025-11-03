@@ -19,6 +19,12 @@ namespace sourcespec2ir
         const std::string &functionName)
     {
         std::stringstream stream;
+
+        stream << "#pragma clang diagnostic push \n";
+        stream << "#pragma clang diagnostic error \"-Wall\" \n";
+        stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
+        stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
+
         stream << "__attribute__((used)) \n";
         stream << " bool " << functionName << "(";
 
@@ -41,6 +47,8 @@ namespace sourcespec2ir
         stream << "{ \n";
         stream << "return " << expr << "; \n";
         stream << "} \n";
+
+        stream << "#pragma clang diagnostic pop \n";
 
         return stream.str();
     }

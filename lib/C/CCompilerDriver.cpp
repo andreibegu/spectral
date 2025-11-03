@@ -44,7 +44,8 @@ namespace sourcespec2ir
                                 " -Xclang -disable-O0-optnone" +
                                 " -I " + specLibPath + "/" + 
                                 " -Xclang -disable-llvm-passes " +
-                                " -fdebug-compilation-dir=. " ; // Use relative paths in the debug-info
+                                " -fdebug-compilation-dir=. " + // Use relative paths in the debug-info
+                                " -Werror " ;
         auto eCode = std::system(clangCall.c_str());
         if (eCode != 0)
             throw utils::PallasException(
