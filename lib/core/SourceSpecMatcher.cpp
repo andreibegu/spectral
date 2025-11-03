@@ -1,16 +1,22 @@
 #include "SourceSpecMatcher.h"
 #include "PallasException.h"
-#include "SrcLookup.h"
+#include "ParsingUtils.h"
+#include "FileUtils.h"
 
 #include <cassert>
-#include <stdexcept>
+#include <optional>
 
 namespace sourcespec2ir
 {
     SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                         llvm::Module *irModule)
+                                         const std::string file,
+                                         llvm::Module *irModule,
+                                         bool matchExternalOnly)
         : specParseTree(specParseTree),
-          irModule(irModule)
+          file(file),
+          md5Checksum(utils::getChecksumForFile(file)),
+          irModule(irModule),
+          matchExternalOnly(matchExternalOnly)
     {
     }
 
@@ -22,37 +28,113 @@ namespace sourcespec2ir
         return std::move(matchedSpecs);
     }
 
+    namespace
+    {
+        ContractType getContractType(SpecParser::SpecContractBlockContext &ctx)
+        {
+            if (auto *mappingClause = ctx.specMappingClause())
+            {
+                if (mappingClause->EXTERNAL() != nullptr)
+                    return External;
+                else if (mappingClause->GENERATED() != nullptr)
+                    return Generated;
+                else
+                    throw utils::PallasException("Invalid contract type!");
+            }
+            return Normal;
+        }
+    }
+
     std::any SourceSpecMatcher::visitSpecContractBlock(
         SpecParser::SpecContractBlockContext *ctx)
     {
         // Safety-check that the state of the object is valid
         assert(contract == nullptr);
 
-        // Match contract to function
         auto loc = getLocFromCtx(ctx);
-        const auto specFun = matchFContract(loc);
-        auto irFunction = utils::getFunctionBySrcName(*irModule, specFun);
-        assert(irFunction != nullptr);
+        auto type = getContractType(*ctx);
+        auto *mappingClause = ctx->specMappingClause();
+        bool hasMappingClause = mappingClause != nullptr;
+        bool hasSigClause = hasMappingClause &&
+                            mappingClause->wrapperSigClause() != nullptr;
+        bool isAssumed = hasMappingClause &&
+                         mappingClause->ASSUMED() != nullptr;
 
-        // Create new matched contract
-        contract = std::make_unique<MatchedFunctionContract>(irFunction, loc);
+        if (matchExternalOnly && type == Normal)
+            throw utils::PallasException(
+                "Encountered non-external contract in contract-file.");
 
-        // Add all statements to the contract by traversing the children
-        for (auto c : ctx->children)
-            visit(c);
+        if (type != External && hasSigClause)
+            throw utils::PallasException("Specification of wrapper-signature "
+                                         "is only allowed for external contracts.");
 
-        // Add the new contract to the collection of contracts.
-        matchedSpecs->matchedFContracts.push_back(std::move(contract));
+        llvm::SmallVector<llvm::Function *> irFunctions;
+        if (type == External || type == Generated)
+        {
+            // Match using matching-string
+            bool isSrcMapping = mappingClause->SRC() != nullptr;
+            auto matchingStr = utils::getCtxAsStr(*mappingClause->specExpression());
+            irFunctions = matchFContract(matchingStr, isSrcMapping, loc, 
+                type == Generated);
+        }
+        else
+        {
+            // Match based on src-location
+            auto *irFunction = matchFContract(loc);
+            if (irFunction != nullptr)
+                irFunctions.push_back(irFunction);
+        }
+
+        if (irFunctions.empty() && !hasMappingClause)
+            throw utils::PallasException("Failed to match contract to function.");
+
+        std::optional<WrapperSignature> sig = std::nullopt;
+        if (hasSigClause)
+            sig = getWrapperSignature(*mappingClause->wrapperSigClause());
+
+        for (auto *irFunction : irFunctions)
+        {
+            // Create new matched contract
+            contract = std::make_unique<MatchedFunctionContract>(
+                irFunction, loc, type);
+            contract->isAssumed = isAssumed;
+            contract->wrapperSignature = sig;
+
+            // Add all statements to the contract by traversing the children
+            for (auto c : ctx->children)
+                visit(c);
+
+            matchedSpecs->matchedFContracts.push_back(std::move(contract));
+        }
+
         return 0;
     }
 
     std::any SourceSpecMatcher::visitPureFlag(SpecParser::PureFlagContext *ctx)
     {
         // Set pure-flag of contract to true
-        if (!contract) 
+        if (!contract)
             throw utils::PallasException("Encountered pure-flag without contract.");
-        contract->isPure = true; 
+        contract->isPure = true;
         return 0;
+    }
+
+    WrapperSignature SourceSpecMatcher::getWrapperSignature(
+        SpecParser::WrapperSigClauseContext &ctx)
+    {
+        WrapperSignature sig;
+        // Use visitor to turn arg-list into vector.
+        auto *argList = ctx.wrapperArgClause()->wrapperArgList();
+        while (argList != nullptr)
+        {
+            sig.addArg(utils::getCtxAsStr(*argList->argExpr()));
+            argList = argList->wrapperArgList();
+        }
+
+        // Extract return-type
+        auto *retClause = ctx.wrapperRetClause();
+        sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
+        return sig;
     }
 
     std::any SourceSpecMatcher::visitRequiresClause(
@@ -75,15 +157,20 @@ namespace sourcespec2ir
     {
         if (!contract)
             assert("No contract set while adding statement");
-        auto exprStr = getExprAsStr(*expr);
+        auto exprStr = utils::getCtxAsStr(*expr);
+        auto extContr = contract->type == External;
         auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr));
+            type, exprStr, loc, getExprStartLoc(*expr), extContr);
         contract->addStatement(std::move(stmnt));
     }
 
     std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(
         SpecParser::SpecLoopInvariantBlockContext *ctx)
     {
+        if (matchExternalOnly)
+            throw utils::PallasException(
+                "Encountered loop invariant in contract-file.");
+
         // Match the spec-block to the IR
         auto loc = getLocFromCtx(ctx);
         auto [parentFunc, loop] = matchLoopInvBlock(loc);
@@ -106,7 +193,7 @@ namespace sourcespec2ir
         // Collect the individual invariants from the invariant-block
         for (auto *inv : ctx->specLoopInvariant())
         {
-            auto stringRepr = getExprAsStr(*inv->specExpression());
+            auto stringRepr = utils::getCtxAsStr(*inv->specExpression());
             auto exprLoc = getExprStartLoc(*inv->specExpression());
             auto invLoc = getLocFromCtx(inv);
             invBlock->addInvariant(
@@ -122,6 +209,10 @@ namespace sourcespec2ir
     {
         // Safety-check that the state of the object is valid
         assert(stmntBlock == nullptr);
+
+        if (matchExternalOnly)
+            throw utils::PallasException(
+                "Encountered statement-block in contract-file.");
 
         // Match contract to instruction
         auto loc = getLocFromCtx(ctx);
@@ -160,37 +251,22 @@ namespace sourcespec2ir
     {
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
-        auto exprStr = getExprAsStr(*expr);
+        auto exprStr = utils::getCtxAsStr(*expr);
         auto stmnt = std::make_unique<MatchedSpecStatement>(
             type, exprStr, loc, getExprStartLoc(*expr));
         stmntBlock->addStatement(std::move(stmnt));
     }
 
-    std::string SourceSpecMatcher::getExprAsStr(
-        const SpecParser::SpecExpressionContext &eCtx)
+    SrcRange SourceSpecMatcher::getLocFromCtx(
+        const antlr4::ParserRuleContext *ctx)
     {
-        auto startToken = eCtx.start;
-        auto stopToken = eCtx.stop;
-        auto charStream = startToken->getTokenSource()->getInputStream();
-
-        antlr4::misc::Interval i(startToken->getStartIndex(),
-                                 stopToken->getStopIndex());
-        return charStream->getText(i);
-    }
-
-    SrcRange SourceSpecMatcher::getLocFromCtx(const antlr4::ParserRuleContext *ctx)
-    {
-        // We change the column-numbering to start with 1 to be consistent with 
-        // the line-info of LLVM
-        return SrcRange(ctx->start->getLine(), ctx->start->getCharPositionInLine() + 1,
-                        ctx->stop->getLine(), ctx->stop->getCharPositionInLine() + 1);
+        return utils::getLocFromCtx(ctx, file, md5Checksum);
     }
 
     SrcLocation SourceSpecMatcher::getExprStartLoc(
         const SpecParser::SpecExpressionContext &exprCtx)
     {
-        return SrcLocation(exprCtx.start->getLine(),
-                           exprCtx.start->getCharPositionInLine());
+        return utils::getExprStartLoc(exprCtx, file, md5Checksum);
     }
 
 }

@@ -14,33 +14,36 @@ namespace sourcespec2ir
 {
 
     SwiftWrapperGenerator::SwiftWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : SourceWrapperGenerator(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
     }
 
     std::string SwiftWrapperGenerator::getWrapperFunctionString(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const WrapperSignature &sig,
         const std::string &expr,
-        const std::string &functionName,
-        const llvm::DIType *returnType)
+        const std::string &functionName)
     {
 
         // Generate the required functions for the specification-library
-        const auto specFuncs = generateSpecLibFunctions(srcVars, returnType,
-                                                        expr);
+        const auto specFuncs = generateSpecLibFunctions(sig, expr);
 
         std::stringstream stream;
         stream << "func " << functionName << "(";
 
         // Construct arg-list
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        bool firstArg = true;
+        for (auto &arg : sig.args)
         {
-            if (it != srcVars.begin())
+            // Skip 'self'-arg as it gets added implicitly
+            if (arg.ends_with(" self"))
+                continue;
+            if (!firstArg)
                 stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varName << ": " << varType;
+            stream << arg;
+            firstArg = false;
         }
         stream << ") -> Bool ";
 
@@ -55,6 +58,12 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::string SwiftWrapperGenerator::buildArgStr(const std::string &type,
+                                                    const std::string &name)
+    {
+        return name + ": " + type;
+    }
+
     std::string SwiftWrapperGenerator::getSrcReprOfType(
         const llvm::DIType *type)
     {
@@ -62,13 +71,13 @@ namespace sourcespec2ir
         const auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
         // Manually handle some cases where the type is not correctly resolved.
-        // This is only required in simple examples, where the used type is not 
-        // used in the code itself. (e.g. Bool is used as a return type, 
+        // This is only required in simple examples, where the used type is not
+        // used in the code itself. (e.g. Bool is used as a return type,
         // but the code does not contain any local variables of type Bool.).
         if (srcType == "$sytD")
             return "Void";
         if (srcType == "$sSbD")
-            return "Bool"; 
+            return "Bool";
 
         return srcType;
     }
@@ -91,7 +100,7 @@ namespace sourcespec2ir
         return baseType;
     }
 
-    void SwiftWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void SwiftWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
         // Add include for the specification-module to the top of the
         // generated file.
@@ -130,24 +139,35 @@ namespace sourcespec2ir
             }
         }
 
+        std::string getTypeFromArg(const std::string &arg)
+        {
+            // Split arg at the ':' into name and type
+            auto splitIdx = arg.find(':');
+            if (splitIdx == std::string::npos)
+                throw utils::PallasException(
+                    "Failed to get type from wrapper-argument: " + arg);
+            auto tyStr = arg.substr(splitIdx + 1);
+            // Strip leading spaces
+            return tyStr.erase(0, tyStr.find_first_not_of(" "));
+        }
+
     }
 
     std::string SwiftWrapperGenerator::generateSpecLibFunctions(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const llvm::DIType *returnType, const std::string &expr)
+        const WrapperSignature &sig, const std::string &expr)
     {
-        // TODO: We could also do the generation of the spec-lib functions using 
+        // TODO: We could also do the generation of the spec-lib functions using
         //       Swift-macros. However, that makes the compilation-process more
-        //       complicated, as the macros have to loaded in. 
+        //       complicated, as the macros have to loaded in.
         std::stringstream stream;
         stream << "// START - SpecLib-Functions \n";
 
         // Generate function for result
-        if (returnType != nullptr)
+        if (sig.parentRetTy.has_value())
         {
             // The spec-function is only a placeholder and not executed.
             // So we just throw a fatal error to get it to compile.
-            const auto retTypeStr = getSrcReprOfType(returnType);
+            const auto &retTypeStr = sig.parentRetTy.value();
             if (retTypeStr != "Void")
             {
                 stream << "@inline(never) \n";
@@ -159,8 +179,8 @@ namespace sourcespec2ir
 
         // Build a set of the argument-types to avoid duplicates
         llvm::SmallSet<std::string, 8> types;
-        for (auto var : srcVars)
-            types.insert(getSrcReprOfType(var->getType()));
+        for (auto &arg : sig.args)
+            types.insert(getTypeFromArg(arg));
         for (auto type : types)
         {
             // Generate function for old
@@ -187,7 +207,7 @@ namespace sourcespec2ir
                    << " { fatalError() } \n";
         }
 
-        // Determine which ADT-types have to be generated 
+        // Determine which ADT-types have to be generated
         // (using the user-provided declarations)
         llvm::SmallSet<std::string, 4> seqTypes;
         for (auto decl : specDeclarations)
@@ -197,7 +217,8 @@ namespace sourcespec2ir
                 declStr.ends_with(">"))
             {
                 auto typeStr = declStr.drop_front(SWIFT_SPEC_SEQ_DEF_MACRO_START.size())
-                                   .drop_back(SWIFT_SPEC_SEQ_DEF_MACRO_END.size()).str();
+                                   .drop_back(SWIFT_SPEC_SEQ_DEF_MACRO_END.size())
+                                   .str();
                 seqTypes.insert(typeStr);
             }
         }
@@ -221,26 +242,26 @@ namespace sourcespec2ir
                    << "     let i4: Int64 \n"
                    << "     let i5: Int64 \n"
 
-                    // Constructor for new sequence 
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    init() { fatalError() } \n"
-                    // Access element of sequence
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
-                    // Size of sequence
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func size() -> Int64 { fatalError() } \n"
-                    // Prepend element to sequence 
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
-                    // Equality of sequences
-                    << "    @inline(never) \n"
-                    << "    @_optimize(none) \n"
-                    << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
+                   // Constructor for new sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    init() { fatalError() } \n"
+                   // Access element of sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    subscript(index: Int64) -> " << eTy << " { fatalError() } \n"
+                   // Size of sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func size() -> Int64 { fatalError() } \n"
+                   // Prepend element to sequence
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func prepend(_ e: " << eTy << ") -> " << seqTy << " { fatalError() } \n"
+                   // Equality of sequences
+                   << "    @inline(never) \n"
+                   << "    @_optimize(none) \n"
+                   << "    func equals(_ s2: " << seqTy << ") -> Bool { fatalError() } \n"
 
                    << "} \n";
         }

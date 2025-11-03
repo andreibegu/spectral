@@ -8,23 +8,27 @@ namespace sourcespec2ir
         std::unique_ptr<SourceCompilerDriver> compilerDriver,
         std::unique_ptr<SpecUnifier> specUnifier,
         std::string srcInPath, std::string outPath,
+        llvm::SmallVector<std::string> extContractPaths,
         const utils::OutputConfig &outputConfig,
-        const std::string &workingDir, 
+        const std::string &workingDir,
         bool runMem2Reg)
         : SourceSpecTransformer(std::move(compilerDriver),
                                 std::move(specUnifier),
                                 srcInPath,
                                 outPath,
+                                extContractPaths,
                                 outputConfig,
-                                workingDir, 
+                                workingDir,
                                 runMem2Reg)
     {
     }
 
-    std::unique_ptr<SourceWrapperGenerator> 
+    std::unique_ptr<SourceWrapperGenerator>
     CSpecTransformer::createWrapperGenerator(
-        const llvm::SmallVector<SpecDeclaration> &specDeclarations)
+        const llvm::SmallVector<SpecDeclaration> &specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
     {
-        return std::make_unique<CWrapperGenerator>(specDeclarations);
+        return std::make_unique<CWrapperGenerator>(
+            getSrcInPath(), specDeclarations, wrapperMarkers);
     }
 }

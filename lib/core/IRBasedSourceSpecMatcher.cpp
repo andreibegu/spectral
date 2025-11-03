@@ -2,7 +2,10 @@
 #include "IRBasedSourceSpecMatcher.h"
 #include "PallasException.h"
 #include "SrcLookup.h"
+#include "FileUtils.h"
+#include "IRUtils.h"
 
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -20,8 +23,6 @@
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Metadata.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Path.h>
 #include <llvm/Support/raw_ostream.h>
 
 namespace
@@ -37,6 +38,15 @@ namespace
     {
         auto locStr = getLocationString(startLine, endLine);
         llvm::outs() << "Matched contract at " << locStr
+                     << " to " << fName << "\n";
+    }
+
+    void printExternalContractMatchingInfo(size_t startLine, size_t endLine,
+                                           std::string fName, bool isGenerated)
+    {
+        auto locStr = getLocationString(startLine, endLine);
+        auto cType = isGenerated ? "generated" : "external";
+        llvm::outs() << "Matched " << cType << " contract at " << locStr
                      << " to " << fName << "\n";
     }
 
@@ -78,42 +88,25 @@ namespace
         return std::make_pair(minLine, maxLine);
     }
 
-    /**
-     * Uses llvm::sys::fs::make_absolute to turn the given path into an absolute
-     * path.
-     *
-     * TODO: Move into the utils ?!
-     */
-    std::string makeAbsPath(std::string path)
-    {
-        if (llvm::sys::path::is_absolute(path))
-            return path;
-
-        llvm::SmallString<512> pathVec = llvm::StringRef(path);
-        llvm::sys::fs::make_absolute(pathVec);
-        auto absPath = llvm::sys::path::remove_leading_dotslash(pathVec);
-        return absPath.str();
-    }
-
 }
 
 namespace sourcespec2ir
 {
 
     IRBasedSourceSpecMatcher::IRBasedSourceSpecMatcher(
-        SpecParser::FileContext *specParseTree, llvm::Module *irModule,
-        const std::string &srcFilePath,
-        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo)
-        : SourceSpecMatcher(specParseTree, irModule),
-          srcFilePath(srcFilePath),
+        SpecParser::FileContext *specParseTree,
+        const std::string &srcFilePath, llvm::Module *irModule,
+        llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo,
+        bool matchExternalOnly)
+        : SourceSpecMatcher(specParseTree, srcFilePath, irModule, matchExternalOnly),
           printMatchingInfo(printMatchingInfo), fam(fam)
     {
     }
 
-    std::string IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
+    llvm::Function *IRBasedSourceSpecMatcher::matchFContract(SrcRange loc)
     {
-        const llvm::Function *closestFunction = nullptr;
-        auto endLine = loc.getEnd()->getLine();
+        llvm::Function *closestFunction = nullptr;
+        auto endLine = loc.getEndLine();
 
         // Map of line-numbers to functions to check for ambiguous matching
         std::map<unsigned int, llvm::SmallPtrSet<llvm::Function *, 4>> lineToFunc;
@@ -122,7 +115,7 @@ namespace sourcespec2ir
         for (auto &f : irModule->getFunctionList())
         {
             // Get location-information
-            auto diSubprog = f.getSubprogram();
+            auto diSubprog = utils::getDeclSubprog(f);
             if (diSubprog != nullptr)
             {
                 if (!isFromMainFile(*diSubprog))
@@ -141,7 +134,7 @@ namespace sourcespec2ir
 
                 // Check if function occurs after contract and is closer than current closest function.
                 if (line > endLine &&
-                    (closestFunction == nullptr || line < closestFunction->getSubprogram()->getLine()))
+                    (closestFunction == nullptr || line < utils::getDeclSubprog(*closestFunction)->getLine()))
                 {
                     closestFunction = &f;
                 }
@@ -155,7 +148,7 @@ namespace sourcespec2ir
                 // a warning. This is not directly an error but could lead to
                 // incorrectly matched contracts if the line-info for a relevant
                 // function is missing
-                if (!f.isIntrinsic() && printMatchingInfo)
+                if (!f.isIntrinsic() && !f.isDeclaration() && printMatchingInfo)
                 {
                     llvm::outs()
                         << "WARNING: Unable to determine line for function "
@@ -176,7 +169,7 @@ namespace sourcespec2ir
 
         // Check that the closest function does not occur on the same line as
         // other functions. In this case, the matching would be ambiguous
-        auto closestLine = closestFunction->getSubprogram()->getLine();
+        auto closestLine = utils::getDeclSubprog(*closestFunction)->getLine();
         if (lineToFunc[closestLine].size() > 1)
         {
             throw utils::PallasException(
@@ -189,11 +182,11 @@ namespace sourcespec2ir
         // TODO: Is this strictly nessessary? Based on the above algorithm,
         // there should never be an instruction between contract and matched
         // function.
-        auto fLine = closestFunction->getSubprogram()->getLine();
+        // auto fLine = getSProgForFunc(*closestFunction)->getLine();
         for (auto &f : irModule->getFunctionList())
         {
             // Skip artificial functions
-            auto sProg = f.getSubprogram();
+            auto sProg = utils::getDeclSubprog(f);
             if (sProg != nullptr && isArtificial(sProg))
                 continue;
 
@@ -205,12 +198,12 @@ namespace sourcespec2ir
                     continue;
                 const auto iLine = dbgLoc.getLine();
                 auto isDebugIntrinsic = llvm::isa<llvm::DbgVariableIntrinsic>(&*it);
-                if (iLine >= endLine && iLine < fLine)
+                if (iLine >= endLine && iLine < closestLine)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction between contract and function.");
                 }
-                else if (iLine >= endLine && iLine == fLine && !isDebugIntrinsic)
+                else if (iLine >= endLine && iLine == closestLine && !isDebugIntrinsic)
                 {
                     throw utils::PallasException(
                         "Encountered an instruction on the same line as the function.");
@@ -226,7 +219,7 @@ namespace sourcespec2ir
             for (auto dbgExpr : dbgExpressions)
             {
                 const auto gLine = dbgExpr->getVariable()->getLine();
-                if (gLine >= endLine && gLine <= fLine)
+                if (gLine >= endLine && gLine <= closestLine)
                 {
                     throw utils::PallasException(
                         "Encountered a global variable between contract and function.");
@@ -242,7 +235,33 @@ namespace sourcespec2ir
                 utils::getSrcNameOfFunction(*closestFunction));
         }
 
-        return utils::getSrcNameOfFunction(*closestFunction);
+        return closestFunction;
+    }
+
+    llvm::SmallVector<llvm::Function *>
+    IRBasedSourceSpecMatcher::matchFContract(
+        const std::string matchingStr, const bool isSrcName, SrcRange loc, 
+        const bool isGenerated)
+    {
+        llvm::SmallVector<llvm::Function *> results;
+        const std::regex matchRegex(matchingStr);
+        for (auto &f : irModule->functions())
+        {
+            if (isSrcName && f.getSubprogram() == nullptr)
+                continue;
+            auto name = isSrcName ? f.getSubprogram()->getName().str()
+                                  : f.getName().str();
+
+            if (std::regex_match(name, matchRegex))
+            {
+                results.push_back(&f);
+                if (printMatchingInfo)
+                    printExternalContractMatchingInfo(
+                        loc.getStartLine(), loc.getEndLine(),
+                        utils::getSrcNameOfFunction(f), isGenerated);
+            }
+        }
+        return results;
     }
 
     std::pair<llvm::Function *, llvm::Loop *>
@@ -346,7 +365,7 @@ namespace sourcespec2ir
         unsigned int parentStartLine = 0;
         for (auto &f : *irModule)
         {
-            if (auto subprog = f.getSubprogram())
+            if (auto subprog = utils::getDeclSubprog(f))
             {
                 // Skip functions that are not in the main-file.
                 if (!isFromMainFile(*subprog))
@@ -371,34 +390,6 @@ namespace sourcespec2ir
     bool IRBasedSourceSpecMatcher::isFromMainFile(
         const llvm::DISubprogram &sProg)
     {
-        // Check that the file that is referenced from the DISubprogram
-        // of the given function matches the source-file from which the
-        // specifications were extracted.
-        const auto specFilePath = makeAbsPath(srcFilePath);
-
-        // Build a scope for the source-file from which the function originates.
-        // Some compilers put an absolute-path into the filename-field, while
-        // others split the path between the filename- and the directory-field.
-        auto fPath = sProg.getFilename().str();
-        if (!llvm::sys::path::is_absolute(fPath))
-        {
-            // Build the path for the scope of the function by joining directory
-            // and filename. Sometimes, a leading ./ occurs, which we remove.
-            // Afterwards, the path is converted into an absolute path.
-            const auto fFile = llvm::sys::path::remove_leading_dotslash(
-                sProg.getFilename());
-            const auto fDir = sProg.getDirectory();
-            const auto fFullPath = fDir +
-                                   llvm::sys::path::get_separator() + fFile;
-            fPath = makeAbsPath(
-                llvm::sys::path::remove_leading_dotslash(fFullPath.str()).str());
-        }
-
-        // llvm::errs() << "=================================\n";
-        // llvm::errs() << "Function: " << sProg.getName().str() << "\n";
-        // llvm::errs() << "Spec-file:   " << specFilePath << "\n";
-        // llvm::errs() << "Function-file: " << fPath << "\n";
-
-        return fPath == specFilePath;
+        return utils::isFromFile(sProg, file);
     }
 }

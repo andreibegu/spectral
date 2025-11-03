@@ -1,5 +1,4 @@
 #include "CppWrapperGenerator.h"
-#include "PallasException.h"
 #include "SrcLookup.h"
 
 #include <sstream>
@@ -7,16 +6,17 @@
 namespace sourcespec2ir
 {
     CppWrapperGenerator::CppWrapperGenerator(
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations)
-        : SourceWrapperGenerator(specDeclarations)
+        const std::string srcInFile,
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
     }
 
     std::string CppWrapperGenerator::getWrapperFunctionString(
-        const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
+        const WrapperSignature &sig,
         const std::string &expr,
-        const std::string &functionName, 
-        const llvm::DIType *returnType)
+        const std::string &functionName)
     {
         std::stringstream stream;
 
@@ -25,16 +25,21 @@ namespace sourcespec2ir
         stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
         stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
 
+        stream << "__attribute__((used)) \n";
         stream << " bool " << functionName << "(";
 
         // Construct arg-list
-        for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
-        {
-            if (it != srcVars.begin())
+        bool firstArg = true;
+        for (auto &arg : sig.args)
+        // for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
+        { 
+            // Skip the 'this' argument as it gets added implicitly
+            if (arg.ends_with(" this")) 
+                continue; 
+            if (!firstArg)
                 stream << ", ";
-            const auto varName = utils::getSrcVarName(**it);
-            const auto varType = getSrcReprOfType((*it)->getType());
-            stream << varType << " " << varName;
+            stream << arg;
+            firstArg = false;
         }
         stream << ")";
 
@@ -81,10 +86,10 @@ namespace sourcespec2ir
         return parentNamespace + childNamespace + "::";
     }
 
-    void CppWrapperGenerator::modifySrcWithWrappers(std::vector<SrcLine> &srcLines)
+    void CppWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
     {
 
-        // Add content of the declaration-block to the file. 
+        // Add content of the declaration-block to the file.
         for (auto &decl : specDeclarations)
         {
             auto declStr = decl.content + ";";
