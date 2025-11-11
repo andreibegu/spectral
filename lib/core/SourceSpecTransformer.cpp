@@ -113,6 +113,14 @@ namespace sourcespec2ir
         for (auto contractPath : extContractPaths)
             matchedSpecs->merge(matchExternalContract(contractPath));
 
+        // TODO: In the future, the encoding sholud be extended to allow
+        //       multiple specification blocks to be mapped to the same element. 
+        //       However this needs some thought when external / pure contracts 
+        //       are involved. 
+        if (matchedSpecs->hasDuplicateMappings())
+            throw utils::PallasException(
+                "Multiple specifications were matched to the same target");
+
         // Generate the wrapper-functions:
         wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
@@ -166,6 +174,7 @@ namespace sourcespec2ir
         }
 
         // Generate metadata for specifications
+        // TODO: Change the encoding to also work if multiple contracts are attached to one function etc. 
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)

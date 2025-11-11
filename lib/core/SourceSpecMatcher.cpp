@@ -74,8 +74,8 @@ namespace sourcespec2ir
             // Match using matching-string
             bool isSrcMapping = mappingClause->SRC() != nullptr;
             auto matchingStr = utils::getCtxAsStr(*mappingClause->specExpression());
-            irFunctions = matchFContract(matchingStr, isSrcMapping, loc, 
-                type == Generated);
+            irFunctions = matchFContract(matchingStr, isSrcMapping, loc,
+                                         type == Generated);
         }
         else
         {
@@ -268,5 +268,4 @@ namespace sourcespec2ir
     {
         return utils::getExprStartLoc(exprCtx, file, md5Checksum);
     }
-
 }

@@ -23,11 +23,14 @@ int bar (int a, double b) {
     } else {
         /*@ assume a > 0 && b > 10; @*/
         int cnt = 0;
+        cnt += a;
+        cnt += b;
         /*@ assert a > 0 && b > 10 && cnt > 0; @*/   
         while (cnt < 10) {
             /*@ assert a > 1 && b > 2 && cnt > 3; @*/   
             b += cnt;
             /*@ assert a > 4 && b > 5 && cnt > 6; @*/   
+            b *= 2;
         }
         /*@ assume a > 0 && b > 10 && cnt > 0; @*/   
         return b;
