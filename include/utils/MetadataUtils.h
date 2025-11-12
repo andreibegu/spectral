@@ -1,9 +1,11 @@
 #ifndef PALLAS_MDUTILS_H
 #define PALLAS_MDUTILS_H
 
+#include <llvm/IR/BasicBlock.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/Instruction.h>
 #include <llvm/IR/LLVMContext.h>
-
 
 namespace sourcespec2ir
 {
@@ -18,6 +20,23 @@ namespace sourcespec2ir
          * Checks if the given function is marked as a generated specification-function.
          */
         bool isGeneratedSpecFunction(const llvm::Function &f);
+
+        /**
+         * Checks if scope is a sub-scope of the parentScope.
+         */
+        bool isSubscope(const llvm::DIScope *parentScope,
+                        const llvm::DIScope *scope);
+
+        /**
+         * Returns the DIScope of the first instruction in the basic block that
+         * has a debug-scope
+         */
+        llvm::DILocalScope *getScopeOfBasicBlock(const llvm::BasicBlock &bb);
+
+        /**
+         * Returns the DIScope of the given instruction (if it has one)
+         */
+        llvm::DILocalScope *getScopeOfInstruction(const llvm::Instruction &i);
 
     }
 }
