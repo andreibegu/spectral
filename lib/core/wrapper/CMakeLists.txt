@@ -4,4 +4,5 @@ target_sources(spec2ir_core PUBLIC
     SpecParserWrapper.cpp
     SrcLocation.cpp
     IRTypeRepresentation.cpp
+    SrcTypeRepresentation.cpp
 )

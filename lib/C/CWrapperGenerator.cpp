@@ -8,7 +8,7 @@ namespace sourcespec2ir
 
     CWrapperGenerator::CWrapperGenerator(
         const std::string srcInFile,
-        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations, 
+        const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
         : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
     {
@@ -31,7 +31,7 @@ namespace sourcespec2ir
         stream << "bool " << functionName << " (";
 
         // Argument-list
-        if (sig.args.empty()) 
+        if (sig.args.empty())
         {
             stream << "void";
         }
@@ -65,20 +65,27 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    std::string CWrapperGenerator::addConst(const std::string &baseType)
+    void CWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
-        return baseType + " const ";
+        baseType.prefix.append(" const ");
     }
 
-    std::string CWrapperGenerator::addPointer(const std::string &baseType)
+    void CWrapperGenerator::addPointer(SrcTypeRepresentation &baseType)
     {
-        return baseType + "*";
+        baseType.prefix.append("*");
     }
 
-    std::string CWrapperGenerator::addTypedef(
-        const std::string &baseType, const std::string &typedefName)
+    void CWrapperGenerator::addTypedef(SrcTypeRepresentation &baseType,
+                                       const std::string &typedefName)
     {
-        return typedefName;
+        baseType.prefix = typedefName;
+        baseType.suffix = "";
+    }
+
+    void CWrapperGenerator::addArrayDim(SrcTypeRepresentation &baseType,
+                                        const std::string &dimSize)
+    { 
+        baseType.suffix.append("[" + dimSize + "]");
     }
 
     void CWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
