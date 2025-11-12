@@ -2,6 +2,7 @@
 #include "PallasException.h"
 #include "FileUtils.h"
 #include "IRUtils.h"
+#include "MetadataUtils.h"
 #include "SrcLookup.h"
 
 #include <algorithm>
@@ -58,7 +59,7 @@ namespace sourcespec2ir
     {
         const auto pFunc = contract.function;
 
-        // Get Wrapper-signature 
+        // Get Wrapper-signature
         std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
         std::optional<WrapperSignature> sig = std::nullopt;
         if (contract.type == External && contract.wrapperSignature.has_value())
@@ -257,19 +258,27 @@ namespace sourcespec2ir
         // later in the code, we add them explicitly.
         // TODO: This might break wrapper-generation, if there is shadowing!
         auto varSet = getSrcVariablesForFunction(*parentFunc);
-        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
         const llvm::DominatorTree domTree(*parentFunc);
 
-        // Get all llvm.dbg.-intrinsics that dominate the loop
+        // Get the scope of the loop header:
+        auto *loopScope = utils::getScopeOfBasicBlock(*loopHeader);
+        if (loopScope == nullptr)
+            throw utils::PallasException(
+                "Cannot determine scope for loop header");
+
+        // Get all llvm.dbg.-intrinsics that dominate the loop and that 
+        // are in scope accrding to the debug-scopes.
         for (auto i = llvm::inst_begin(parentFunc),
                   end = llvm::inst_end(parentFunc);
              i != end; ++i)
         {
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
-                if (!domTree.dominates(intr, loopHeader))
-                    continue;
                 auto *srcVar = intr->getVariable();
+                if (srcVar == nullptr ||
+                    !domTree.dominates(intr, loopHeader) ||
+                    !utils::isSubscope(srcVar->getScope(), loopScope))
+                    continue;
                 varSet->insert(srcVar);
             }
         }
@@ -289,6 +298,11 @@ namespace sourcespec2ir
                 "Encountered instruction without parent");
         }
         auto parentFunc = inst->getParent()->getParent();
+        auto *instScope = utils::getScopeOfInstruction(*inst);
+        // TODO: Print the instruction as well
+        if (instScope == nullptr) 
+            throw utils::PallasException(
+                "Cannot determine scope of instruction.");
 
         // Some compilers place the debug-intrinsics for the function-arguments
         // later in the code, we add them explicitly.
@@ -296,8 +310,8 @@ namespace sourcespec2ir
         auto varSet = getSrcVariablesForFunction(*parentFunc);
 
         // Collect all variables from the llvm.dbg.-intrinsics that
-        // dominate the instruction
-        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        // dominate the instruction and that are in scope 
+        // (according to the debug-scopes.)
         const llvm::DominatorTree domTree(*parentFunc);
         for (auto i = llvm::inst_begin(parentFunc),
                   end = llvm::inst_end(parentFunc);
@@ -308,10 +322,12 @@ namespace sourcespec2ir
 
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
-                // The instruction is a debug-intrinsic
-                if (!domTree.dominates(&*i, inst))
-                    continue;
                 auto *srcVar = intr->getVariable();
+                // The instruction is a debug-intrinsic
+                if (srcVar == nullptr ||
+                    !domTree.dominates(&*i, inst) ||
+                    !utils::isSubscope(srcVar->getScope(), instScope))
+                    continue;
                 varSet->insert(srcVar);
             }
         }
