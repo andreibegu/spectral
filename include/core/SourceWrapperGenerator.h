@@ -3,6 +3,7 @@
 
 #include "MatchedSourceSpec.h"
 #include "wrapper/SrcLocation.h"
+#include "wrapper/SrcTypeRepresentation.h"
 #include "wrapper/SrcWrapperFunction.h"
 #include "wrapper/MatchedWrapperFunctions.h"
 #include "wrapper/WrapperLocMarker.h"
@@ -139,11 +140,11 @@ namespace sourcespec2ir
             llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions);
 
         /**
-         * Returns a string representation of the given DIType that matches the
+         * Returns a textual representation of the given DIType that matches the
          * types representation on the source-level.
-         * If the string-representation cannot be generated, an error is raised.
+         * If the representation cannot be generated, an error is raised.
          */
-        virtual std::string getSrcReprOfType(const llvm::DIType *type);
+        virtual SrcTypeRepresentation getSrcReprOfType(const llvm::DIType *type);
 
         /**
          * Collects the DILocalVariable-nodes that refer to variables
@@ -202,21 +203,30 @@ namespace sourcespec2ir
             const llvm::DIType *returnType = nullptr);
 
         /**
-         * Build a string-representation of an argument from a string of the 
-         * arguments type and name. 
+         * Build a string-representation of an argument from a string of the
+         * arguments type and name.
          */
-        virtual std::string buildArgStr(const std::string &type,
+        virtual std::string buildArgStr(const SrcTypeRepresentation &type,
                                         const std::string &name);
+
+        /**
+         * Constructs a string representation for a DICompositeType with the
+         * DW_TAG_array_type-tag.
+         * Can be overwritten by subclasses if the default-implementation
+         * is not sufficient.
+         */
+        virtual SrcTypeRepresentation getSrcReprOfArrType(
+            const llvm::DICompositeType *type);
 
         /**
          * Adds a const-qualifier to the given base-type.
          */
-        virtual std::string addConst(const std::string &baseType);
+        virtual void addConst(SrcTypeRepresentation &baseType);
 
         /**
          * Adds a pointer-qualifier to the given base-type.
          */
-        virtual std::string addPointer(const std::string &baseType);
+        virtual void addPointer(SrcTypeRepresentation &baseType);
 
         /**
          * Adds a namespace-qualifier to the string represnetation of the given
@@ -230,15 +240,15 @@ namespace sourcespec2ir
          * base-type. Can be overwritten by subclasses.
          * The default-implementation simply throws an error.
          */
-        virtual std::string addReference(const std::string &baseType);
+        virtual void addReference(SrcTypeRepresentation &baseType);
 
         /**
          * Adds a typedef qualifier to the string-representation of the given
          * base-type. Can be overwritten by subclasses.
          * The default-implementation simply throws an error.
          */
-        virtual std::string addTypedef(const std::string &baseType,
-                                       const std::string &typedefName);
+        virtual void addTypedef(SrcTypeRepresentation &baseType,
+                                const std::string &typedefName);
 
         /**
          * This function is called when a different type-tag is encountered that
@@ -246,8 +256,16 @@ namespace sourcespec2ir
          * The default-implementation just throws an error.
          * Subclasses can overwrite this to support other type-tags.
          */
-        virtual std::string addOtherQualifier(const std::string &baseType,
-                                              const llvm::DIDerivedType &type);
+        virtual void addOtherQualifier(SrcTypeRepresentation &baseType,
+                                       const llvm::DIDerivedType &type);
+
+        /**
+         * This function is called to add a dimention to an array-type.
+         * Can be overwritten by subclasses.
+         * The default-implementation simply throws an error.
+         */
+        virtual void addArrayDim(SrcTypeRepresentation &baseType,
+                                 const std::string &dimSize);
 
         /**
          * Function is called after the wrapper-functions and declarations

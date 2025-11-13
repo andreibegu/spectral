@@ -32,10 +32,10 @@ namespace sourcespec2ir
         bool firstArg = true;
         for (auto &arg : sig.args)
         // for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
-        { 
+        {
             // Skip the 'this' argument as it gets added implicitly
-            if (arg.ends_with(" this")) 
-                continue; 
+            if (arg.ends_with(" this"))
+                continue;
             if (!firstArg)
                 stream << ", ";
             stream << arg;
@@ -59,25 +59,32 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    std::string CppWrapperGenerator::addConst(const std::string &baseType)
+    void CppWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
-        return baseType + " const ";
+        baseType.prefix.append(" const ");
     }
 
-    std::string CppWrapperGenerator::addPointer(const std::string &baseType)
+    void CppWrapperGenerator::addPointer(SrcTypeRepresentation &baseType)
     {
-        return baseType + "*";
+        baseType.prefix.append("*");
     }
 
-    std::string CppWrapperGenerator::addReference(const std::string &baseType)
+    void CppWrapperGenerator::addReference(SrcTypeRepresentation &baseType)
     {
-        return baseType + " &";
+        baseType.prefix.append(" &");
     }
 
-    std::string CppWrapperGenerator::addTypedef(
-        const std::string &baseType, const std::string &typedefName)
+    void CppWrapperGenerator::addTypedef(
+        SrcTypeRepresentation &baseType, const std::string &typedefName)
     {
-        return typedefName;
+        baseType.prefix = typedefName;
+        baseType.suffix = "";
+    }
+
+    void CppWrapperGenerator::addArrayDim(SrcTypeRepresentation &baseType,
+                                          const std::string &dimSize)
+    {
+        baseType.suffix.append("[" + dimSize + "]");
     }
 
     std::string CppWrapperGenerator::addNamespace(

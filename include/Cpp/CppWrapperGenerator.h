@@ -27,11 +27,13 @@ namespace sourcespec2ir
 
     protected:
         // Overwritten methods to customize the default-WrapperGenerator
-        std::string addConst(const std::string &baseType) override;
-        std::string addPointer(const std::string &baseType) override;
-        std::string addReference(const std::string &baseType) override;
-        std::string addTypedef(const std::string &baseType,
-                               const std::string &typedefName) override;
+        void addConst(SrcTypeRepresentation &baseType) override;
+        void addPointer(SrcTypeRepresentation &baseType) override;
+        void addReference(SrcTypeRepresentation &baseType) override;
+        void addTypedef(SrcTypeRepresentation &baseType,
+                        const std::string &typedefName) override;
+        void addArrayDim(SrcTypeRepresentation &baseType,
+                         const std::string &dimSize);
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
