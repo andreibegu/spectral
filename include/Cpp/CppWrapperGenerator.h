@@ -32,6 +32,8 @@ namespace sourcespec2ir
         void addReference(SrcTypeRepresentation &baseType) override;
         void addTypedef(SrcTypeRepresentation &baseType,
                         const std::string &typedefName) override;
+        void addArrayDim(SrcTypeRepresentation &baseType,
+                         const std::string &dimSize);
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
