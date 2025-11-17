@@ -26,6 +26,7 @@
 #include "IRBasedSourceSpecMatcher.h"
 #include "SourceSpecTransformer.h"
 #include "SpecDeclarationCollector.h"
+#include "SpecPredicateCollector.h"
 #include "FileUtils.h"
 #include "IrSpecConstants.h"
 #include "IRUtils.h"
@@ -95,6 +96,11 @@ namespace sourcespec2ir
         SpecDeclarationCollector declCollector(srcParseTree);
         auto specDeclarations = declCollector.collectDeclarations();
 
+        // Collect predicate definitions
+        auto specPredicates =
+            SpecPredicateCollector(*srcParseTree, srcInPath, inFileChecksum)
+                .collect();
+
         // Collect location-markers:
         WrapperLocCollector wLocCollector(*srcParseTree, srcInPath,
                                           inFileChecksum);
@@ -114,9 +120,9 @@ namespace sourcespec2ir
             matchedSpecs->merge(matchExternalContract(contractPath));
 
         // TODO: In the future, the encoding sholud be extended to allow
-        //       multiple specification blocks to be mapped to the same element. 
-        //       However this needs some thought when external / pure contracts 
-        //       are involved. 
+        //       multiple specification blocks to be mapped to the same element.
+        //       However this needs some thought when external / pure contracts
+        //       are involved.
         if (matchedSpecs->hasDuplicateMappings())
             throw utils::PallasException(
                 "Multiple specifications were matched to the same target");
@@ -125,6 +131,8 @@ namespace sourcespec2ir
         wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
+
+        // TODO: Extend the wrapper generator to build the predicate definitions.
 
         // Insert wrappers into source
         // TODO: Either move this into the WrapperGenerator, or into a new class
@@ -174,7 +182,7 @@ namespace sourcespec2ir
         }
 
         // Generate metadata for specifications
-        // TODO: Change the encoding to also work if multiple contracts are attached to one function etc. 
+        // TODO: Change the encoding to also work if multiple contracts are attached to one function etc.
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
@@ -422,11 +430,16 @@ namespace sourcespec2ir
     {
         // TODO: Find a better way to set the language
         unsigned int lang = 0;
-        if (path.ends_with(".h")) {
+        if (path.ends_with(".h"))
+        {
             lang = llvm::dwarf::DW_LANG_C;
-        } else if (path.ends_with(".hpp")) {
+        }
+        else if (path.ends_with(".hpp"))
+        {
             lang = llvm::dwarf::DW_LANG_C_plus_plus;
-        } else if (path.ends_with(".swift")) {
+        }
+        else if (path.ends_with(".swift"))
+        {
             lang = llvm::dwarf::DW_LANG_Swift;
         }
 

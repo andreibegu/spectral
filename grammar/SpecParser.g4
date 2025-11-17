@@ -7,7 +7,8 @@ spec
     : specContractBlock 
     | specStatementBlock 
     | specLoopInvariantBlock 
-    | wrapperLocationMarker;
+    | wrapperLocationMarker
+    | predicateDefBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -18,6 +19,8 @@ specStatementBlock: SPEC_START specStatement+ SPEC_END;
 specLoopInvariantBlock: SPEC_START specLoopInvariant+ SPEC_END;
 
 wrapperLocationMarker: SPEC_START 'wrapper location' specExpression? SPEC_EXPR_END SPEC_END;
+
+predicateDefBlock: SPEC_START predicateDef+ SPEC_END;
 
 specContractClause
     : ('requires' specExpression SPEC_EXPR_END) # requiresClause
@@ -52,6 +55,9 @@ specDeclaration
     : ('declare' specExpression SPEC_EXPR_END) # declarationClause
     ;
 
+predicateDef: 'predicate' predicateSig ':=' specExpression SPEC_EXPR_END ;
+
+predicateSig: (~PRED_DEF)+;
 argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+ ; 
 specExpression: (~SPEC_EXPR_END)+ ;
 

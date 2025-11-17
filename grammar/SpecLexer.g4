@@ -25,6 +25,8 @@ SRC: 'src';
 WRAPPER_LOC: 'wrapper location';
 ARGS: 'args';
 RETURNS: 'returns';
+PREDICATE: 'predicate';
+PRED_DEF: ':=';
 
 WRAPPER_ARG_SEP: ',';
 SPEC_EXPR_END: ';';
