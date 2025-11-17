@@ -9,13 +9,11 @@ namespace pallasSpec
     /***************************************************
      *                    Datatypes                    *
      ***************************************************/
-    // We need to fill the structs with dummy-values so that it exceeds a size 
-    // of 64 bytes. Otherwise, the struct will be decomposed into its individual
-    // values or compressed into an int when it is passed to a function. 
+    // We need to fill the structs with dummy-values so that they are not uniqued with a user's type. 
     
     // Fractions
     struct frac {
-        int64_t dummy1, dummy2, dummy3;
+        int64_t dummy[0x66726163];
     };
 
     // ADT for sequences 
@@ -24,7 +22,7 @@ namespace pallasSpec
     struct seq
     {
         T contentType;
-        int64_t dummy1, dummy2, dummy3;
+        int64_t dummy[0x736571];
     };
 
 

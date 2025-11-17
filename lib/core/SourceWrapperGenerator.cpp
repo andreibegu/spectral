@@ -338,6 +338,10 @@ namespace sourcespec2ir
     SrcTypeRepresentation SourceWrapperGenerator::getSrcReprOfType(
         const llvm::DIType *type)
     {
+        if (type == nullptr) {
+            return getVoid();
+        }
+
         // Check if type is a derived type
         if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
         {
@@ -433,6 +437,12 @@ namespace sourcespec2ir
         auto currentNSpace = nSpace->getName().str();
         auto parentNSpace = getSrcNamespace(nSpace->getScope());
         return addNamespace(parentNSpace, currentNSpace);
+    }
+
+    SrcTypeRepresentation SourceWrapperGenerator::getVoid()
+    {
+        // Override this to support a void type (e.g. for derived types where the base type is null)
+        throw utils::PallasException("Void is not supported by this WrapperGenerator");
     }
 
     void SourceWrapperGenerator::addConst(
