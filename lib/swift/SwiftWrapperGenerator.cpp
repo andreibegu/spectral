@@ -58,10 +58,18 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::string SwiftWrapperGenerator::getPredicateDefString(
+        const std::string &name, const std::string &args,
+        const std::string &body)
+    {
+        throw utils::PallasException(
+            "Predicates are not yet supported in Swift.");
+    }
+
     std::string SwiftWrapperGenerator::buildArgStr(
         const SrcTypeRepresentation &type, const std::string &name)
     {
-        if (!type.suffix.empty()) 
+        if (!type.suffix.empty())
             throw utils::PallasException(
                 "Unexpected suffix in type representation");
         return name + ": " + type.prefix.str().str();
@@ -91,6 +99,13 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
+    std::pair<size_t, size_t> SwiftWrapperGenerator::getOffsetToExprStart(
+        const SpecPredicate &pDef)
+    {
+        throw utils::PallasException(
+            "Predicates are not yet supported in Swift.");
+    }
+
     void SwiftWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
         // In swift, function-arguments are const by default
@@ -98,7 +113,7 @@ namespace sourcespec2ir
     }
 
     void SwiftWrapperGenerator::addTypedef(
-        SrcTypeRepresentation&baseType, const std::string &typedefName)
+        SrcTypeRepresentation &baseType, const std::string &typedefName)
     {
         return;
     }

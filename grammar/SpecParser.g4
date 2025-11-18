@@ -55,9 +55,10 @@ specDeclaration
     : ('declare' specExpression SPEC_EXPR_END) # declarationClause
     ;
 
-predicateDef: 'predicate' predicateSig ':=' specExpression SPEC_EXPR_END ;
+predicateDef: 'predicate' predName PRED_SIG_START predicateSig PRED_SIG_END ':=' specExpression SPEC_EXPR_END ;
 
-predicateSig: (~PRED_DEF)+;
+predName: (~PRED_SIG_START)+;
+predicateSig: (~PRED_SIG_END)+;
 argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+ ; 
 specExpression: (~SPEC_EXPR_END)+ ;
 

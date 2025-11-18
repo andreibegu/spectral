@@ -1,24 +1,27 @@
 #include "SpecPredicateCollector.h"
 
 #include <cassert>
-
+#include <llvm/Support/raw_ostream.h>
 #include "ParsingUtils.h"
 
 namespace sourcespec2ir
 {
     SpecPredicateCollector::SpecPredicateCollector(
         SpecParser::FileContext &specParseTree, const std::string &file,
-        const std::string &md5Checksum)
-        : specParseTree(specParseTree), file(file), md5Checksum(md5Checksum)
+        const std::string &md5Checksum, const bool printInfo)
+        : specParseTree(specParseTree),
+          file(file),
+          md5Checksum(md5Checksum),
+          printInfo(printInfo)
     {
     }
 
-    std::unique_ptr<llvm::SmallVector<SpecPredicate>>
+    std::unique_ptr<llvm::SmallVector<SpecPredicate, 16>>
     SpecPredicateCollector::collect()
     {
         assert(predicates == nullptr);
         predicates =
-            std::make_unique<llvm::SmallVector<SpecPredicate>>();
+            std::make_unique<llvm::SmallVector<SpecPredicate, 16>>();
         visit(&specParseTree);
         return std::move(predicates);
     }
@@ -28,11 +31,24 @@ namespace sourcespec2ir
     {
         assert(predicates != nullptr);
 
-        auto loc = utils::getLocFromCtx(ctx, file, md5Checksum);
-        auto sig = utils::getCtxAsStr(*ctx->predicateSig());
+        auto srcLoc = utils::getLocFromCtx(ctx, file, md5Checksum);
+        auto exprLoc = utils::getLocFromCtx(ctx->specExpression(), file,
+                                            md5Checksum);
+        auto name = utils::getCtxAsStr(*ctx->predName());
+        auto args = utils::getCtxAsStr(*ctx->predicateSig());
         auto body = utils::getCtxAsStr(*ctx->specExpression());
 
-        predicates->push_back(SpecPredicate(sig, body, loc));
+        predicates->push_back(SpecPredicate(name, args, body, srcLoc, exprLoc));
+
+        if (printInfo)
+        {
+            llvm::outs() << "Found predicate at "
+                         << srcLoc.getStartLine() << "::" << srcLoc.getStartCol()
+                         << " - "
+                         << srcLoc.getEndLine() << "::" << srcLoc.getEndCol()
+                         << "\n";
+        }
+
         return 0;
     }
 }

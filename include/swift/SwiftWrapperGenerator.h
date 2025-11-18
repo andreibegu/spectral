@@ -22,8 +22,15 @@ namespace sourcespec2ir
             const std::string &expr,
             const std::string &functionName) override;
 
+        std::string getPredicateDefString(const std::string &name,
+                                          const std::string &args,
+                                          const std::string &body) override;
+
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;
+
+        std::pair<size_t, size_t> getOffsetToExprStart(
+            const SpecPredicate &pDef) override;
 
         /*
          * In swift, the debug-info for e.g. the Boolean-type does not always
@@ -35,7 +42,7 @@ namespace sourcespec2ir
         // Overwritten methods to customize the default-WrapperGenerator
         void addConst(SrcTypeRepresentation &baseType) override;
         void addTypedef(SrcTypeRepresentation &baseType,
-                               const std::string &typedefName) override;
+                        const std::string &typedefName) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
 
         std::string buildArgStr(const SrcTypeRepresentation &type,

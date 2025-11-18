@@ -21,15 +21,17 @@ namespace sourcespec2ir
     public:
         SpecPredicateCollector(SpecParser::FileContext &specParseTree,
                                const std::string &file,
-                               const std::string &md5Checksum);
+                               const std::string &md5Checksum,
+                               const bool printInfo);
 
-        std::unique_ptr<llvm::SmallVector<SpecPredicate>> collect();
+        std::unique_ptr<llvm::SmallVector<SpecPredicate, 16>> collect();
 
     private:
         SpecParser::FileContext &specParseTree;
         const std::string file;
         const std::string md5Checksum;
-        std::unique_ptr<llvm::SmallVector<SpecPredicate>> predicates;
+        const bool printInfo;
+        std::unique_ptr<llvm::SmallVector<SpecPredicate, 16>> predicates;
 
         // Overwritten visitor-methods
         std::any visitPredicateDef(

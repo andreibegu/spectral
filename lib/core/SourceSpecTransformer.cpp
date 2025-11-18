@@ -98,7 +98,8 @@ namespace sourcespec2ir
 
         // Collect predicate definitions
         auto specPredicates =
-            SpecPredicateCollector(*srcParseTree, srcInPath, inFileChecksum)
+            SpecPredicateCollector(*srcParseTree, srcInPath, inFileChecksum,
+                                   outputConfig.printMatchingInfo)
                 .collect();
 
         // Collect location-markers:
@@ -132,12 +133,11 @@ namespace sourcespec2ir
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
 
-        // TODO: Extend the wrapper generator to build the predicate definitions.
-
         // Insert wrappers into source
         // TODO: Either move this into the WrapperGenerator, or into a new class
         const auto srcWrapperPath = getPathForSourceWithWrappers();
-        wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath, *wrappers);
+        wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
+                                               *wrappers, *specPredicates);
 
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
@@ -158,6 +158,8 @@ namespace sourcespec2ir
         // Add all generated wrapper to the llvm.used-list of the module
         // to ensure that they are copied over during linking.
         markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
+        // Add MD-marker to functions used as predicate definitions.
+        markPredicateDefs(*moduleWithWrappers, *specPredicates);
 
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers),
@@ -168,7 +170,7 @@ namespace sourcespec2ir
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
-        rewriteWrapperLocations(*matchedSpecs);
+        rewriteSpecLocations(*matchedSpecs, *specPredicates);
 
         if (outputConfig.printDebugInfo)
             verifyModule(*irModule, "After location rewrite");
@@ -457,8 +459,9 @@ namespace sourcespec2ir
         return cu;
     }
 
-    void SourceSpecTransformer::rewriteWrapperLocations(
-        const MatchedSpecifications &matchedSpecs)
+    void SourceSpecTransformer::rewriteSpecLocations(
+        const MatchedSpecifications &matchedSpecs,
+        llvm::ArrayRef<SpecPredicate> predDefs)
     {
         // Handle function-contracts
         for (auto &contr : matchedSpecs.matchedFContracts)
@@ -510,6 +513,24 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(*matchedWrappers->statementWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
+
+        // Rewrite locations in predicate definitions
+        for (auto &p : predDefs)
+        {
+            auto irFunc = utils::getFunctionBySrcName(*irModule, p.name);
+            if (irFunc == nullptr)
+                throw utils::PallasException(
+                    "Failed to get IR-function for predicate");
+            auto path = utils::makeAbsPath(p.srcLoc.getFile());
+            llvm::DICompileUnit *cu = getCompileUnit(path);
+            rewriteSpecLocations(
+                *irFunc,
+                p.exprLoc.startLoc,
+                wrapperGenerator->getOffsetToExprStart(p),
+                cu,
+                cu->getFile(),
+                cu->getFile());
+        }
     }
 
     void SourceSpecTransformer::rewriteWrapperLocations(
@@ -521,14 +542,24 @@ namespace sourcespec2ir
         auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
         if (irWrapperF == nullptr)
             throw utils::PallasException("Failed to get wrapper-function by name");
+        auto offset = wrapperGenerator->getOffsetToExprStart(wFun);
+        rewriteSpecLocations(*irWrapperF, exprStartLoc, offset, cu,
+                             scopeFile, scope);
+    }
 
-        auto *oldSProg = irWrapperF->getSubprogram();
+    void SourceSpecTransformer::rewriteSpecLocations(
+        llvm::Function &irFunc, const SrcLocation &exprStartLoc,
+        std::pair<size_t, size_t> srcOffset,
+        llvm::DICompileUnit *cu, llvm::DIFile *scopeFile,
+        llvm::DIScope *scope)
+    {
+        auto *oldSProg = irFunc.getSubprogram();
         auto oldFLine = oldSProg->getLine(); // Needed to calculate new positions for instructions
         llvm::DIBuilder diBuilder(*irModule, true, cu);
 
-        // Update the location of the wrapper-functions DISubprogram
+        // Update the location of the functions DISubprogram
         // The line-info cannot be modified manually, so we replace the full
-        // DISubprogram of the wrapper-function.
+        // DISubprogram of the function.
         auto newSProg = diBuilder.createFunction(
             scope, // New scope
             oldSProg->getName(),
@@ -544,11 +575,11 @@ namespace sourcespec2ir
             oldSProg->getThrownTypes(),
             oldSProg->getAnnotations(),
             oldSProg->getTargetFuncName());
-        irWrapperF->setSubprogram(newSProg);
+        irFunc.setSubprogram(newSProg);
 
         // Update the dbg-locations of the instructions within the function
-        auto [lineOffset, colOffset] = wrapperGenerator->getOffsetToExprStart(wFun);
-        for (auto it = inst_begin(irWrapperF), end = inst_end(irWrapperF); it != end; ++it)
+        auto [lineOffset, colOffset] = srcOffset;
+        for (auto it = inst_begin(irFunc), end = inst_end(irFunc); it != end; ++it)
         {
             if (!it->getDebugLoc())
                 continue;
@@ -865,6 +896,21 @@ namespace sourcespec2ir
             irWrappers.push_back(wrapperF);
         }
         llvm::appendToUsed(module, irWrappers);
+    }
+
+    void SourceSpecTransformer::markPredicateDefs(
+        llvm::Module &module, llvm::ArrayRef<SpecPredicate> preds)
+    {
+        llvm::SmallVector<llvm::GlobalValue *> irFunctions;
+        for (auto &p : preds)
+        {
+            auto f = utils::getFunctionBySrcName(module, p.name);
+            if (f == nullptr)
+                throw utils::PallasException("Failed to get predicate");
+            utils::markPredicateDef(*f, module.getContext());
+            irFunctions.push_back(f);
+        }
+        llvm::appendToUsed(module, irFunctions);
     }
 
     std::string SourceSpecTransformer::getPathForSourceWithWrappers()

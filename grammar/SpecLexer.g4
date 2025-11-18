@@ -28,6 +28,8 @@ RETURNS: 'returns';
 PREDICATE: 'predicate';
 PRED_DEF: ':=';
 
+PRED_SIG_START: '(';
+PRED_SIG_END: ')';
 WRAPPER_ARG_SEP: ',';
 SPEC_EXPR_END: ';';
 Whitespace: [ \t]+ -> channel(HIDDEN);

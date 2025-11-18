@@ -9,6 +9,7 @@
 #include "wrapper/WrapperLocMarker.h"
 #include "wrapper/WrapperSignature.h"
 #include "SpecDeclaration.h"
+#include "SpecPredicate.h"
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SetVector.h>
@@ -68,6 +69,28 @@ namespace sourcespec2ir
             const std::string &functionName) = 0;
 
         /**
+         * Generates a string representation for a given predicate definition.
+         * The function must return a boolean.
+         * Argument 'sig' contains the signature and name of the function.
+         * Argument 'body' contains the expression that makes up the predicate.
+         *
+         * E.g. for C a call with the following inputs
+         * sig:  'hasVal(int *ptr, int val)'
+         * body: '_sep(_Perm(ptr, _write),
+         *             *ptr == val)'
+         * could be represented with the following function:
+         * '
+         * bool hasVal(int *ptr, int val) {
+         *      return _sep(_Perm(ptr, _write),
+         *             *ptr == val);
+         * }
+         * '
+         */
+        virtual std::string getPredicateDefString(const std::string &name,
+                                                  const std::string &args,
+                                                  const std::string &body) = 0;
+
+        /**
          * For a given SrcWrapperFunction, return the line- and column-offset
          * from the start of the wrapper-function to the beginning of the
          * wrapped expression in the source.
@@ -84,6 +107,13 @@ namespace sourcespec2ir
          */
         virtual std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) = 0;
+
+        /**
+         * Analogous to getOffsetToExprStart for wrapper fucntions, but for 
+         * predicate definitions. 
+         */
+        virtual std::pair<size_t, size_t> getOffsetToExprStart(
+            const SpecPredicate &pDef) = 0;
 
         /**
          * Return the line-number where the wrapper-functions for the
@@ -137,7 +167,8 @@ namespace sourcespec2ir
          */
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
-            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions);
+            llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
+            llvm::ArrayRef<SpecPredicate> predicates);
 
         /**
          * Returns a textual representation of the given DIType that matches the

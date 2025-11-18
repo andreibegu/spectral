@@ -19,6 +19,18 @@ namespace sourcespec2ir
             return f.getMetadata(PALLAS_GENERATED_MARKER) != nullptr;
         }
 
+        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context)
+        {
+            auto idStr = llvm::MDString::get(context, "");
+            f.setMetadata(PALLAS_PREDICATE_DEF_MARKER,
+                          llvm::MDNode::get(context, idStr));
+        }
+
+        bool isPredicateDef(const llvm::Function &f)
+        {
+            return f.getMetadata(PALLAS_PREDICATE_DEF_MARKER) != nullptr;
+        }
+
         bool isSubscope(const llvm::DIScope *parentScope,
                         const llvm::DIScope *scope)
         {

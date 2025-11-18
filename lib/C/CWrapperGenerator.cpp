@@ -1,5 +1,5 @@
 #include "CWrapperGenerator.h"
-#include "SrcLookup.h"
+#include "PallasException.h"
 
 #include <sstream>
 
@@ -59,8 +59,25 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::string CWrapperGenerator::getPredicateDefString(
+        const std::string &name, const std::string &args,
+        const std::string &body)
+    {
+        std::stringstream s;
+        s << "bool " << name << "(" << args << ") {" << "\n";
+        s << "return " << body << ";" << "\n";
+        s << "}";
+        return s.str();
+    }
+
     std::pair<size_t, size_t> CWrapperGenerator::getOffsetToExprStart(
         const SrcWrapperFunction &wFun)
+    {
+        return std::make_pair(1, 7);
+    }
+
+    std::pair<size_t, size_t> CWrapperGenerator::getOffsetToExprStart(
+        const SpecPredicate &pDef)
     {
         return std::make_pair(1, 7);
     }
@@ -84,7 +101,7 @@ namespace sourcespec2ir
 
     void CWrapperGenerator::addArrayDim(SrcTypeRepresentation &baseType,
                                         const std::string &dimSize)
-    { 
+    {
         baseType.suffix.append("[" + dimSize + "]");
     }
 

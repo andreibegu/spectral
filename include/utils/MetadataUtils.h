@@ -11,6 +11,7 @@ namespace sourcespec2ir
 {
     namespace utils
     {
+        
         /**
          * Adds a metadata-node to the function that marks it as a generated specification-function.
          */
@@ -20,6 +21,17 @@ namespace sourcespec2ir
          * Checks if the given function is marked as a generated specification-function.
          */
         bool isGeneratedSpecFunction(const llvm::Function &f);
+
+        /**
+         * Adds a metadata-node to the function that marks it as a 
+         * definition of a predicate.
+         */
+        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context);
+
+        /**
+         * Checks if the given function is marked as a predicate definition.
+         */
+        bool isPredicateDef(const llvm::Function &f);
 
         /**
          * Checks if scope is a sub-scope of the parentScope.

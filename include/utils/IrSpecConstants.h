@@ -32,6 +32,9 @@ namespace sourcespec2ir
     // Metadata-identifier that is used to mark generated functions that wrap specification expressions
     const std::string PALLAS_GENERATED_MARKER = "pallas.exprWrapper";
 
+    // Identifier to mark predicate definitions
+    const std::string PALLAS_PREDICATE_DEF_MARKER = "pallas.predDef";
+
     // String that is used to identify a MD-Tuple as a source-location
     const std::string PALLAS_SRC_LOCATION_MARKER = "pallas.srcLoc";
 

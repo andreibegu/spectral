@@ -1,5 +1,5 @@
 #include "CppWrapperGenerator.h"
-#include "SrcLookup.h"
+#include "PallasException.h"
 
 #include <sstream>
 
@@ -53,10 +53,23 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::string CppWrapperGenerator::getPredicateDefString(
+        const std::string &name, const std::string &args,
+        const std::string &body)
+    {
+        throw utils::PallasException("Predicates are not yet supported in C++.");
+    }
+
     std::pair<size_t, size_t> CppWrapperGenerator::getOffsetToExprStart(
         const SrcWrapperFunction &wFun)
     {
         return std::make_pair(1, 7);
+    }
+
+    std::pair<size_t, size_t> CppWrapperGenerator::getOffsetToExprStart(
+        const SpecPredicate &pDef)
+    {
+        throw utils::PallasException("Predicates are not yet supported in C++.");
     }
 
     void CppWrapperGenerator::addConst(SrcTypeRepresentation &baseType)

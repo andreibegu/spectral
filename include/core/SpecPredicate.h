@@ -13,13 +13,22 @@ namespace sourcespec2ir
      */
     struct SpecPredicate
     {
-        const std::string signature;
+        const std::string name;
+        const std::string args;
         const std::string body;
+        // Location where the predicate-definition starts in the src-file
         const SrcRange srcLoc;
+        // Location where the body-expression in the src-file starts.
+        const SrcRange exprLoc;
 
-        SpecPredicate(std::string signature, std::string body,
-                      const SrcRange srcLoc)
-            : signature(signature), body(body), srcLoc(srcLoc)
+        SpecPredicate(std::string name, std::string args,
+                      std::string body, const SrcRange srcLoc,
+                      const SrcRange exprLoc)
+            : name(name),
+              args(args),
+              body(body),
+              srcLoc(srcLoc),
+              exprLoc(exprLoc)
         {
         }
     };
