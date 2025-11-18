@@ -219,6 +219,11 @@ namespace sourcespec2ir
             const llvm::DICompositeType *type);
 
         /**
+         * Gets the SrcTypeRepresentation of the `void` type.
+         */
+        virtual SrcTypeRepresentation getVoid();
+
+        /**
          * Adds a const-qualifier to the given base-type.
          */
         virtual void addConst(SrcTypeRepresentation &baseType);
