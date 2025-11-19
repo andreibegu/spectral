@@ -19,11 +19,11 @@ namespace sourcespec2ir
         // Location where the predicate-definition starts in the src-file
         const SrcRange srcLoc;
         // Location where the body-expression in the src-file starts.
-        const SrcRange exprLoc;
+        const SrcLocation exprLoc;
 
         SpecPredicate(std::string name, std::string args,
                       std::string body, const SrcRange srcLoc,
-                      const SrcRange exprLoc)
+                      const SrcLocation exprLoc)
             : name(name),
               args(args),
               body(body),

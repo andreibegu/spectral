@@ -32,8 +32,8 @@ namespace sourcespec2ir
         assert(predicates != nullptr);
 
         auto srcLoc = utils::getLocFromCtx(ctx, file, md5Checksum);
-        auto exprLoc = utils::getLocFromCtx(ctx->specExpression(), file,
-                                            md5Checksum);
+        auto exprLoc = utils::getExprStartLoc(*ctx->specExpression(), file,
+                                              md5Checksum);
         auto name = utils::getCtxAsStr(*ctx->predName());
         auto args = utils::getCtxAsStr(*ctx->predicateSig());
         auto body = utils::getCtxAsStr(*ctx->specExpression());

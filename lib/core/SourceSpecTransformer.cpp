@@ -529,7 +529,7 @@ namespace sourcespec2ir
             llvm::DICompileUnit *cu = getCompileUnit(path);
             rewriteSpecLocations(
                 *irFunc,
-                p.exprLoc.startLoc,
+                p.exprLoc,
                 wrapperGenerator->getOffsetToExprStart(p),
                 cu,
                 cu->getFile(),

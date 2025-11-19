@@ -64,8 +64,8 @@ namespace sourcespec2ir
         const std::string &body)
     {
         std::stringstream s;
-        s << "bool " << name << "(" << args << ") {" << "\n";
-        s << "return " << body << ";" << "\n";
+        s << "bool " << name << "(" << args << ") { \n";
+        s << "return " << body << "; \n";
         s << "}";
         return s.str();
     }
