@@ -7,6 +7,7 @@
 #include <regex>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Type.h>
 
@@ -62,8 +63,18 @@ namespace sourcespec2ir
         const std::string &name, const std::string &args,
         const std::string &body)
     {
-        throw utils::PallasException(
-            "Predicates are not yet supported in Swift.");
+        auto sig = getSigFromPredicateArgs(args);
+        const auto specFuncs = generateSpecLibFunctions(sig, body);
+
+        std::stringstream s;
+        s << "func " << name << "(" << args << ") -> Bool {\n"
+          << "return " << body << "; \n"
+          << "\n"
+          << specFuncs
+          << "}\n"
+          << "\n";
+
+        return s.str();
     }
 
     std::string SwiftWrapperGenerator::buildArgStr(
@@ -102,8 +113,7 @@ namespace sourcespec2ir
     std::pair<size_t, size_t> SwiftWrapperGenerator::getOffsetToExprStart(
         const SpecPredicate &pDef)
     {
-        throw utils::PallasException(
-            "Predicates are not yet supported in Swift.");
+        return std::make_pair(1, 7);
     }
 
     void SwiftWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
@@ -286,6 +296,19 @@ namespace sourcespec2ir
 
         stream << "// END - SpecLib-Functions \n";
         return stream.str();
+    }
+
+    WrapperSignature SwiftWrapperGenerator::getSigFromPredicateArgs(llvm::StringRef argStr)
+    {
+        WrapperSignature sig;
+        sig.parentRetTy = std::nullopt;
+
+        // Split the argument list on ',' to get the types of the arguments
+        llvm::SmallVector<llvm::StringRef> args;
+        argStr.split(args, ',');
+        for (auto arg : args)
+            sig.addArg(arg.str());
+        return sig;
     }
 
 }

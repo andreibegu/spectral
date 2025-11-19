@@ -2,7 +2,7 @@
 #define PALLAS_SWIFTWRAPPERGENERATOR_H
 
 #include "SourceWrapperGenerator.h"
-
+#include <llvm/ADT/StringRef.h>
 namespace sourcespec2ir
 {
 
@@ -49,6 +49,10 @@ namespace sourcespec2ir
                                 const std::string &name) override;
 
     private:
+        // TODO: Instead of doing this here, we might want to handle the 
+        //      predicate arguments similar to the arguments on external 
+        //      contracts and separate them during parsing!
+        WrapperSignature getSigFromPredicateArgs(llvm::StringRef argStr);
         std::string generateSpecLibFunctions(
             const WrapperSignature &sig, const std::string &expr);
     };
