@@ -26,6 +26,10 @@ namespace sourcespec2ir
 
     const std::string PALLAS_ASSUME = "pallas.assume";
 
+    const std::string PALLAS_FOLD = "pallas.fold";
+
+    const std::string PALLAS_UNFOLD = "pallas.unfold";
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 

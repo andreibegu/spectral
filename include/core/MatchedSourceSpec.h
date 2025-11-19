@@ -31,7 +31,9 @@ namespace sourcespec2ir
     enum SpecStatementType
     {
         Assert,
-        Assume
+        Assume, 
+        Fold, 
+        Unfold
     };
 
     /**

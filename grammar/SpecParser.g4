@@ -49,6 +49,8 @@ specLoopInvariant
 specStatement
     : ('assert' specExpression SPEC_EXPR_END) # assertStatement
     | ('assume' specExpression SPEC_EXPR_END) # assumeStatement
+    | ('fold' specExpression SPEC_EXPR_END) #foldStatement
+    | ('unfold' specExpression SPEC_EXPR_END) #unfoldStatement
     ;
 
 specDeclaration

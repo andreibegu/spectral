@@ -318,6 +318,10 @@ namespace sourcespec2ir
             mdId = PALLAS_ASSERT;
         else if (stmnt.type == Assume)
             mdId = PALLAS_ASSUME;
+        else if (stmnt.type == Fold)
+            mdId = PALLAS_FOLD;
+        else if (stmnt.type == Unfold)
+            mdId = PALLAS_UNFOLD;
         else
             throw utils::PallasException("Unsupported statement-type");
         mdElems.push_back(llvm::MDString::get(*irContext, mdId));

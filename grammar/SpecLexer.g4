@@ -12,6 +12,8 @@ REQUIRES: 'requires';
 ENSURES: 'ensures';
 ASSERT: 'assert';
 ASSUME: 'assume';
+FOLD: 'fold';
+UNFOLD: 'unfold';
 DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 PURE: 'pure';

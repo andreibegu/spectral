@@ -214,19 +214,19 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Encountered statement-block in contract-file.");
 
-        // Match contract to instruction
+        // Match specifications to instruction
         auto loc = getLocFromCtx(ctx);
         const auto instr = matchStatementBlock(loc);
         assert(instr != nullptr);
 
-        // Create new matched contract-block
+        // Create new matched spec-block
         stmntBlock = std::make_unique<MatchedSpecStatementBlock>(instr, loc);
 
-        // Add all statements to the contract by traversing the children
+        // Add all statements by traversing the children
         for (auto c : ctx->children)
             visit(c);
 
-        // Add the new contract to the collection of contracts.
+        // Add to the collection of matched specifications.
         matchedSpecs->matchedStmntBlocks.push_back(std::move(stmntBlock));
         return 0;
     }
@@ -242,6 +242,20 @@ namespace sourcespec2ir
         SpecParser::AssumeStatementContext *ctx)
     {
         addToStmntBlock(Assume, ctx->specExpression(), getLocFromCtx(ctx));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitFoldStatement(
+        SpecParser::FoldStatementContext *ctx)
+    {
+        addToStmntBlock(Fold, ctx->specExpression(), getLocFromCtx(ctx));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitUnfoldStatement(
+        SpecParser::UnfoldStatementContext *ctx) 
+    {
+        addToStmntBlock(Unfold, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
     }
 
