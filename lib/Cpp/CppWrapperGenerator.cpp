@@ -57,7 +57,20 @@ namespace sourcespec2ir
         const std::string &name, const std::string &args,
         const std::string &body)
     {
-        throw utils::PallasException("Predicates are not yet supported in C++.");
+        std::stringstream s;
+        s << "#pragma clang diagnostic push \n"
+          << "#pragma clang diagnostic error \"-Wall\" \n"
+          << "#pragma clang diagnostic error \"-Wpedantic\" \n"
+          << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n"
+          << "__attribute__((used)) \n";
+
+        s << "bool " << name << "(" << args << ") { \n"
+          << "return " << body << "; \n"
+          << "} \n";
+
+        s << "#pragma clang diagnostic pop \n";
+
+        return s.str();
     }
 
     std::pair<size_t, size_t> CppWrapperGenerator::getOffsetToExprStart(
@@ -69,7 +82,7 @@ namespace sourcespec2ir
     std::pair<size_t, size_t> CppWrapperGenerator::getOffsetToExprStart(
         const SpecPredicate &pDef)
     {
-        throw utils::PallasException("Predicates are not yet supported in C++.");
+        return std::make_pair(1, 7);
     }
 
     void CppWrapperGenerator::addConst(SrcTypeRepresentation &baseType)

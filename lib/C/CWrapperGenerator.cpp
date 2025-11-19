@@ -64,9 +64,17 @@ namespace sourcespec2ir
         const std::string &body)
     {
         std::stringstream s;
-        s << "bool " << name << "(" << args << ") { \n";
-        s << "return " << body << "; \n";
-        s << "}";
+        s << "#pragma clang diagnostic push \n"
+          << "#pragma clang diagnostic error \"-Wall\" \n"
+          << "#pragma clang diagnostic error \"-Wpedantic\" \n"
+          << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
+
+        s << "bool " << name << "(" << args << ") { \n"
+          << "return " << body << "; \n"
+          << "} \n";
+
+        s << "#pragma clang diagnostic pop \n";
+
         return s.str();
     }
 
