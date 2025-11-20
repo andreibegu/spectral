@@ -6,12 +6,13 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
 #include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 
 namespace sourcespec2ir
 {
     namespace utils
     {
-        
+
         /**
          * Adds a metadata-node to the function that marks it as a generated specification-function.
          */
@@ -23,7 +24,7 @@ namespace sourcespec2ir
         bool isGeneratedSpecFunction(const llvm::Function &f);
 
         /**
-         * Adds a metadata-node to the function that marks it as a 
+         * Adds a metadata-node to the function that marks it as a
          * definition of a predicate.
          */
         void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context);
