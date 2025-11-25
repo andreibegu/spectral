@@ -436,11 +436,11 @@ namespace sourcespec2ir
     {
         // TODO: Find a better way to set the language
         unsigned int lang = 0;
-        if (path.ends_with(".h"))
+        if (path.ends_with(".h") || path.ends_with(".c"))
         {
             lang = llvm::dwarf::DW_LANG_C;
         }
-        else if (path.ends_with(".hpp"))
+        else if (path.ends_with(".hpp") || path.ends_with(".cpp"))
         {
             lang = llvm::dwarf::DW_LANG_C_plus_plus;
         }

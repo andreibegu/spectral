@@ -2,6 +2,7 @@
 #include "IrSpecConstants.h"
 
 #include <llvm/IR/DebugLoc.h>
+#include <llvm/IR/Instructions.h>
 
 namespace sourcespec2ir
 {
@@ -44,8 +45,15 @@ namespace sourcespec2ir
         llvm::DILocalScope *getScopeOfBasicBlock(const llvm::BasicBlock &bb)
         {
             for (auto &i : bb)
+            {
+                // We skip phi-nodes because these are braught in from a 
+                // different sope when e.g. mem2reg is applied. 
+                if (llvm::isa<llvm::PHINode>(i))
+                    continue; 
                 if (auto *s = getScopeOfInstruction(i))
                     return s;
+            }
+
             return nullptr;
         }
 
