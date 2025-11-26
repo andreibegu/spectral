@@ -122,7 +122,7 @@ This tuple contains:
 - followed by references to the MD-nodes that encode the individual specification statements. 
 
 Individual specification-statements are encoded as MD-nodes (`!123`) that consist of
-- a MD-string that identifies the type of the statement ( `!"pallas.assume"` or `!"pallas.assert"` )
+- a MD-string that identifies the type of the statement ( `!"pallas.assume"`, `!"pallas.assert"`, `!"pallas.fold"` or `!"pallas.unfold"` )
 - a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the specification-statement (`@_Z13PALLAS_SPEC_0iii`)
 - A list of references to the `!DILocalVariable`s that represent the variables that are available in the expression (`!111`, `!113` and `!115`). The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
@@ -130,6 +130,8 @@ Individual specification-statements are encoded as MD-nodes (`!123`) that consis
 **Supported constructs:**
 - `assert EXPR ;`
 - `assume EXPR ;`
+- `fold EXPR ;`
+- `unfold EXPR ;`
 
 ### Example (C++):
 
@@ -287,7 +289,7 @@ and the type-representation of the returned struct would be ```{ i64, i64, doubl
 In the following sections, we use the notation ```<<T>>``` to represent a type-representation 
 of type ```T```.
 
-## IR-Representaion of spec-lib:
+## IR-Representation of spec-lib:
 - The names of the function in the specification-library should not matter. The functions can by identified by using the metadata-node that is labeled with `!pallas.specLib`.
 
 ### Logical Implication

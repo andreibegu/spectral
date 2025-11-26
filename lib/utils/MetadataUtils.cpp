@@ -20,11 +20,13 @@ namespace sourcespec2ir
             return f.getMetadata(PALLAS_GENERATED_MARKER) != nullptr;
         }
 
-        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context)
+        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context,
+                              bool isInline)
         {
-            auto idStr = llvm::MDString::get(context, "");
+            auto inlineFlag = llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::getBool(context, isInline));
             f.setMetadata(PALLAS_PREDICATE_DEF_MARKER,
-                          llvm::MDNode::get(context, idStr));
+                          llvm::MDNode::get(context, inlineFlag));
         }
 
         bool isPredicateDef(const llvm::Function &f)
@@ -46,10 +48,10 @@ namespace sourcespec2ir
         {
             for (auto &i : bb)
             {
-                // We skip phi-nodes because these are braught in from a 
-                // different sope when e.g. mem2reg is applied. 
+                // We skip phi-nodes because these are braught in from a
+                // different sope when e.g. mem2reg is applied.
                 if (llvm::isa<llvm::PHINode>(i))
-                    continue; 
+                    continue;
                 if (auto *s = getScopeOfInstruction(i))
                     return s;
             }

@@ -13,6 +13,7 @@ namespace sourcespec2ir
      */
     struct SpecPredicate
     {
+        const bool isInline;
         const std::string name;
         const std::string args;
         const std::string body;
@@ -21,10 +22,11 @@ namespace sourcespec2ir
         // Location where the body-expression in the src-file starts.
         const SrcLocation exprLoc;
 
-        SpecPredicate(std::string name, std::string args,
+        SpecPredicate(bool isInline, std::string name, std::string args,
                       std::string body, const SrcRange srcLoc,
                       const SrcLocation exprLoc)
-            : name(name),
+            : isInline(isInline),
+              name(name),
               args(args),
               body(body),
               srcLoc(srcLoc),

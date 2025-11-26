@@ -34,11 +34,13 @@ namespace sourcespec2ir
         auto srcLoc = utils::getLocFromCtx(ctx, file, md5Checksum);
         auto exprLoc = utils::getExprStartLoc(*ctx->specExpression(), file,
                                               md5Checksum);
+        auto isInline = ctx->INLINE() != nullptr;
         auto name = utils::getCtxAsStr(*ctx->predName());
         auto args = utils::getCtxAsStr(*ctx->predicateSig());
         auto body = utils::getCtxAsStr(*ctx->specExpression());
 
-        predicates->push_back(SpecPredicate(name, args, body, srcLoc, exprLoc));
+        predicates->push_back(
+            SpecPredicate(isInline, name, args, body, srcLoc, exprLoc));
 
         if (printInfo)
         {

@@ -29,6 +29,7 @@ ARGS: 'args';
 RETURNS: 'returns';
 PREDICATE: 'predicate';
 PRED_DEF: ':=';
+INLINE: 'inline';
 
 PRED_SIG_START: '(';
 PRED_SIG_END: ')';

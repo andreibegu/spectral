@@ -477,7 +477,7 @@ namespace sourcespec2ir
             llvm::DICompileUnit *cu = nullptr;
             llvm::DIFile *scopeFile = nullptr;
             llvm::DIScope *scope = nullptr;
-            if (externalFile)
+            if (externalFile || contr->type == External)
             {
                 // For contracts in external files, point scopes to that file
                 cu = getCompileUnit(contrPath);
@@ -911,7 +911,7 @@ namespace sourcespec2ir
             auto f = utils::getFunctionBySrcName(module, p.name);
             if (f == nullptr)
                 throw utils::PallasException("Failed to get predicate");
-            utils::markPredicateDef(*f, module.getContext());
+            utils::markPredicateDef(*f, module.getContext(), p.isInline);
             irFunctions.push_back(f);
         }
         llvm::appendToUsed(module, irFunctions);

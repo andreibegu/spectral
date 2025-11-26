@@ -27,7 +27,8 @@ namespace sourcespec2ir
          * Adds a metadata-node to the function that marks it as a
          * definition of a predicate.
          */
-        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context);
+        void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context, 
+            bool isInline);
 
         /**
          * Checks if the given function is marked as a predicate definition.
