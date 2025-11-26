@@ -1,0 +1,30 @@
+// clang-format off
+// Test that the _unfolding construct is translated correctly
+// RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
+
+// COM: Declaration of _unfolding is present and labeled
+// CHECK-DAG: declare !pallas.specLib [[mdNode:![0-9]+]] zeroext i1 @pallas.unfolding(i1 noundef zeroext, i1 noundef zeroext)
+// CHECK-DAG: [[mdNode]] = !{!"pallas.unfolding"}
+
+// COM: Unified specification-function is called 
+// CHECK-DAG: {{%[0-9]+}} = call i1 @pallas.unfolding(
+
+class MyTuple {
+    var fst : Int = 0
+    var snd : Int = 0
+}
+
+/*@
+predicate tupRead(_ t : MyTuple) := _perm(t, Frac(1, 2));
+@*/
+
+/*@
+requires tupRead(t);
+requires _unfolding(tupRead(t), t.fst == 0);
+@*/
+func swapTuple(_ t : MyTuple) -> MyTuple {
+    let res = MyTuple()
+    res.fst = t.snd
+    res.snd = t.fst
+    return res
+}

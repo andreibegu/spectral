@@ -28,7 +28,8 @@ namespace sourcespec2ir
             {"4FracVyACs5Int32V_AEtcfC", FracOf}, 
             {"7_forallyS2b_SbtF", Forall},
             {"10_forallSepyS2b_SbtF", ForallSep},
-            {"7_existsyS2b_SbtF", Exists}
+            {"7_existsyS2b_SbtF", Exists}, 
+            {"10_unfoldingyS2b_SbtF", Unfolding}
         };
 
         // Map to identify specification-functions that are defined as 

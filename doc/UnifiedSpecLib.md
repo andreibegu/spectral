@@ -475,6 +475,14 @@ declare !pallas.specLib !129 i64 @pallas.ptrLength(ptr noundef)
 !129 = !{!"pallas.ptrLength"}
 ```
 
+### Unfolding
+Temporarily unfolds a predicate while evaluating an expression.
+```
+declare !pallas.specLib !144 zeroext i1 @pallas.unfolding(noundef zeroext i1, noundef zeroext i1)
+
+!144 = !{!"pallas.unfolding"}
+```
+
 
 ### Sequence-type
 A sequence of content-type `T` is encoded as a struct. The first value of the 

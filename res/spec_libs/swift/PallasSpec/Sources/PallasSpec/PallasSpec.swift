@@ -85,3 +85,7 @@ public struct Frac {
         placeholder2 = Int64(denominator)
     }
 }
+
+/// Temporary unfolding of predicates
+@inline(never)
+public func _unfolding(_ pred: Bool, _ in: Bool) -> Bool { fatalError() }

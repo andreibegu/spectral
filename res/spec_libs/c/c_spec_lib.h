@@ -42,8 +42,12 @@ typedef struct
  *******************************************/
 
 // Macros to define a version of \result for every possible return-type
-#define RESULT_NAME(type) PALLAS_RESULT___ ## type
-#define DEF_RESULT(type) type RESULT_NAME(type) ()
+// In special case where the type contains characters that may not appear in a 
+// function name (e.g. *) the DEF_RESULT_ macro can be used with a custom alias. 
+// In the normal case, the alias is equal to the type-name.
+#define RESULT_NAME(alias) PALLAS_RESULT___ ## alias
+#define DEF_RESULT_(type, alias) type RESULT_NAME(alias) ()
+#define DEF_RESULT(type) DEF_RESULT_(type, type)
 #define _result(type) RESULT_NAME(type)()
 
 // Macros to define a version of \old(...) for every possible parameter-type
@@ -101,6 +105,19 @@ bool _sep(bool lhs, bool rhs);
 // Define a fraction as a division of two integers
 // Only valid for positive parameters with 0 < (numerator \ denominator ) <= 1.
 frac _fracOf(int numerator, int denominator);
+
+/*******************************************
+ *              Predicates                 *
+ *******************************************/
+
+// Macros to define a version of \unfolding for expressions with different types.
+// In special case where the type contains characters that may not appear in a 
+// function name (e.g. *) the DEF_UNFOLDING_ macro can be used with a custom alias. 
+// In the normal case, the alias is equal to the type-name.
+#define UNFOLDING_NAME(alias) PALLAS_UNFOLDING___ ## alias
+#define DEF_UNFOLDING_(type, alias) type UNFOLDING_NAME(alias) (bool pred, type in)
+#define DEF_UNFOLDING(type) DEF_UNFOLDING_(type, type)
+#define _unfolding(type) RESULT_NAME(type)()
 
 /*******************************************
  *          Shorthand-notations            *

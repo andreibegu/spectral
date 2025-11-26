@@ -32,7 +32,8 @@ namespace sourcespec2ir
             {"_ptr_block_length", PtrBlockLength},
             {"_ptr_block_offset", PtrBlockOffset},
             {"_ptr_length", PtrLength},
-            {"_sep", SepConj}
+            {"_sep", SepConj}, 
+            {"_unfolding", Unfolding}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"PALLAS_OLD___", Old},

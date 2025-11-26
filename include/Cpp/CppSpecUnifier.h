@@ -34,7 +34,8 @@ namespace sourcespec2ir
             {"_forall(bool, bool)", Forall},
             {"_forallS(bool, bool)", ForallSep},
             {"_fracOf(int, int)", FracOf}, 
-            {"_sep(bool, bool)", SepConj}
+            {"_sep(bool, bool)", SepConj}, 
+            {"_unfolding(bool, bool)", Unfolding}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"_old<", Old},

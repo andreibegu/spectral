@@ -231,6 +231,14 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *SpecUnifier::transformUnfolding(llvm::CallInst &oldCall)
+    {
+        llvm::SmallVector<llvm::Value *, 2> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1)};
+        return llvm::CallInst::Create(getUSpecUnfolding(), newArgs);
+    }
+
     llvm::CallInst *SpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
     {
         auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
@@ -448,6 +456,8 @@ namespace sourcespec2ir
             return transformPtrBlockOffset(oldCall);
         case PtrLength:
             return transformPtrLength(oldCall);
+        case Unfolding:
+            return transformUnfolding(oldCall);
         case SeqNew:
             return transformSeqNew(oldCall);
         case SeqSize:
@@ -839,6 +849,76 @@ namespace sourcespec2ir
             specPtrLength = specFun;
         }
         return specPtrLength;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecUnfolding(
+        const IRTypeRepresentation &argRepr,
+        const IRTypeRepresentation &retRepr)
+    {
+        // Check if an appropriate function has already been generated
+        for (auto t : specUnfolding)
+        {
+            if (std::get<0>(t) == retRepr && std::get<1>(t) == argRepr)
+                return std::get<2>(t);
+        }
+
+
+
+        // TODO: Fix this similar to \old
+        // TODO: Do not use numbers but something else! 
+        /*
+        // Generate declaration for new old-function with the given type
+        auto cnt = specOld.size();
+        auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
+
+        auto isParamRet = retRepr.isReturnByParam();
+        llvm::SmallVector<llvm::Type *> argList;
+        // Ptr for return value
+        if (isParamRet)
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+        // Representation of passed element
+        for (auto t : argRepr.getTypes())
+            argList.push_back(t);
+
+        auto specFun = createSpecLibFunction(
+            specName, retRepr.getTypes().front(), argList, PALLAS_SPEC_OLD_BASE);
+
+        // Add attributes:
+        applyAttrToReturn(retRepr, specFun);
+        applyAttrToParamRepr(argRepr, specFun, isParamRet ? 1 : 0);
+
+        // Register the new spec-function
+        // TODO: Get rid of duplicate copies
+        specOld.push_back(std::make_tuple(IRTypeRepresentation(retRepr),
+                                          IRTypeRepresentation(argRepr),
+                                          specFun));
+
+        return specFun;
+        */
+
+
+
+
+        sdofslf
+        if (specUnfolding == nullptr)
+        {
+            llvm::SmallVector<llvm::Type *> args(
+                {llvm::Type::getInt1Ty(*irContext),
+                 llvm::Type::getInt1Ty(*irContext)});
+            auto fType = llvm::FunctionType::get(
+                llvm::Type::getInt1Ty(*irContext), args, false);
+            specUnfolding = llvm::Function::Create(
+                fType, llvm::Function::ExternalLinkage, PALLAS_SPEC_UNFOLDING, irModule);
+            specUnfolding->addParamAttr(0, llvm::Attribute::NoUndef);
+            specUnfolding->addParamAttr(0, llvm::Attribute::ZExt);
+            specUnfolding->addParamAttr(1, llvm::Attribute::NoUndef);
+            specUnfolding->addParamAttr(1, llvm::Attribute::ZExt);
+            specUnfolding->addRetAttr(llvm::Attribute::ZExt);
+
+            // Add metadata-marker to mark as specification-library-function
+            markAsSpecLibFunction(specUnfolding, PALLAS_SPEC_UNFOLDING);
+        }
+        return specUnfolding;
     }
 
     llvm::Function *SpecUnifier::getUSpecSeqNew(llvm::Type *type)
