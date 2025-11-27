@@ -5,12 +5,12 @@
 // RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declarations are created
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] { i64, i16 } @pallas.old.0(i64, i16)
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] { i64, i16 } @"pallas.old { i64, i16 }_i64,i16"(i64, i16)
 
 // COM: Declarations have MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-functions are called 
-// CHECK-DAG: { i64, i16 } @pallas.old.0(i64 {{%[0-9]+}}, i16 {{%[0-9]+}})
+// CHECK-DAG: { i64, i16 } @"pallas.old { i64, i16 }_i64,i16"(i64 {{%[0-9]+}}, i16 {{%[0-9]+}})
 
 struct SomeStruct {
     var x: Int64

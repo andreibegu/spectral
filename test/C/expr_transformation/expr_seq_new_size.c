@@ -3,16 +3,16 @@
 // RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Check that declarations are present
-// CHECK-DAG: declare !pallas.specLib [[sizeMD:![0-9]+]] i64 [[size:@pallas.seq.size.[0-9]+]](ptr noundef byval(%pallas.seq.{{[0-9]+}}))
-// CHECK-DAG: declare !pallas.specLib [[newMD:![0-9]+]] void [[new:@pallas.seq.new.[0-9]+]](ptr sret(%pallas.seq.{{[0-9]+}}))
+// CHECK-DAG: declare !pallas.specLib [[sizeMD:![0-9]+]] i64 @"pallas.seq.size double"(ptr noundef byval(%pallas.seq.double))
+// CHECK-DAG: declare !pallas.specLib [[newMD:![0-9]+]] void @"pallas.seq.new double"(ptr sret(%pallas.seq.double))
 
 // COM: Check that the metadata-annotations are present
-// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size.{{[0-9]+}}"}
-// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new.{{[0-9]+}}"}
+// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size double"}
+// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new double"}
 
 // COM: Check that the spec-functions are called
-// CHECK-DAG: call void [[new]](ptr sret(%pallas.seq.{{[0-9]+}}) %{{[0-9]+}})
-// CHECK-DAG: call i64 [[size]](ptr noundef byval(%pallas.seq.{{[0-9]+}}) %{{[0-9]+}})
+// CHECK-DAG: call void @"pallas.seq.new double"(ptr sret(%pallas.seq.double) %{{[0-9]+}})
+// CHECK-DAG: call i64 @"pallas.seq.size double"(ptr noundef byval(%pallas.seq.double) %{{[0-9]+}})
 
 /*@
  declare DEF_SEQ(double);

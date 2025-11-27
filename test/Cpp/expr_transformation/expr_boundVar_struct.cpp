@@ -3,11 +3,11 @@
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Declaration is created and labled with md-node
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @pallas.boundVar.0(ptr sret(%class.ClumsyClass) align 8, ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @"pallas.boundVar sret(%class.ClumsyClass) align 8 void"(ptr sret(%class.ClumsyClass) align 8, ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
 
 // COM: Spec-function is called with sret-attribute
-// CHECK-DAG call void @pallas.boundVar.0(ptr sret(%class.ClumsyClass) align 8 {{%[0-9]+}}, ptr {{%[0-9]+}})
+// CHECK-DAG call void @"pallas.boundVar sret(%class.ClumsyClass) align 8 void"(ptr sret(%class.ClumsyClass) align 8 {{%[0-9]+}}, ptr {{%[0-9]+}})
 
 class ClumsyClass {
     public:

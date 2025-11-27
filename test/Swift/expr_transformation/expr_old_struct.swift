@@ -4,12 +4,12 @@
 // RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declarations are created
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] void @pallas.old.0(ptr noalias nocapture sret([[sT:[^)]*]]), ptr noalias nocapture dereferenceable(48))
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] void @"pallas.old noalias nocapture sret(%T13tmp_ir_source10SomeStructV) void_noalias nocapture dereferenceable(48) ptr"(ptr noalias nocapture sret([[sT:[^)]*]]), ptr noalias nocapture dereferenceable(48))
 
 // COM: Declarations have MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-functions are called 
-// CHECK-DAG: call void @pallas.old.0(ptr noalias nocapture sret([[sT]]) {{%[0-9]+}}, ptr noalias nocapture dereferenceable(48) {{%[0-9]+}})
+// CHECK-DAG: call void @"pallas.old noalias nocapture sret(%T13tmp_ir_source10SomeStructV) void_noalias nocapture dereferenceable(48) ptr"(ptr noalias nocapture sret([[sT]]) {{%[0-9]+}}, ptr noalias nocapture dereferenceable(48) {{%[0-9]+}})
 
 struct SomeStruct {
     var x: Int64

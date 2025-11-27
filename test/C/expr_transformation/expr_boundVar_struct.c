@@ -4,11 +4,11 @@
 // CHECK-NOT: PALLAS_BOUND_VAR___
 
 // COM: Declaration is created and labled with md-node
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @pallas.boundVar.0(ptr sret(%struct.S) align 4, ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] void @"pallas.boundVar sret(%struct.S) align 4 void"(ptr sret(%struct.S) align 4, ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
 
 // COM: Spec-function is called with sret-attribute
-// CHECK-DAG call void @pallas.boundVar.0(ptr sret(%struct.S) align 4 {{%[0-9]+}}, ptr {{%[0-9]+}})
+// CHECK-DAG call void @"pallas.boundVar sret(%struct.S) align 4 void"(ptr sret(%struct.S) align 4 {{%[0-9]+}}, ptr {{%[0-9]+}})
 
 typedef struct S {
     int a, b, c, d, e, f, g, h;

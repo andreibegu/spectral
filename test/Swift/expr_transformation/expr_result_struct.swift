@@ -3,10 +3,10 @@
 // RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declaration is created
-// CHECK-DAG: declare !pallas.specLib [[resMD:![0-9]+]] void @pallas.result.0(ptr noalias nocapture sret([[sT:%[^)]+]]))
+// CHECK-DAG: declare !pallas.specLib [[resMD:![0-9]+]] void @"pallas.result noalias nocapture sret(%T13tmp_ir_source7AStructV) void"(ptr noalias nocapture sret([[sT:%[^)]+]]))
 // CHECK-DAG: [[resMD]] = !{!"pallas.result"}
 // COM: result-function is called
-// CHECK-DAG: call void @pallas.result.0(ptr noalias nocapture sret([[sT]]) {{%[0-9]+}})
+// CHECK-DAG: call void @"pallas.result noalias nocapture sret(%T13tmp_ir_source7AStructV) void"(ptr noalias nocapture sret([[sT]]) {{%[0-9]+}})
 
 
 struct AStruct {
