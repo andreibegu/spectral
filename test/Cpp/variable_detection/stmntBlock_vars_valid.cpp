@@ -32,6 +32,7 @@ int bar (int a, double b) {
             /*@ assert a > 1 && b > 2 && cnt > 3; @*/   
             b += cnt;
             /*@ assert a > 4 && b > 5 && cnt > 6; @*/   
+            b *= 2;
         }
         /*@ assume a > 0 && b > 10 && cnt > 0; @*/   
         return b;

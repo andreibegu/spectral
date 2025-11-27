@@ -25,11 +25,15 @@ namespace sourcespec2ir
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;
 
+
     protected:
-        std::string addConst(const std::string &baseType) override;
-        std::string addPointer(const std::string &baseType) override;
-        std::string addTypedef(const std::string &baseType,
-                               const std::string &typedefName) override;
+        SrcTypeRepresentation getVoid() override;
+        void addConst(SrcTypeRepresentation &baseType) override;
+        void addPointer(SrcTypeRepresentation &baseType) override;
+        void addTypedef(SrcTypeRepresentation &baseType,
+                        const std::string &typedefName) override;
+        void addArrayDim(SrcTypeRepresentation &baseType,
+                         const std::string &dimSize);
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
     };
 

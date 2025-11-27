@@ -6,7 +6,7 @@ int bar (int x) {
     int i = 0;
     /*@
     loop_invariant i <= x + 10
-      && x == x;
+      && i == x;
     @*/
     while (i < 10 ) {
       i += x;

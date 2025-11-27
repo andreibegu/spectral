@@ -29,16 +29,16 @@ namespace sourcespec2ir
          * In swift, the debug-info for e.g. the Boolean-type does not always
          * get resolved properly. Hence, manually patch this.
          */
-        std::string getSrcReprOfType(const llvm::DIType *type) override;
+        SrcTypeRepresentation getSrcReprOfType(const llvm::DIType *type) override;
 
     protected:
         // Overwritten methods to customize the default-WrapperGenerator
-        std::string addConst(const std::string &baseType) override;
-        std::string addTypedef(const std::string &baseType,
+        void addConst(SrcTypeRepresentation &baseType) override;
+        void addTypedef(SrcTypeRepresentation &baseType,
                                const std::string &typedefName) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
 
-        std::string buildArgStr(const std::string &type,
+        std::string buildArgStr(const SrcTypeRepresentation &type,
                                 const std::string &name) override;
 
     private:

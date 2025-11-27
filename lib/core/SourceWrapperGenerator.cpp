@@ -2,6 +2,7 @@
 #include "PallasException.h"
 #include "FileUtils.h"
 #include "IRUtils.h"
+#include "MetadataUtils.h"
 #include "SrcLookup.h"
 
 #include <algorithm>
@@ -12,6 +13,7 @@
 #include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Argument.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfoMetadata.h>
 #include <llvm/IR/Dominators.h>
 #include <llvm/IR/InstIterator.h>
@@ -58,7 +60,7 @@ namespace sourcespec2ir
     {
         const auto pFunc = contract.function;
 
-        // Get Wrapper-signature 
+        // Get Wrapper-signature
         std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
         std::optional<WrapperSignature> sig = std::nullopt;
         if (contract.type == External && contract.wrapperSignature.has_value())
@@ -257,19 +259,27 @@ namespace sourcespec2ir
         // later in the code, we add them explicitly.
         // TODO: This might break wrapper-generation, if there is shadowing!
         auto varSet = getSrcVariablesForFunction(*parentFunc);
-        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
         const llvm::DominatorTree domTree(*parentFunc);
 
-        // Get all llvm.dbg.-intrinsics that dominate the loop
+        // Get the scope of the loop header:
+        auto *loopScope = utils::getScopeOfBasicBlock(*loopHeader);
+        if (loopScope == nullptr)
+            throw utils::PallasException(
+                "Cannot determine scope for loop header");
+
+        // Get all llvm.dbg.-intrinsics that dominate the loop and that
+        // are in scope accrding to the debug-scopes.
         for (auto i = llvm::inst_begin(parentFunc),
                   end = llvm::inst_end(parentFunc);
              i != end; ++i)
         {
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
-                if (!domTree.dominates(intr, loopHeader))
-                    continue;
                 auto *srcVar = intr->getVariable();
+                if (srcVar == nullptr ||
+                    !domTree.dominates(intr, loopHeader) ||
+                    !utils::isSubscope(srcVar->getScope(), loopScope))
+                    continue;
                 varSet->insert(srcVar);
             }
         }
@@ -289,6 +299,11 @@ namespace sourcespec2ir
                 "Encountered instruction without parent");
         }
         auto parentFunc = inst->getParent()->getParent();
+        auto *instScope = utils::getScopeOfInstruction(*inst);
+        // TODO: Print the instruction as well
+        if (instScope == nullptr)
+            throw utils::PallasException(
+                "Cannot determine scope of instruction.");
 
         // Some compilers place the debug-intrinsics for the function-arguments
         // later in the code, we add them explicitly.
@@ -296,8 +311,8 @@ namespace sourcespec2ir
         auto varSet = getSrcVariablesForFunction(*parentFunc);
 
         // Collect all variables from the llvm.dbg.-intrinsics that
-        // dominate the instruction
-        // auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        // dominate the instruction and that are in scope
+        // (according to the debug-scopes.)
         const llvm::DominatorTree domTree(*parentFunc);
         for (auto i = llvm::inst_begin(parentFunc),
                   end = llvm::inst_end(parentFunc);
@@ -308,36 +323,49 @@ namespace sourcespec2ir
 
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*i))
             {
-                // The instruction is a debug-intrinsic
-                if (!domTree.dominates(&*i, inst))
-                    continue;
                 auto *srcVar = intr->getVariable();
+                // The instruction is a debug-intrinsic
+                if (srcVar == nullptr ||
+                    !domTree.dominates(&*i, inst) ||
+                    !utils::isSubscope(srcVar->getScope(), instScope))
+                    continue;
                 varSet->insert(srcVar);
             }
         }
         return varSet;
     }
 
-    std::string SourceWrapperGenerator::getSrcReprOfType(const llvm::DIType *type)
+    SrcTypeRepresentation SourceWrapperGenerator::getSrcReprOfType(
+        const llvm::DIType *type)
     {
+        if (type == nullptr) {
+            return getVoid();
+        }
+
         // Check if type is a derived type
         if (auto *dType = llvm::dyn_cast<llvm::DIDerivedType>(type))
         {
             const auto tag = dType->getTag();
             const auto baseType = dType->getBaseType();
-            const auto baseTyStr = getSrcReprOfType(baseType);
+            auto tRepr = getSrcReprOfType(baseType);
 
             if (tag == llvm::dwarf::DW_TAG_pointer_type)
-                return addPointer(baseTyStr);
+                addPointer(tRepr);
             else if (tag == llvm::dwarf::DW_TAG_const_type)
-                return addConst(baseTyStr);
+                addConst(tRepr);
             else if (tag == llvm::dwarf::DW_TAG_reference_type)
-                return addReference(baseTyStr);
+                addReference(tRepr);
             else if (tag == llvm::dwarf::DW_TAG_typedef)
-                return addTypedef(baseTyStr, dType->getName().str());
+                addTypedef(tRepr, dType->getName().str());
             else
-                return addOtherQualifier(baseTyStr, *dType);
+                addOtherQualifier(tRepr, *dType);
+
+            return tRepr;
         }
+
+        if (auto *cType = llvm::dyn_cast<llvm::DICompositeType>(type))
+            if (cType->getTag() == llvm::dwarf::DW_TAG_array_type)
+                return getSrcReprOfArrType(cType);
 
         // Assume that the DIType is a plain DIType and just get the name
         auto typeName = type->getName().str();
@@ -349,14 +377,34 @@ namespace sourcespec2ir
 
         // Recursively construct the namespace
         auto nSpaceStr = getSrcNamespace(type->getScope());
-
-        return nSpaceStr + typeName;
+        return SrcTypeRepresentation(nSpaceStr + typeName);
     }
 
-    std::string SourceWrapperGenerator::buildArgStr(const std::string &type,
-                                                    const std::string &name)
+    SrcTypeRepresentation SourceWrapperGenerator::getSrcReprOfArrType(
+        const llvm::DICompositeType *type)
     {
-        return type + " " + name;
+        assert(type->getTag() == llvm::dwarf::DW_TAG_array_type);
+        SrcTypeRepresentation arrRepr = getSrcReprOfType(type->getBaseType());
+
+        // Add dimensions to the type-representation:
+        for (auto *elem : type->getElements())
+        {
+            auto *sRange = llvm::cast<llvm::DISubrange>(elem);
+            auto *countInt = sRange->getCount().dyn_cast<llvm::ConstantInt *>();
+            if (countInt == nullptr)
+                throw utils::PallasException(
+                    "Encountered an unsupported array-type");
+            addArrayDim(arrRepr,
+                        std::to_string(countInt->getValue().getSExtValue()));
+        }
+
+        return arrRepr;
+    }
+
+    std::string SourceWrapperGenerator::buildArgStr(
+        const SrcTypeRepresentation &type, const std::string &name)
+    {
+        return type.prefix.str().str() + " " + name + type.suffix.str().str();
     }
 
     WrapperSignature SourceWrapperGenerator::getWrapperSignature(
@@ -374,7 +422,8 @@ namespace sourcespec2ir
 
         if (returnType != nullptr)
         {
-            sig.parentRetTy = getSrcReprOfType(returnType);
+            // TOOD: Check that suffix is empty
+            sig.parentRetTy = getSrcReprOfType(returnType).prefix.str().str();
         }
 
         return sig;
@@ -390,37 +439,53 @@ namespace sourcespec2ir
         return addNamespace(parentNSpace, currentNSpace);
     }
 
-    std::string SourceWrapperGenerator::addConst(const std::string &baseType)
+    SrcTypeRepresentation SourceWrapperGenerator::getVoid()
+    {
+        // Override this to support a void type (e.g. for derived types where the base type is null)
+        throw utils::PallasException("Void is not supported by this WrapperGenerator");
+    }
+
+    void SourceWrapperGenerator::addConst(
+        SrcTypeRepresentation &baseType)
     {
         // Override this to support const.
         throw utils::PallasException(
             "Const is not supported by this WrapperGenerator.");
     }
 
-    std::string SourceWrapperGenerator::addPointer(const std::string &baseType)
+    void SourceWrapperGenerator::addPointer(
+        SrcTypeRepresentation &baseType)
     {
         // Override this to support pointers.
         throw utils::PallasException(
             "Pointers are not supported by this WrapperGenerator.");
     }
 
-    std::string SourceWrapperGenerator::addReference(const std::string &baseType)
+    void SourceWrapperGenerator::addReference(
+        SrcTypeRepresentation &baseType)
     {
         // Override this to support references.
         throw utils::PallasException(
             "References are not supported by this WrapperGenerator.");
     }
 
-    std::string SourceWrapperGenerator::addTypedef(
-        const std::string &baseType, const std::string &typedefName)
+    void SourceWrapperGenerator::addTypedef(
+        SrcTypeRepresentation &baseType, const std::string &typedefName)
     {
         // Override this to support typedefs.
         throw utils::PallasException(
             "Typedefs are not supported by this WrapperGenerator.");
     }
 
-    std::string SourceWrapperGenerator::addOtherQualifier(
-        const std::string &baseType, const llvm::DIDerivedType &type)
+    void SourceWrapperGenerator::addArrayDim(
+        SrcTypeRepresentation &baseType, const std::string &dimSize)
+    {
+        throw utils::PallasException(
+            "Array types are not supported by this WrapperGenerator.");
+    }
+
+    void SourceWrapperGenerator::addOtherQualifier(
+        SrcTypeRepresentation &baseType, const llvm::DIDerivedType &type)
     {
         // Override this to support other type-tags that are not
         // supported by the default-implementation.

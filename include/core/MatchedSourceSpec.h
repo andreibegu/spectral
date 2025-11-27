@@ -208,6 +208,12 @@ namespace sourcespec2ir
          * Adds the specifications from 'specs2' to this object.
          */
         void merge(std::unique_ptr<MatchedSpecifications> specs2);
+
+        /**
+         * Checks that no two specification-elements are matched to the same 
+         * LLVM construct. 
+         */
+        bool hasDuplicateMappings();
     };
 
 }

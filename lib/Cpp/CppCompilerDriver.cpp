@@ -44,6 +44,7 @@ namespace sourcespec2ir
         call << " -emit-llvm -S ";
         call << " -g -O0 ";
         call << " -Xclang -disable-O0-optnone ";
+        call << " -Werror ";
         call << srcFilePath;
         call << " -o " + irOutStr;
         call << " -I " << specLibPath << "/";

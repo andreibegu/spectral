@@ -19,6 +19,12 @@ namespace sourcespec2ir
         const std::string &functionName)
     {
         std::stringstream stream;
+
+        stream << "#pragma clang diagnostic push \n";
+        stream << "#pragma clang diagnostic error \"-Wall\" \n";
+        stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
+        stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
+
         stream << "__attribute__((used)) \n";
         stream << " bool " << functionName << "(";
 
@@ -26,10 +32,10 @@ namespace sourcespec2ir
         bool firstArg = true;
         for (auto &arg : sig.args)
         // for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
-        { 
+        {
             // Skip the 'this' argument as it gets added implicitly
-            if (arg.ends_with(" this")) 
-                continue; 
+            if (arg.ends_with(" this"))
+                continue;
             if (!firstArg)
                 stream << ", ";
             stream << arg;
@@ -42,6 +48,8 @@ namespace sourcespec2ir
         stream << "return " << expr << "; \n";
         stream << "} \n";
 
+        stream << "#pragma clang diagnostic pop \n";
+
         return stream.str();
     }
 
@@ -51,25 +59,36 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    std::string CppWrapperGenerator::addConst(const std::string &baseType)
-    {
-        return baseType + " const ";
+    SrcTypeRepresentation CppWrapperGenerator::getVoid() {
+        return SrcTypeRepresentation("void");
     }
 
-    std::string CppWrapperGenerator::addPointer(const std::string &baseType)
+    void CppWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
-        return baseType + "*";
+        baseType.prefix.append(" const ");
     }
 
-    std::string CppWrapperGenerator::addReference(const std::string &baseType)
+    void CppWrapperGenerator::addPointer(SrcTypeRepresentation &baseType)
     {
-        return baseType + " &";
+        baseType.prefix.append("*");
     }
 
-    std::string CppWrapperGenerator::addTypedef(
-        const std::string &baseType, const std::string &typedefName)
+    void CppWrapperGenerator::addReference(SrcTypeRepresentation &baseType)
     {
-        return typedefName;
+        baseType.prefix.append(" &");
+    }
+
+    void CppWrapperGenerator::addTypedef(
+        SrcTypeRepresentation &baseType, const std::string &typedefName)
+    {
+        baseType.prefix = typedefName;
+        baseType.suffix = "";
+    }
+
+    void CppWrapperGenerator::addArrayDim(SrcTypeRepresentation &baseType,
+                                          const std::string &dimSize)
+    {
+        baseType.suffix.append("[" + dimSize + "]");
     }
 
     std::string CppWrapperGenerator::addNamespace(

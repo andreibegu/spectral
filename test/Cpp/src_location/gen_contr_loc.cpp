@@ -8,7 +8,7 @@ class AClass {
 
     /*@
     contract for generated src AClass;
-    requires this != nullptr;
+    ensures this->i == 0;
     @*/
 };
 
@@ -28,7 +28,7 @@ bool bar () {
 // CHECK-DAG: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[reqMD:![0-9]+]]}
 // CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 9, i64 5, i64 12, i64 5, [[fileMD:![0-9]+]]}
 
-// CHECK-DAG: [[reqMD]] = !{!"pallas.requires", [[reqLoc:![0-9]+]], 
-// CHECK-DAG: [[reqLoc]] = !{!"pallas.srcLoc", i64 11, i64 5, i64 11, i64 29, [[fileMD]]}
+// CHECK-DAG: [[reqMD]] = !{!"pallas.ensures", [[ensLoc:![0-9]+]], 
+// CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", i64 11, i64 5, i64 11, i64 25, [[fileMD]]}
 
 // CHECK-DAG: [[fileMD]] = !DIFile(filename: "{{.*}}gen_contr_loc.cpp",

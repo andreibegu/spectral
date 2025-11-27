@@ -58,26 +58,29 @@ namespace sourcespec2ir
         return stream.str();
     }
 
-    std::string SwiftWrapperGenerator::buildArgStr(const std::string &type,
-                                                    const std::string &name)
+    std::string SwiftWrapperGenerator::buildArgStr(
+        const SrcTypeRepresentation &type, const std::string &name)
     {
-        return name + ": " + type;
+        if (!type.suffix.empty()) 
+            throw utils::PallasException(
+                "Unexpected suffix in type representation");
+        return name + ": " + type.prefix.str().str();
     }
 
-    std::string SwiftWrapperGenerator::getSrcReprOfType(
+    SrcTypeRepresentation SwiftWrapperGenerator::getSrcReprOfType(
         const llvm::DIType *type)
     {
         // Get src-representation of the type using default-implementation
-        const auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
+        auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
         // Manually handle some cases where the type is not correctly resolved.
         // This is only required in simple examples, where the used type is not
         // used in the code itself. (e.g. Bool is used as a return type,
         // but the code does not contain any local variables of type Bool.).
-        if (srcType == "$sytD")
-            return "Void";
-        if (srcType == "$sSbD")
-            return "Bool";
+        if (srcType.prefix == "$sytD")
+            srcType.prefix = "Void";
+        if (srcType.prefix == "$sSbD")
+            srcType.prefix = "Bool";
 
         return srcType;
     }
@@ -88,16 +91,16 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    std::string SwiftWrapperGenerator::addConst(const std::string &baseType)
+    void SwiftWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
         // In swift, function-arguments are const by default
-        return baseType;
+        return;
     }
 
-    std::string SwiftWrapperGenerator::addTypedef(
-        const std::string &baseType, const std::string &typedefName)
+    void SwiftWrapperGenerator::addTypedef(
+        SrcTypeRepresentation&baseType, const std::string &typedefName)
     {
-        return baseType;
+        return;
     }
 
     void SwiftWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)

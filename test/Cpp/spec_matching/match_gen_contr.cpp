@@ -14,7 +14,6 @@ class CheerfulClass {
     // Contract for the generated constructor
     /*@
     contract for generated src CheerfulClass;
-    requires this != nullptr;
     requires _sep(_Perm(&this->i, _write), _Perm(&this->j, _write)); 
     ensures _sep(_Perm(&this->i, _write), _Perm(&this->j, _write));
     ensures (this->i == 0) && (this->j == 2);
@@ -29,5 +28,5 @@ int foo(int i, int j) {
     return 42;
 }
 
-// CHECK: Matched generated contract at 15-21 to CheerfulClass
+// CHECK: Matched generated contract at 15-20 to CheerfulClass
 // CHECK-NOT: Matched
