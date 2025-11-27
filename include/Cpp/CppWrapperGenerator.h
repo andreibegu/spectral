@@ -34,6 +34,7 @@ namespace sourcespec2ir
 
     protected:
         // Overwritten methods to customize the default-WrapperGenerator
+        SrcTypeRepresentation getVoid() override;
         void addConst(SrcTypeRepresentation &baseType) override;
         void addPointer(SrcTypeRepresentation &baseType) override;
         void addReference(SrcTypeRepresentation &baseType) override;

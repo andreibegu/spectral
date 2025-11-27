@@ -551,13 +551,25 @@ namespace sourcespec2ir
         return fracType;
     }
 
+    namespace
+    {
+        std::string getTypeAsStr(const llvm::Type *type)
+        {
+            std::string tName;
+            llvm::raw_string_ostream nameStr(tName);
+            type->print(nameStr, false, true);
+            return tName;
+        }
+    }
+
     llvm::StructType *SpecUnifier::getUSpecSeqType(llvm::Type *type)
     {
         if (specSeqTypes.find(type) == specSeqTypes.end())
         {
             // Generate declaration for new sequence-type
-            auto cnt = specSeqTypes.size();
-            auto tName = PALLAS_SPEC_TYPE_SEQ_BASE + "." + std::to_string(cnt);
+            std::string tName = PALLAS_SPEC_TYPE_SEQ_BASE + "." +
+                                getTypeAsStr(type);
+
             // The first value in the sequence type determines the content-type of the sequence
             // The remaining values are dummy-values to increase the size which prevents
             // ABI optimizations when the struct is passed to a function.
@@ -649,8 +661,9 @@ namespace sourcespec2ir
         }
 
         // Generate declaration for new old-function with the given type
-        auto cnt = specOld.size();
-        auto specName = PALLAS_SPEC_OLD_BASE + "." + std::to_string(cnt);
+        auto specName = PALLAS_SPEC_OLD_BASE + " " +
+                        retRepr.asString() + "_" +
+                        argRepr.asString();
 
         auto isParamRet = retRepr.isReturnByParam();
         llvm::SmallVector<llvm::Type *> argList;
@@ -686,8 +699,7 @@ namespace sourcespec2ir
                 return p.second;
 
         // Generate declaration for new result-function with the given type
-        auto cnt = specResult.size();
-        auto specName = PALLAS_SPEC_RESULT_BASE + "." + std::to_string(cnt);
+        auto specName = PALLAS_SPEC_RESULT_BASE + " " + retRepr.asString();
 
         llvm::SmallVector<llvm::Type *> argList;
         // Ptr for return value
@@ -719,8 +731,7 @@ namespace sourcespec2ir
                 return p.second;
 
         // Generate declaration for the given type
-        auto cnt = specBoundVar.size();
-        auto specName = PALLAS_SPEC_BOUND_VAR + "." + std::to_string(cnt);
+        auto specName = PALLAS_SPEC_BOUND_VAR + " " + retRepr.asString();
 
         llvm::SmallVector<llvm::Type *> argList;
         // Ptr for the return-value
@@ -926,8 +937,7 @@ namespace sourcespec2ir
         if (specSeqNew.find(type) == specSeqNew.end())
         {
             // Generate function declaration
-            auto cnt = specSeqNew.size();
-            auto specName = PALLAS_SPEC_SEQ_NEW_BASE + "." + std::to_string(cnt);
+            auto specName = PALLAS_SPEC_SEQ_NEW_BASE + " " + getTypeAsStr(type);
             auto retType = llvm::PointerType::get(getUSpecSeqType(type), 0);
             auto specFun = createSpecLibFunction(specName, getVoidTy(), {retType});
             specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
@@ -942,8 +952,7 @@ namespace sourcespec2ir
         if (specSeqSize.find(type) == specSeqSize.end())
         {
             // Generate function declaration
-            auto cnt = specSeqSize.size();
-            auto name = PALLAS_SPEC_SEQ_SIZE_BASE + "." + std::to_string(cnt);
+            auto name = PALLAS_SPEC_SEQ_SIZE_BASE + " " + getTypeAsStr(type);
             auto argType = llvm::PointerType::get(getUSpecSeqType(type), 0);
             auto specFun = createSpecLibFunction(name, llvm::Type::getInt64Ty(*irContext), {argType});
             specFun->addParamAttr(0, llvm::Attribute::NoUndef);
@@ -966,8 +975,9 @@ namespace sourcespec2ir
         if (retRepr.getTypes().size() != 1)
             throw utils::PallasException("Received more than one return-type");
 
-        auto cnt = specSeqGet.size();
-        auto name = PALLAS_SPEC_SEQ_GET_BASE + "." + std::to_string(cnt);
+        auto name = PALLAS_SPEC_SEQ_GET_BASE + " " +
+                    getTypeAsStr(type) + "_" +
+                    retRepr.asString();
 
         // Check if the result is returned directly, or as a sret-parameter.
         auto isParamReturn = retRepr.isReturnByParam();
@@ -1000,8 +1010,9 @@ namespace sourcespec2ir
             if (std::get<0>(t) == type && std::get<1>(t) == argRepr)
                 return std::get<2>(t);
 
-        auto cnt = specSeqPrepend.size();
-        auto name = PALLAS_SPEC_SEQ_PREPEND_BASE + "." + std::to_string(cnt);
+        auto name = PALLAS_SPEC_SEQ_PREPEND_BASE + " " +
+                    getTypeAsStr(type) + "_" +
+                    argRepr.asString();
 
         llvm::SmallVector<llvm::Type *> argList;
         // Pointer for the return-value
@@ -1036,8 +1047,7 @@ namespace sourcespec2ir
     {
         if (specSeqEquals.find(type) == specSeqEquals.end())
         {
-            auto cnt = specSeqEquals.size();
-            auto name = PALLAS_SPEC_SEQ_EQUALS_BASE + "." + std::to_string(cnt);
+            auto name = PALLAS_SPEC_SEQ_EQUALS_BASE + " " + getTypeAsStr(type);
 
             llvm::SmallVector<llvm::Type *> argList = {
                 llvm::PointerType::get(*irContext, 0),

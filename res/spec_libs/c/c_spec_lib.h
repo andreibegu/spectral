@@ -11,14 +11,13 @@
  * However, when the types are defined as empty structs, clang optimizes them 
  * away when they are passed as a parameter to a function. Hence the structs 
  * contain dummmy-values to avoid this. 
- * Moreover the structs are filled with dummy-values to exceed a length 
- * of 64 bytes to ensure that they are passed as a by-value pointer to functions 
- * (ABI-dependent behavior).
+ * Moreover the structs is filled with a "randomly"-sized array to prevent it
+ * from being merged with a user's type.
  */
 
 typedef struct
 {
-    int32_t dummy1, dummy2, dummy3, dummy4, dummy5;
+    int32_t dummy[0x66726163];
 } frac;
 
 /* Macros for 'generic' ADTs */
@@ -33,7 +32,7 @@ typedef struct
 // size to suppress ABI-specific optimizations when passing the struct.
 #define DEF_SEQ_T(type) typedef struct { \
     type contentType; \
-    int32_t dummy1, dummy2, dummy3, dummy4, dummy5; \
+    int32_t dummy[0x736571]; \
 } SEQ(type)
 
 

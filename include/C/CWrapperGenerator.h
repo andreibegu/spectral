@@ -32,7 +32,9 @@ namespace sourcespec2ir
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SpecPredicate &pDef) override;
 
+
     protected:
+        SrcTypeRepresentation getVoid() override;
         void addConst(SrcTypeRepresentation &baseType) override;
         void addPointer(SrcTypeRepresentation &baseType) override;
         void addTypedef(SrcTypeRepresentation &baseType,

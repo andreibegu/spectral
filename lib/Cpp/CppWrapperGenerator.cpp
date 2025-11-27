@@ -85,6 +85,10 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
+    SrcTypeRepresentation CppWrapperGenerator::getVoid() {
+        return SrcTypeRepresentation("void");
+    }
+
     void CppWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
         baseType.prefix.append(" const ");

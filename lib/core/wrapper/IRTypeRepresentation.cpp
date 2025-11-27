@@ -1,6 +1,10 @@
 #include <wrapper/IRTypeRepresentation.h>
 
+#include <sstream>
 #include <utility>
+
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include "PallasException.h"
 
@@ -26,7 +30,7 @@ namespace sourcespec2ir
         return repr;
     }
 
-    std::unique_ptr<IRTypeRepresentation> 
+    std::unique_ptr<IRTypeRepresentation>
     IRTypeRepresentation::getRetReprFromCall(const llvm::CallInst &call)
     {
         // Check if it is return by sret-parameter or nomral return.
@@ -36,17 +40,17 @@ namespace sourcespec2ir
             if (!call.hasStructRetAttr())
                 throw utils::PallasException(
                     "Failed to build return-representation: Missing sret-attribute");
-            auto repr =  std::make_unique<IRTypeRepresentation>();
+            auto repr = std::make_unique<IRTypeRepresentation>();
             repr->addType(call.getCalledFunction()->getReturnType(),
-                         call.getAttributes().getParamAttrs(0));
+                          call.getAttributes().getParamAttrs(0));
             return repr;
         }
         else
         {
             // Normal return
-            auto repr =  std::make_unique<IRTypeRepresentation>();
+            auto repr = std::make_unique<IRTypeRepresentation>();
             repr->addType(call.getCalledFunction()->getReturnType(),
-                         call.getAttributes().getRetAttrs());
+                          call.getAttributes().getRetAttrs());
             return repr;
         }
     }
@@ -84,6 +88,21 @@ namespace sourcespec2ir
     bool IRTypeRepresentation::isReturnByParam() const
     {
         return types.size() == 1 && types.front()->isVoidTy();
+    }
+
+    std::string IRTypeRepresentation::asString() const
+    {
+        std::string sRepr;
+        llvm::raw_string_ostream s(sRepr);
+        for (auto [idx, ty, attrSet] : llvm::enumerate(types, attributes))
+        {
+            for (auto &attr : attrSet)
+                s << attr.getAsString() << " ";
+            ty->print(s, false, true);
+            if (idx != types.size() - 1) 
+                s << ",";
+        }
+        return sRepr;
     }
 
 }
