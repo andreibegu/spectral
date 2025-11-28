@@ -50,7 +50,8 @@ namespace pallasSpec
     /***************************************************
      *                Predicates                       *
      ***************************************************/
-    bool _unfolding(bool pred, bool in);
+    template<typename T>
+    T _unfolding(bool pred, T in);
 
     /***************************************************
      *                    Quantifiers                  *

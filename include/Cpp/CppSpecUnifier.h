@@ -34,8 +34,7 @@ namespace sourcespec2ir
             {"_forall(bool, bool)", Forall},
             {"_forallS(bool, bool)", ForallSep},
             {"_fracOf(int, int)", FracOf}, 
-            {"_sep(bool, bool)", SepConj}, 
-            {"_unfolding(bool, bool)", Unfolding}
+            {"_sep(bool, bool)", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"_old<", Old},
@@ -49,7 +48,8 @@ namespace sourcespec2ir
             {"_Perm<", Perm}, 
             {"_ptrBlockLength<", PtrBlockLength},
             {"_ptrBlockOffset<", PtrBlockOffset},
-            {"_ptrLength<", PtrLength}
+            {"_ptrLength<", PtrLength},
+            {"_unfolding<", Unfolding}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";
