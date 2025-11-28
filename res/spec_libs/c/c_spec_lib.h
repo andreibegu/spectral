@@ -116,7 +116,7 @@ frac _fracOf(int numerator, int denominator);
 #define UNFOLDING_NAME(alias) PALLAS_UNFOLDING___ ## alias
 #define DEF_UNFOLDING_(type, alias) type UNFOLDING_NAME(alias) (bool pred, type in)
 #define DEF_UNFOLDING(type) DEF_UNFOLDING_(type, type)
-#define _unfolding(type) RESULT_NAME(type)()
+#define _unfolding(type) UNFOLDING_NAME(type)
 
 /*******************************************
  *          Shorthand-notations            *

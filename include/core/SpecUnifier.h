@@ -260,8 +260,8 @@ namespace sourcespec2ir
          * Returns a pointer to the unified specification-function for the
          * 'unfolding' construct for predicates.
          */
-        llvm::Function *getUSpecUnfolding(const IRTypeRepresentation &argRepr,
-                                          const IRTypeRepresentation &retRepr);
+        llvm::Function *getUSpecUnfolding(const IRTypeRepresentation &retRepr,
+                                          const IRTypeRepresentation &argRepr);
 
         /**
          * Returns pointer to the unified specification-function for creating
