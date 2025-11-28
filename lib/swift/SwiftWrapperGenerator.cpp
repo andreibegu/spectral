@@ -221,6 +221,7 @@ namespace sourcespec2ir
             stream << "@_optimize(none) \n";
             stream << "func _perm(_ loc: " << type << ", _ f: Frac) -> Bool "
                    << "{ fatalError() } \n";
+            // TODO: Generate default-implementation for unfolding of type Bool
         }
 
         // Determine for which types the _bv-functions have to be generated.
@@ -233,6 +234,20 @@ namespace sourcespec2ir
             stream << "@_optimize(none) \n";
             stream << "func _bv" << bvType << "(_ id: String) -> " << bvType
                    << " { fatalError() } \n";
+        }
+
+        // Generate spec-functions for _unfolding:
+        llvm::SmallSet<std::string, 4> unfoldingTypes;
+        getTypesFromSuffix(expr, SWIFT_SPEC_UNFOLDING_PREFIX, unfoldingTypes);
+        for (auto t : unfoldingTypes)
+        {
+            // We generate a default-implementation for the Bool-type, so we can skip this here
+            if (t == "")
+                continue;
+            stream << "@inline(never) \n"
+                   << "@_optimize(none) \n"
+                   << "func _unfolding" << t << "(_ pred: Bool, _ in: " << t << ") -> " << t << " "
+                   << "{ fatalError() } \n";
         }
 
         // Determine which ADT-types have to be generated

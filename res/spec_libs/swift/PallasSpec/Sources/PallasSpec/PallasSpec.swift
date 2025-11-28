@@ -87,5 +87,7 @@ public struct Frac {
 }
 
 /// Temporary unfolding of predicates
+/// We include this for the bool-type because that is the most commonly used case. 
+/// For other types, the function is generated in the wrapper-function.
 @inline(never)
 public func _unfolding(_ pred: Bool, _ in: Bool) -> Bool { fatalError() }

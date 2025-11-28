@@ -27,6 +27,9 @@ namespace sourcespec2ir
     // Prefix of the specification-function for bound variables.
     const std::string SWIFT_SPEC_BOUND_VAR_PREFIX = "_bv";
 
+    // Prefix of the specification-function for _unfolding.
+    const std::string SWIFT_SPEC_UNFOLDING_PREFIX = "_unfolding";
+
     // Prefixes for the specification-functions for sequences
     const std::string SWIFT_SPEC_SEQ_TY_PREFIX = "Seq";
     const std::string SWIFT_SPEC_SEQ_NEW = "init";
