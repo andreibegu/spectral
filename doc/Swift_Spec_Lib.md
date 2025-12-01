@@ -56,9 +56,14 @@ Where:
 ### Predicates
 Temporarily unfold a predicate while evaluating an expression:
 ```
-TODO
+_unfoldingT(PRED, EXPR)
 ``` 
 where ```T``` is the type of the variable, ```PRED``` is the predicate and ```EXPR``` is the expression.
+
+If the type of the expression is ```Bool```, the type-suffix can be omitted: 
+```
+_unfolding(PRED, EXPR)
+``` 
 
 ### Sequence-ADT
 To use sequences that contain elements of type ```T```, the following declares-clause must be added:
