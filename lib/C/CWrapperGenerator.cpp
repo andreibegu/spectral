@@ -123,7 +123,7 @@ namespace sourcespec2ir
         for (auto &decl : specDeclarations)
         {
             auto declStr = decl.content + ";";
-            auto insertPos = findInsertPos(decl.srcFileLine, srcLines);
+            auto insertPos = findInsertPos(decl.srcLoc.getStartLine(), srcLines);
             insertLines(srcLines, declStr, insertPos);
         }
 

@@ -3,8 +3,12 @@
 
 namespace sourcespec2ir
 {
-    SpecDeclarationCollector::SpecDeclarationCollector(SpecParser::FileContext *specParseTree)
-        : specParseTree(specParseTree)
+    SpecDeclarationCollector::SpecDeclarationCollector(
+        SpecParser::FileContext *specParseTree, const std::string &file,
+        const std::string &md5Checksum)
+        : specParseTree(specParseTree),
+          file(file),
+          md5Checksum(md5Checksum)
     {
     }
 
@@ -22,8 +26,8 @@ namespace sourcespec2ir
     {
         auto *specExpr = ctx->specExpression();
         auto declStr = utils::getCtxAsStr(*specExpr);
-        declarations->push_back(
-            SpecDeclaration(declStr, specExpr->start->getLine()));
+        auto loc = utils::getLocFromCtx(ctx, file, md5Checksum);
+        declarations->push_back(SpecDeclaration(declStr, loc));
         return 0;
     }
 
