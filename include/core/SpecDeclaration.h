@@ -1,6 +1,8 @@
 #ifndef PALLAS_SPECDECLARATION_H
 #define PALLAS_SPECDECLARATION_H
 
+#include "wrapper/SrcLocation.h"
+
 #include <string>
 
 namespace sourcespec2ir
@@ -13,9 +15,9 @@ namespace sourcespec2ir
     struct SpecDeclaration
     {
         std::string content;
-        size_t srcFileLine;
-        SpecDeclaration(std::string content, size_t srcFileLine)
-            : content(content), srcFileLine(srcFileLine)
+        SrcRange srcLoc;
+        SpecDeclaration(std::string content, SrcRange srcLoc)
+            : content(content), srcLoc(srcLoc)
         {
         }
     };

@@ -13,18 +13,21 @@ namespace sourcespec2ir
 {
 
     /**
-     * Class that collects all declarations from the optional declaration-block. 
+     * Class that collects all declarations from the optional declaration-block.
      */
     class SpecDeclarationCollector : SpecParserBaseVisitor
     {
     public:
-        SpecDeclarationCollector(SpecParser::FileContext *specParseTree);
+        SpecDeclarationCollector(SpecParser::FileContext *specParseTree,
+                                 const std::string &file,
+                                 const std::string &md5Checksum);
 
         std::unique_ptr<llvm::SmallVector<SpecDeclaration>> collectDeclarations();
 
     private:
-
         SpecParser::FileContext *specParseTree;
+        const std::string file;
+        const std::string md5Checksum;
         std::unique_ptr<llvm::SmallVector<SpecDeclaration>> declarations;
 
         // Overwritten visitor-methods

@@ -93,7 +93,8 @@ namespace sourcespec2ir
             throw utils::PallasException("Unable to parse the source file.");
 
         // Collect declarations
-        SpecDeclarationCollector declCollector(srcParseTree);
+        SpecDeclarationCollector declCollector(
+            srcParseTree, srcInPath, inFileChecksum);
         auto specDeclarations = declCollector.collectDeclarations();
 
         // Collect predicate definitions

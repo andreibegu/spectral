@@ -1,10 +1,11 @@
 parser grammar SpecParser;
 options { tokenVocab = SpecLexer; }
 
-file: nonSpec (specDeclarationBlock nonSpec)? (spec nonSpec)*;
+file: nonSpec (spec nonSpec)*;
 
 spec
-    : specContractBlock 
+    : specDeclarationBlock
+    | specContractBlock 
     | specStatementBlock 
     | specLoopInvariantBlock 
     | wrapperLocationMarker
