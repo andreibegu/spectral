@@ -22,8 +22,15 @@ namespace sourcespec2ir
             const std::string &expr,
             const std::string &functionName) override;
 
+        std::string getPredicateDefString(const std::string &name,
+                                          const std::string &args,
+                                          const std::string &body) override;
+
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;
+            
+        std::pair<size_t, size_t> getOffsetToExprStart(
+            const SpecPredicate &pDef) override;
 
 
     protected:

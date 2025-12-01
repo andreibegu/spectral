@@ -2,7 +2,7 @@
 #define PALLAS_SWIFTWRAPPERGENERATOR_H
 
 #include "SourceWrapperGenerator.h"
-
+#include <llvm/ADT/StringRef.h>
 namespace sourcespec2ir
 {
 
@@ -22,8 +22,15 @@ namespace sourcespec2ir
             const std::string &expr,
             const std::string &functionName) override;
 
+        std::string getPredicateDefString(const std::string &name,
+                                          const std::string &args,
+                                          const std::string &body) override;
+
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;
+
+        std::pair<size_t, size_t> getOffsetToExprStart(
+            const SpecPredicate &pDef) override;
 
         /*
          * In swift, the debug-info for e.g. the Boolean-type does not always
@@ -35,13 +42,17 @@ namespace sourcespec2ir
         // Overwritten methods to customize the default-WrapperGenerator
         void addConst(SrcTypeRepresentation &baseType) override;
         void addTypedef(SrcTypeRepresentation &baseType,
-                               const std::string &typedefName) override;
+                        const std::string &typedefName) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
 
         std::string buildArgStr(const SrcTypeRepresentation &type,
                                 const std::string &name) override;
 
     private:
+        // TODO: Instead of doing this here, we might want to handle the 
+        //      predicate arguments similar to the arguments on external 
+        //      contracts and separate them during parsing!
+        WrapperSignature getSigFromPredicateArgs(llvm::StringRef argStr);
         std::string generateSpecLibFunctions(
             const WrapperSignature &sig, const std::string &expr);
     };

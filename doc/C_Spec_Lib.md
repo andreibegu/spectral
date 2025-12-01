@@ -54,6 +54,11 @@ The VerCors-constructs for specifying properties about pointers are encoded as f
 - ```\pointer_block_length(p)```: ```_ptr_block_length(p)```
 - ```\pointer_block_offset(p)```: ```_ptr_block_offset(p)```
 
+### Predicates
+To temporarily unfold a predicate while evaluating an expression, a call to ```_unfolding(T)(PRED, EXPR)``` is used where ```PRED``` is the predicate, ```EXPR``` is the expression and ```T``` is the type of the expression.
+
+Requires ```DEF_UNFOLDING(T)``` to be called in a declares-clause to declare the required function. 
+
 
 ### Sequence-ADT
 A sequence containing elements of type ```T``` is representd by the struct-type ```SEQ(T)```

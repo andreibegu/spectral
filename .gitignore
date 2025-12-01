@@ -6,6 +6,7 @@ grammar/demo/.antlr/
 # Local temporary/ working directory
 .tmp
 # Local files used for testing
+examples/
 examples/cpp_test.cpp
 examples/cpp_test.h
 examples/c_test.c

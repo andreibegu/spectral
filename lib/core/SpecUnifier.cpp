@@ -231,6 +231,35 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *SpecUnifier::transformUnfolding(llvm::CallInst &oldCall)
+    {
+        auto numArgs = oldCall.arg_size();
+
+        auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
+
+        // Check that first arg is boolean for the pred-expr:
+        // TODO: Implement
+
+        auto exprRepr = retRepr->isReturnByParam()
+                            ? IRTypeRepresentation::getArgReprFromCall(oldCall, 2, numArgs - 2)
+                            : IRTypeRepresentation::getArgReprFromCall(oldCall, 1, numArgs - 1);
+
+        // Build new arg-list (1:1 copy)
+        llvm::SmallVector<llvm::Value *> newArgs;
+        for (unsigned int i = 0; i < numArgs; ++i)
+            newArgs.push_back(oldCall.getArgOperand(i));
+
+        // Build new call
+        auto *newFunc = getUSpecUnfolding(*retRepr, *exprRepr);
+        auto newCall = llvm::CallInst::Create(newFunc, newArgs);
+
+        // Add attributes to new call
+        applyAttrToReturn(*retRepr, newCall);
+        applyAttrToParamRepr(*exprRepr, newCall, retRepr->isReturnByParam() ? 2 : 1);
+
+        return newCall;
+    }
+
     llvm::CallInst *SpecUnifier::transformSeqNew(llvm::CallInst &oldCall)
     {
         auto cType = getContentTypeOfADT(*oldCall.getArgOperand(0));
@@ -368,7 +397,8 @@ namespace sourcespec2ir
             }
             auto parentF = oldCall->getParent()->getParent();
             // Calls to spec-functions are only allowed from within wrapper-functions
-            if (!utils::isGeneratedSpecFunction(*parentF))
+            if (!utils::isGeneratedSpecFunction(*parentF) &&
+                !utils::isPredicateDef(*parentF))
             {
                 throw utils::PallasException(
                     "Encountered a call to a specification-function from a non-wrapper function.");
@@ -447,6 +477,8 @@ namespace sourcespec2ir
             return transformPtrBlockOffset(oldCall);
         case PtrLength:
             return transformPtrLength(oldCall);
+        case Unfolding:
+            return transformUnfolding(oldCall);
         case SeqNew:
             return transformSeqNew(oldCall);
         case SeqSize:
@@ -487,7 +519,8 @@ namespace sourcespec2ir
         for (auto &f : irModule->getFunctionList())
         {
             // Skip all functions that do not contain generated specifications.
-            if (!utils::isGeneratedSpecFunction(f))
+            if (!utils::isGeneratedSpecFunction(f) &&
+                !utils::isPredicateDef(f))
                 continue;
 
             // Check all instructions in the function
@@ -848,6 +881,55 @@ namespace sourcespec2ir
             specPtrLength = specFun;
         }
         return specPtrLength;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecUnfolding(
+        const IRTypeRepresentation &retRepr,
+        const IRTypeRepresentation &argRepr)
+    {
+        // Check if an appropriate function has already been generated
+        for (auto t : specUnfolding)
+        {
+            if (std::get<0>(t) == retRepr && std::get<1>(t) == argRepr)
+                return std::get<2>(t);
+        }
+
+        // Generate declaration for new function
+        auto specName = PALLAS_SPEC_UNFOLDING_BASE + " " +
+                        retRepr.asString() + "_" +
+                        argRepr.asString();
+
+        llvm::SmallVector<llvm::Type *> argList;
+        // Ptr for return value
+        if (retRepr.isReturnByParam())
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+
+        // Boolean for the predicate
+        argList.push_back(llvm::Type::getInt1Ty(*irContext));
+
+        // Representation of expression type
+        for (auto t : argRepr.getTypes())
+            argList.push_back(t);
+
+        auto specFun = createSpecLibFunction(
+            specName, retRepr.getTypes().front(), argList,
+            PALLAS_SPEC_UNFOLDING_BASE);
+
+        // Add attributes:
+        applyAttrToReturn(retRepr, specFun);
+
+        auto predIdx = retRepr.isReturnByParam() ? 1 : 0;
+        specFun->addParamAttr(predIdx, llvm::Attribute::NoUndef);
+        specFun->addParamAttr(predIdx, llvm::Attribute::ZExt);
+
+        applyAttrToParamRepr(argRepr, specFun,
+                             retRepr.isReturnByParam() ? 2 : 1);
+
+        // Register the new spec-function
+        specUnfolding.push_back(std::make_tuple(IRTypeRepresentation(retRepr),
+                                                IRTypeRepresentation(argRepr),
+                                                specFun));
+        return specFun;
     }
 
     llvm::Function *SpecUnifier::getUSpecSeqNew(llvm::Type *type)

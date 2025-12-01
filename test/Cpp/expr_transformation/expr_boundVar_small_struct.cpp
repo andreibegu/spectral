@@ -4,11 +4,11 @@
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Declaration is created and labled with md-node
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] i32 @pallas.boundVar.0(ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] i32 @"pallas.boundVar i32"(ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
 
 // COM: Spec-function is called with sret-attribute
-// CHECK-DAG call i32 @pallas.boundVar.0(ptr {{%[0-9]+}})
+// CHECK-DAG call i32 @"pallas.boundVar i32"(ptr {{%[0-9]+}})
 
 #include <cstdint>
 

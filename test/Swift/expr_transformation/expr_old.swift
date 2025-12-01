@@ -4,14 +4,14 @@
 // RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Declarations are created
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float [[oldF:@pallas.old.[0-9]+]](float)
-// CHECK-DAG: declare !pallas.specLib [[oldMD]] double [[oldD:@pallas.old.[0-9]+]](double)
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] float @"pallas.old float_float"(float)
+// CHECK-DAG: declare !pallas.specLib [[oldMD]] double @"pallas.old double_double"(double)
 
 // COM: Declarations have MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-functions are called
-// CHECK-DAG: = call float [[oldF]](float 
-// CHECK-DAG: = call double [[oldD]](double 
+// CHECK-DAG: = call float @"pallas.old float_float"(float 
+// CHECK-DAG: = call double @"pallas.old double_double"(double 
 
 /*@
 ensures _old(a) == a && _old(b) == b;

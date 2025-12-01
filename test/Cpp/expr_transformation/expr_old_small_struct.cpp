@@ -4,12 +4,12 @@
 // RUN: %Spec2IR %s -lib %CppSpecLib -m -lang Cpp | %FileCheck %s
 
 // COM: Declaration is created and has two arguments
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] i48 @pallas.old.0(i48)
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] i48 @"pallas.old i48_i48"(i48)
 
 // COM: Declaration has MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-function is called
-// CHECK-DAG: call i48 @pallas.old.0(i48 {{%[0-9]+}})
+// CHECK-DAG: call i48 @"pallas.old i48_i48"(i48 {{%[0-9]+}})
 #include <cstdint>
 
 struct SuperStruct {

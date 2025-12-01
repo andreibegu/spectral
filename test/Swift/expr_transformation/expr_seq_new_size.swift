@@ -4,19 +4,19 @@
 // RUN: %Spec2IR %s -lib %SwiftSpecLib -m -lang Swift | %FileCheck %s
 
 // COM: Check that the type in the allocation has been replaced
-// CHECK: {{%[0-9]+}} = alloca %pallas.seq.0
+// CHECK: {{%[0-9]+}} = alloca %pallas.seq.float
 
 // COM: Check that declarations are present
-// CHECK-DAG: declare !pallas.specLib [[sizeMD:![0-9]+]] i64 @pallas.seq.size.0(ptr noundef byval(%pallas.seq.0))
-// CHECK-DAG: declare !pallas.specLib [[newMD:![0-9]+]] void @pallas.seq.new.0(ptr sret(%pallas.seq.0))
+// CHECK-DAG: declare !pallas.specLib [[sizeMD:![0-9]+]] i64 @"pallas.seq.size float"(ptr noundef byval(%pallas.seq.float))
+// CHECK-DAG: declare !pallas.specLib [[newMD:![0-9]+]] void @"pallas.seq.new float"(ptr sret(%pallas.seq.float))
 
 // COM: Check that the metadata-annotations are present
-// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size.0"}
-// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new.0"}
+// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size float"}
+// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new float"}
 
 // COM: Check that the spec-functions are called
-// CHECK-DAG: call void @pallas.seq.new.0(ptr sret(%pallas.seq.0) %{{[0-9]+}})
-// CHECK-DAG: call i64 @pallas.seq.size.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}})
+// CHECK-DAG: call void @"pallas.seq.new float"(ptr sret(%pallas.seq.float) %{{[0-9]+}})
+// CHECK-DAG: call i64 @"pallas.seq.size float"(ptr noundef byval(%pallas.seq.float) %{{[0-9]+}})
 
 
 /*@

@@ -26,11 +26,18 @@ namespace sourcespec2ir
 
     const std::string PALLAS_ASSUME = "pallas.assume";
 
+    const std::string PALLAS_FOLD = "pallas.fold";
+
+    const std::string PALLAS_UNFOLD = "pallas.unfold";
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 
     // Metadata-identifier that is used to mark generated functions that wrap specification expressions
     const std::string PALLAS_GENERATED_MARKER = "pallas.exprWrapper";
+
+    // Identifier to mark predicate definitions
+    const std::string PALLAS_PREDICATE_DEF_MARKER = "pallas.predDef";
 
     // String that is used to identify a MD-Tuple as a source-location
     const std::string PALLAS_SRC_LOCATION_MARKER = "pallas.srcLoc";
@@ -65,6 +72,8 @@ namespace sourcespec2ir
     const std::string PALLAS_SPEC_PTR_BLOCK_OFFSET = "pallas.ptrBlockOffset";
 
     const std::string PALLAS_SPEC_PTR_LENGTH = "pallas.ptrLength";
+
+    const std::string PALLAS_SPEC_UNFOLDING_BASE = "pallas.unfolding";
 
     const std::string PALLAS_SPEC_SEQ_NEW_BASE = "pallas.seq.new";
 

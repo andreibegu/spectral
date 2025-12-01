@@ -19,6 +19,7 @@ add_library(spec2ir_core STATIC
     SourceSpecTransformer.cpp
     SourceWrapperGenerator.cpp
     SpecDeclarationCollector.cpp
+    SpecPredicateCollector.cpp
     SpecUnifier.cpp
     WrapperLocCollector.cpp
     ${ANTLR_SpecificationLexer_CXX_OUTPUTS} 

@@ -10,7 +10,6 @@
 #include <map>
 #include <regex>
 #include <sstream>
-#include <vector>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/Constants.h>
@@ -622,6 +621,8 @@ namespace sourcespec2ir
             currentLine++;
         // Move back in the vector to find the first blank line above
         // the insert-position
+        // TODO: Also check if a line starts with whitespace and '/*@'.
+        //      The would be more robust.
         while (currentLine != srcLines.begin() &&
                !isInsertLine(currentLine->content))
             currentLine--;
@@ -631,24 +632,34 @@ namespace sourcespec2ir
 
     void SourceWrapperGenerator::buildSrcWithWrappers(
         const std::string &inPath, const std::string &outPath,
-        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions)
+        llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
+        llvm::ArrayRef<SpecPredicate> predicates)
     {
         // Load file as vector of lines
-        auto sourceLines = readSrcFile(inPath);
+        auto srcLines = readSrcFile(inPath);
 
         // Insert the wrapper-functions
         for (auto wrapper : wrapperFunctions)
         {
             // Insert lines of the wrapper-function
-            auto insertPos = findInsertPos(wrapper->insertLoc, *sourceLines);
-            insertLines(*sourceLines, wrapper->stringRepr, insertPos);
+            auto insertPos = findInsertPos(wrapper->insertLoc, *srcLines);
+            insertLines(*srcLines, wrapper->stringRepr, insertPos);
+        }
+
+        // Insert the predicate definitions
+        for (auto &pDef : predicates)
+        {
+            auto strRepr = getPredicateDefString(
+                pDef.name, pDef.args, pDef.body);
+            auto insertPos = findInsertPos(pDef.srcLoc.getStartLine(), *srcLines);
+            insertLines(*srcLines, strRepr, insertPos);
         }
 
         // Call entry-point for subclasses to customize the generated source.
-        modifySrcWithWrappers(*sourceLines);
+        modifySrcWithWrappers(*srcLines);
 
         // Write modified file
-        writeSrcFile(outPath, *sourceLines);
+        writeSrcFile(outPath, *srcLines);
     }
 
     std::unique_ptr<std::list<SourceWrapperGenerator::SrcLine>>

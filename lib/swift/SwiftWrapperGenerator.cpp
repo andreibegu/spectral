@@ -7,6 +7,7 @@
 #include <regex>
 
 #include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Type.h>
 
@@ -58,10 +59,28 @@ namespace sourcespec2ir
         return stream.str();
     }
 
+    std::string SwiftWrapperGenerator::getPredicateDefString(
+        const std::string &name, const std::string &args,
+        const std::string &body)
+    {
+        auto sig = getSigFromPredicateArgs(args);
+        const auto specFuncs = generateSpecLibFunctions(sig, body);
+
+        std::stringstream s;
+        s << "func " << name << "(" << args << ") -> Bool {\n"
+          << "return " << body << "; \n"
+          << "\n"
+          << specFuncs
+          << "}\n"
+          << "\n";
+
+        return s.str();
+    }
+
     std::string SwiftWrapperGenerator::buildArgStr(
         const SrcTypeRepresentation &type, const std::string &name)
     {
-        if (!type.suffix.empty()) 
+        if (!type.suffix.empty())
             throw utils::PallasException(
                 "Unexpected suffix in type representation");
         return name + ": " + type.prefix.str().str();
@@ -91,6 +110,12 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
+    std::pair<size_t, size_t> SwiftWrapperGenerator::getOffsetToExprStart(
+        const SpecPredicate &pDef)
+    {
+        return std::make_pair(1, 7);
+    }
+
     void SwiftWrapperGenerator::addConst(SrcTypeRepresentation &baseType)
     {
         // In swift, function-arguments are const by default
@@ -98,7 +123,7 @@ namespace sourcespec2ir
     }
 
     void SwiftWrapperGenerator::addTypedef(
-        SrcTypeRepresentation&baseType, const std::string &typedefName)
+        SrcTypeRepresentation &baseType, const std::string &typedefName)
     {
         return;
     }
@@ -210,6 +235,20 @@ namespace sourcespec2ir
                    << " { fatalError() } \n";
         }
 
+        // Generate spec-functions for _unfolding:
+        llvm::SmallSet<std::string, 4> unfoldingTypes;
+        getTypesFromSuffix(expr, SWIFT_SPEC_UNFOLDING_PREFIX, unfoldingTypes);
+        for (auto t : unfoldingTypes)
+        {
+            // We generate a default-implementation for the Bool-type, so we can skip this here
+            if (t == "")
+                continue;
+            stream << "@inline(never) \n"
+                   << "@_optimize(none) \n"
+                   << "func _unfolding" << t << "(_ pred: Bool, _ in: " << t << ") -> " << t << " "
+                   << "{ fatalError() } \n";
+        }
+
         // Determine which ADT-types have to be generated
         // (using the user-provided declarations)
         llvm::SmallSet<std::string, 4> seqTypes;
@@ -271,6 +310,19 @@ namespace sourcespec2ir
 
         stream << "// END - SpecLib-Functions \n";
         return stream.str();
+    }
+
+    WrapperSignature SwiftWrapperGenerator::getSigFromPredicateArgs(llvm::StringRef argStr)
+    {
+        WrapperSignature sig;
+        sig.parentRetTy = std::nullopt;
+
+        // Split the argument list on ',' to get the types of the arguments
+        llvm::SmallVector<llvm::StringRef> args;
+        argStr.split(args, ',');
+        for (auto arg : args)
+            sig.addArg(arg.str());
+        return sig;
     }
 
 }

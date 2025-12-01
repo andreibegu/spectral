@@ -8,7 +8,7 @@
 // CHECK-NOT: @_ZN10pallasSpec9forallSepEbb
 
 // COM: Declarations are created and labeled with MD-nodes
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] noundef double [[bv:@pallas.boundVar.[0-9]+]](ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] noundef double @"pallas.boundVar noundef double"(ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
 // CHECK-DAG: declare !pallas.specLib [[exMD:![0-9]+]] i1 @pallas.exists(i1, i1)
 // CHECK-DAG: [[exMD]] = !{!"pallas.exists"}
@@ -21,7 +21,7 @@
 // CHECK-DAG: call i1 @pallas.exists(
 // CHECK-DAG: call i1 @pallas.forall(
 // CHECK-DAG: call i1 @pallas.forallSep(
-// CHECK-DAG: call noundef double [[bv]](
+// CHECK-DAG: call noundef double @"pallas.boundVar noundef double"(
 
 
 /*@

@@ -5,8 +5,8 @@
 // CHECK-DAG: [[sLit:@[^ ]+]] = private unnamed_addr constant [2 x i8] c"x\00"
 
 // COM: Declarations are created and labeled with MD-nodes
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] double [[bvD:@pallas.boundVar.[0-9]+]](ptr)
-// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] i64 [[bvI:@pallas.boundVar.[0-9]+]](ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] double [[bvD:@"pallas.boundVar double"]](ptr)
+// CHECK-DAG: declare !pallas.specLib [[bvMD:![0-9]+]] i64 [[bvI:@"pallas.boundVar i64"]](ptr)
 // CHECK-DAG: [[bvMD]] = !{!"pallas.boundVar"}
 // CHECK-DAG: declare !pallas.specLib [[exMD:![0-9]+]] i1 @pallas.exists(i1, i1)
 // CHECK-DAG: [[exMD]] = !{!"pallas.exists"}

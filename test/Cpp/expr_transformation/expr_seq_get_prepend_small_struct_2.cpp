@@ -8,16 +8,16 @@
 // CHECK-NOT: struct.pallasSpec::seq
 
 // COM: Check that declaration is present
-// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] { i64, i32 } @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0), i64 noundef)
-// CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0), i64, i32, ptr noundef byval(%pallas.seq.0))
+// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] { i64, i32 } @"pallas.seq.get %class.ColorfulClass_{ i64, i32 }"(ptr noundef byval(%"pallas.seq.%class.ColorfulClass"), i64 noundef)
+// CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @"pallas.seq.prepend %class.ColorfulClass_i64,i32"(ptr sret(%"pallas.seq.%class.ColorfulClass"), i64, i32, ptr noundef byval(%"pallas.seq.%class.ColorfulClass"))
 
 // COM: Check that the metadata-annotations are present
 // CHECK-DAG: [[getMD]] = !{!"pallas.seq.get"}
 // CHECK-DAG: [[preMD]] = !{!"pallas.seq.prepend"}
 
 // COM: Check that the spec-functions are called
-// CHECK-DAG: call void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0) %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}})
-// CHECK-DAG: call { i64, i32 } @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
+// CHECK-DAG: call void @"pallas.seq.prepend %class.ColorfulClass_i64,i32"(ptr sret(%"pallas.seq.%class.ColorfulClass") %{{[0-9]+}}, i64 %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr noundef byval(%"pallas.seq.%class.ColorfulClass") %{{[0-9]+}})
+// CHECK-DAG: call { i64, i32 } @"pallas.seq.get %class.ColorfulClass_{ i64, i32 }"(ptr noundef byval(%"pallas.seq.%class.ColorfulClass") %{{[0-9]+}}, i64 noundef 0)
 #include <cstdint>
 
 class ColorfulClass {

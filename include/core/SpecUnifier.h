@@ -35,26 +35,27 @@ namespace sourcespec2ir
          */
         enum SpecLibElement
         {
-            Imply,     // Implication
-            ScAnd,     // Short-circuting and
-            ScOr,      // Short-circuting or
-            SepConj,   // Separating conjunction
-            Old,       // Old value of variable
-            Result,    // Result in fucntion contract
-            BoundVar,  // Bound variable of a quantifier
-            Exists,    // Existential quantifier
-            Forall,    // Universal quantifier
-            ForallSep, // Universal quantifier with separating conjunction
-            FracOf,    // Construct fraction from two ints
-            Perm,      // Assert permission over memory location
+            Imply,          // Implication
+            ScAnd,          // Short-circuting and
+            ScOr,           // Short-circuting or
+            SepConj,        // Separating conjunction
+            Old,            // Old value of variable
+            Result,         // Result in fucntion contract
+            BoundVar,       // Bound variable of a quantifier
+            Exists,         // Existential quantifier
+            Forall,         // Universal quantifier
+            ForallSep,      // Universal quantifier with separating conjunction
+            FracOf,         // Construct fraction from two ints
+            Perm,           // Assert permission over memory location
             PtrBlockLength, // Length pointer-block
             PtrBlockOffset, // Offset in pointer block
-            PtrLength, // Size of valid locations after the given pointer
-            SeqNew,    // New sequence
-            SeqSize,   // Size of sequence
-            SeqGet,    // Get element from sequence
-            SeqPrepend,// Prepend element to sequence
-            SeqEquals  // Equality of two sequences
+            PtrLength,      // Size of valid locations after the given pointer
+            Unfolding,      // Construct for temporarily unfolding a predicate
+            SeqNew,         // New sequence
+            SeqSize,        // Size of sequence
+            SeqGet,         // Get element from sequence
+            SeqPrepend,     // Prepend element to sequence
+            SeqEquals       // Equality of two sequences
         };
 
         SpecUnifier(const bool printDebugInfo);
@@ -106,16 +107,16 @@ namespace sourcespec2ir
         /*
          * Functions that are used to transform a specific call to the source
          * specification-library into a call to the unified specification library.
-         * 
-         * The default implementation of these functions performs a 1:1 mapping 
-         * of the source-language specific call to a call to the unified 
-         * specification function (i.e. the called function is replaced and the 
-         * arguments of the old call are used as arguments for the new call 
-         * (in the same order) and the attributes that are required by the 
+         *
+         * The default implementation of these functions performs a 1:1 mapping
+         * of the source-language specific call to a call to the unified
+         * specification function (i.e. the called function is replaced and the
+         * arguments of the old call are used as arguments for the new call
+         * (in the same order) and the attributes that are required by the
          * unified sepc-ob are added).
-         * 
-         * In cases where a more elaborate transformation is required, the 
-         * source-language specific specialization of the SpecUnifier can 
+         *
+         * In cases where a more elaborate transformation is required, the
+         * source-language specific specialization of the SpecUnifier can
          * override these functions to implement a custom unification-startegy,
          */
         virtual llvm::CallInst *transformImply(llvm::CallInst &oldCall);
@@ -148,6 +149,8 @@ namespace sourcespec2ir
 
         virtual llvm::CallInst *transformPtrLength(llvm::CallInst &oldCall);
 
+        virtual llvm::CallInst *transformUnfolding(llvm::CallInst &oldCall);
+
         virtual llvm::CallInst *transformSeqNew(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformSeqSize(llvm::CallInst &oldCall);
@@ -179,20 +182,19 @@ namespace sourcespec2ir
         llvm::Function *getUSpecImply();
 
         /**
-         * Returns pointer to the unified specification-function for 
+         * Returns pointer to the unified specification-function for
          * the short-circuting and-operator.
          */
         llvm::Function *getUSpecScAnd();
 
-        
         /**
-         * Returns pointer to the unified specification-function for 
+         * Returns pointer to the unified specification-function for
          * the short-circuting or-operator.
          */
         llvm::Function *getUSpecScOr();
 
         /**
-         * Returns pointer to the unified specification-function for 
+         * Returns pointer to the unified specification-function for
          * the separating conjunction.
          */
         llvm::Function *getUSpecSepConj();
@@ -201,7 +203,7 @@ namespace sourcespec2ir
          * Returns pointer to the unified specification-function for the
          * \old-construct of the given type.
          */
-        llvm::Function *getUSpecOld(const IRTypeRepresentation &argRepr, 
+        llvm::Function *getUSpecOld(const IRTypeRepresentation &argRepr,
                                     const IRTypeRepresentation &retRepr);
 
         /**
@@ -247,13 +249,20 @@ namespace sourcespec2ir
         llvm::Function *getUSpecPerm();
 
         /**
-         * Return pointer to the unified specification-functions 
+         * Return pointer to the unified specification-functions
          * regarding validity of pointers
          */
         llvm::Function *getUSpecPtrBlockLength();
         llvm::Function *getUSpecPtrBlockOffset();
         llvm::Function *getUSpecPtrLength();
-        
+
+        /**
+         * Returns a pointer to the unified specification-function for the
+         * 'unfolding' construct for predicates.
+         */
+        llvm::Function *getUSpecUnfolding(const IRTypeRepresentation &retRepr,
+                                          const IRTypeRepresentation &argRepr);
+
         /**
          * Returns pointer to the unified specification-function for creating
          * empty sequences with the given content type.
@@ -269,21 +278,21 @@ namespace sourcespec2ir
         /**
          * Returns a pointer to the unified specification-function for accessing
          * an element of a sequence with the given content-type.
-         * The representation of the returned element is specified through the 
-         * provided type-representation. 
+         * The representation of the returned element is specified through the
+         * provided type-representation.
          */
-        llvm::Function *getUSpecSeqGet(llvm::Type *type, 
-            const IRTypeRepresentation &retRepr);
+        llvm::Function *getUSpecSeqGet(llvm::Type *type,
+                                       const IRTypeRepresentation &retRepr);
 
         /**
          * Returns a pointer to the unified specification-function for
          * prepending an element to a sequence with the given content type.
-         * The representation of the prepended element is specified through 
-         * the passed IRTypeRepresentation. 
+         * The representation of the prepended element is specified through
+         * the passed IRTypeRepresentation.
          */
-        llvm::Function *getUSpecSeqPrepend(llvm::Type *type, 
-            const IRTypeRepresentation &argRepr);
-        
+        llvm::Function *getUSpecSeqPrepend(llvm::Type *type,
+                                           const IRTypeRepresentation &argRepr);
+
         /**
          * Returns a pointer to the unified specification-function for
          * the equality-operator for sequences with the given content type.
@@ -308,55 +317,54 @@ namespace sourcespec2ir
          */
 
         /**
-         * Applies the attributes from the given IRTypeRepresentation to the 
+         * Applies the attributes from the given IRTypeRepresentation to the
          * given function.
          * If the function returns by sret-parameter, the attributes are applied
-         * to the parameter, otherwise they are applied to the return-value. 
+         * to the parameter, otherwise they are applied to the return-value.
          */
-        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
-            llvm::Function *func);
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr,
+                               llvm::Function *func);
 
         /**
-         * Applies the attributes from the given IRTypeRepresentation to the 
+         * Applies the attributes from the given IRTypeRepresentation to the
          * given function.
-         * The given argIdx specifies to which arguments of the function the 
-         * attributes are applied. 
+         * The given argIdx specifies to which arguments of the function the
+         * attributes are applied.
          */
-        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
-            llvm::Function *func, unsigned int argIdx);
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr,
+                                  llvm::Function *func, unsigned int argIdx);
 
         /**
-         * Applies the attributes from the given IRTypeRepresentation to the 
+         * Applies the attributes from the given IRTypeRepresentation to the
          * given function-call.
          * If the function returns by sret-parameter, the attributes are applied
-         * to the parameter, otherwise they are applied to the return-value. 
+         * to the parameter, otherwise they are applied to the return-value.
          */
-        void applyAttrToReturn(const IRTypeRepresentation &retRepr, 
-            llvm::CallInst *call);
+        void applyAttrToReturn(const IRTypeRepresentation &retRepr,
+                               llvm::CallInst *call);
 
         /**
-         * Applies the attributes from the given IRTypeRepresentation to the 
+         * Applies the attributes from the given IRTypeRepresentation to the
          * given function-call.
-         * The given argIdx specifies to which arguments of the call the 
-         * attributes are applied. 
+         * The given argIdx specifies to which arguments of the call the
+         * attributes are applied.
          */
-        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr, 
-            llvm::CallInst *call, unsigned int argIdx);
+        void applyAttrToParamRepr(const IRTypeRepresentation &pRepr,
+                                  llvm::CallInst *call, unsigned int argIdx);
 
         /**
-         * Helper that adds the sret attribute to the argument with the given 
-         * index of the given function. 
+         * Helper that adds the sret attribute to the argument with the given
+         * index of the given function.
          */
         void addSret(
-            llvm::CallInst* call, unsigned int argNo, llvm::Type *rType);
+            llvm::CallInst *call, unsigned int argNo, llvm::Type *rType);
 
         /**
-         * Helper that adds the byval attribute to the argument with the given 
-         * index of the given function. 
+         * Helper that adds the byval attribute to the argument with the given
+         * index of the given function.
          */
         void addByVal(
-            llvm::CallInst* call, unsigned int argNo, llvm::Type *type);
-
+            llvm::CallInst *call, unsigned int argNo, llvm::Type *type);
 
     private:
         /**
@@ -373,9 +381,10 @@ namespace sourcespec2ir
 
         // TODO: Implement these as maps instead
         llvm::SmallVector<std::tuple<
-            IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>> specOld;
+            IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>>
+            specOld;
 
-        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function*>> specResult;
+        llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specResult;
 
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specBoundVar;
 
@@ -393,18 +402,24 @@ namespace sourcespec2ir
 
         llvm::Function *specPtrBlockOffset = nullptr;
 
-        llvm::Function *specPtrLength  = nullptr;
+        llvm::Function *specPtrLength = nullptr;
+
+        llvm::SmallVector<std::tuple<
+            IRTypeRepresentation, IRTypeRepresentation, llvm::Function *>>
+            specUnfolding;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqNew;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSize;
 
         llvm::SmallVector<std::tuple<
-            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqGet;
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>>
+            specSeqGet;
 
         // llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqPrepend;
         llvm::SmallVector<std::tuple<
-            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqPrepend;
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>>
+            specSeqPrepend;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
 
@@ -437,13 +452,13 @@ namespace sourcespec2ir
          * Helper to generate the functions of the unified specification library
          */
         llvm::Function *createSpecLibFunction(
-            const std::string &name, 
+            const std::string &name,
             llvm::Type *returnType,
             llvm::SmallVector<llvm::Type *> argTypes);
         llvm::Function *createSpecLibFunction(
-            const std::string &name, 
+            const std::string &name,
             llvm::Type *returnType,
-            llvm::SmallVector<llvm::Type *> argTypes, 
+            llvm::SmallVector<llvm::Type *> argTypes,
             const std::string &labelName);
 
         /**
@@ -465,7 +480,6 @@ namespace sourcespec2ir
          * Returns pointer to the void-type in the current context.
          */
         inline llvm::Type *getVoidTy();
-
     };
 
 }

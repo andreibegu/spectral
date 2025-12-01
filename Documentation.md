@@ -6,6 +6,7 @@ The ```/doc/```-folder contains documentation of the framework for translating s
 - [Adding a new specification-construct](doc/Extend_SpecLib.md)
 
 ## Specification libraries & formats
+- [Overview of the source-level specification format](doc/Spec_Format.md)
 - [IR-level specification format](doc/UnifiedSpecLib.md)
 - [C specification library](doc/C_Spec_Lib.md)
 - [C++ specification library](doc/Cpp_Spec_Lib.md)

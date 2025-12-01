@@ -6,8 +6,8 @@
 // COM: Check that only two types are generated (i.e. the float-type is not generated twice)
 // CHECK-NOT: %pallas.seq.2
 
-// CHECK-DAG: %pallas.seq.{{[0-9]+}} = type { float, i64, i64, i64 }
-// CHECK-DAG: %pallas.seq.{{[0-9]+}} = type { double, i64, i64, i64 }
+// CHECK-DAG: %pallas.seq.float = type { float, i64, i64, i64 }
+// CHECK-DAG: %pallas.seq.double = type { double, i64, i64, i64 }
 
 /*@
 declare #defSeq<Float>;

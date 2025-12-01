@@ -165,19 +165,29 @@ namespace sourcespec2ir
 
         /**
          * Modifies the debug-locations of the instructions in the generated
-         * wrapper-functions to represent the locations from the original
-         * source-file.
+         * wrapper-functions and predicate definitions to represent the
+         * locations from the original source-file.
          * Modifies irModule and uses the passed matched specifications
          * to find the wrapper-functions and to determine the appropriate scopes.
          */
-        void rewriteWrapperLocations(const MatchedSpecifications &matchedSpecs);
+        void rewriteSpecLocations(const MatchedSpecifications &matchedSpecs,
+                                  llvm::ArrayRef<SpecPredicate> predDefs);
 
         /**
          * Modifies the debug-locations of the instructions in the passed
-         * wrapper function to represent the location in the source file.
+         * function to represent the location in the source file.
          *
          * The passed compilation-unit and scope-file are used as the
-         * cu and scope of the wrapper-function.
+         * cu and scope of the function.
+         */
+        void rewriteSpecLocations(
+            llvm::Function &irFunc, const SrcLocation &exprStartLoc,
+            std::pair<size_t, size_t> srcOffset,
+            llvm::DICompileUnit *cu, llvm::DIFile *scopeFile,
+            llvm::DIScope *scope);
+
+        /**
+         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions 
          */
         void rewriteWrapperLocations(
             const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
@@ -221,6 +231,13 @@ namespace sourcespec2ir
          */
         void markWrapperFunctionsAsUsed(llvm::Module &module,
                                         llvm::ArrayRef<SrcWrapperFunction *> wrappers);
+
+        /**
+         * Adds a metadata-marker to every function that is used as a
+         * predicate definition.
+         */
+        void markPredicateDefs(llvm::Module &module,
+                               llvm::ArrayRef<SpecPredicate> preds);
 
         /**
          * Generates a MDTuple that encodes a source-location.

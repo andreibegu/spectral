@@ -122,7 +122,7 @@ This tuple contains:
 - followed by references to the MD-nodes that encode the individual specification statements. 
 
 Individual specification-statements are encoded as MD-nodes (`!123`) that consist of
-- a MD-string that identifies the type of the statement ( `!"pallas.assume"` or `!"pallas.assert"` )
+- a MD-string that identifies the type of the statement ( `!"pallas.assume"`, `!"pallas.assert"`, `!"pallas.fold"` or `!"pallas.unfold"` )
 - a reference to a MD-tuple that encodes the location in the source-file
 - a pointer to the function that wraps the expression of the specification-statement (`@_Z13PALLAS_SPEC_0iii`)
 - A list of references to the `!DILocalVariable`s that represent the variables that are available in the expression (`!111`, `!113` and `!115`). The order of the variable-references corresponds to the order in the wrapper-function's argument list. 
@@ -130,6 +130,8 @@ Individual specification-statements are encoded as MD-nodes (`!123`) that consis
 **Supported constructs:**
 - `assert EXPR ;`
 - `assume EXPR ;`
+- `fold EXPR ;`
+- `unfold EXPR ;`
 
 ### Example (C++):
 
@@ -171,6 +173,35 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 {
 !123 = !{!"pallas.srcLoc", i64 3, i64 5, i64 5, i64 5, !100}
 !124 = !{!"pallas.assume", !125, ptr @_Z13PALLAS_SPEC_0iii, !111, !113, !115}
 ```
+
+## Predicate definitions:
+A predicate definition is represented as regular function definition that is marked by a metadata-node with id `!pallas.predDef`.
+This node contains a boolean flag that specifies if the predicate is an inline predicate or not.
+
+### Example (C):
+
+**Source definition:**
+```
+/*@
+predicate wPred(int *p) := _sep(p != NULL, _Perm(p, _write));
+@*/
+```
+
+**IR definition:**
+```
+define zeroext i1 @wPred(ptr noundef %0) #0 !dbg !44 !pallas.predDef !45 {
+  %2 = alloca %pallas.fracT, align 8
+  %3 = icmp ne ptr %0, null, !dbg !48
+  %4 = call i1 @pallas.perm(ptr noundef %0, ptr noundef byval(%pallas.fracT) %2), !dbg !50
+  %5 = call i1 @pallas.sepConj(i1 %3, i1 %4), !dbg !51
+  ret i1 %5, !dbg !47
+}
+
+[...]
+
+!45 = !{i1 false}
+```
+
 
 ## Ghost-code
 **Not supported yet**
@@ -249,9 +280,31 @@ See the examples of the previous sections for reference.
 # Unified specification-library
 The unified specification-library contains a set of LLVM-IR function- and type declarations that are used to encode expressions with specification-specific constructs.  
 
-E.g. a reference to the old value of a memory location (`\old(&x)`) is represented by a call to the corresponding specification-function on the IR-level (`call i32 @pallas.old.0(ptr %0)`). 
+E.g. a reference to the old value of an expression (`\old(&x)`) is represented by a call to the corresponding specification-function on the IR-level (`call i32 @"pallas.old i32_i32"(i32 %0)`). 
 
 Because frontends for different source-languages use different specification-librarys respectively, these source-language specific librarys are transformed into the unified specification-library which is the common specification-format for the backends.  
+
+## Function Naming
+In general, the names of the functions in the specification-library do not matter. The functions can by identified by using the metadata-node that is labeled with `!pallas.specLib` and that is attached to the function. 
+
+Even though the concrete names do not matter, we use the following naming conventions for easier readability:
+- The name starts with am identifier that specifies the type of the specification construct. This identifier is the same as in the `!pallas.specLib` metadata-node that is attached to the function
+- This identifier is followed by a suffix that is unique to the signature of the concrete function. In general, this means that the name includes the function signature. In the following, this suffix is represented as `SFX`.
+
+This naming scheme is used to ensure that functions are not incorreclty merged when LLVM-IR with specifications is linked together from multiple files. 
+
+
+
+### Example: 
+The function used to repsesent the `\old` constructs for expressions of type `i32` is named as follows:
+```
+declare !pallas.specLib !42 i32 @"pallas.old i32_i32"(i32)
+
+!42 = !{!"pallas.old"}
+```
+Where 
+- `pallas.old` is the identifier and 
+- ` i32_i32` is the signature suffix
 
 ## Type-representations
 When values are passed to- or returned from functions in the specification-library, 
@@ -287,8 +340,7 @@ and the type-representation of the returned struct would be ```{ i64, i64, doubl
 In the following sections, we use the notation ```<<T>>``` to represent a type-representation 
 of type ```T```.
 
-## IR-Representaion of spec-lib:
-- The names of the function in the specification-library should not matter. The functions can by identified by using the metadata-node that is labeled with `!pallas.specLib`.
+## IR-Representation of spec-lib:
 
 ### Logical Implication
 Models a boolean implication (i.e. the first argument implies the second argument). 
@@ -333,16 +385,15 @@ To be used in the ensures-clause. References the value of the parameter
 evaluated on the heap-state before the functions execution. 
 
 For a type `T`, specification-functions of the following shape are constructed, 
-where `<<Tp>>` is the type-represnetation that is used to pass a value of type `T`, and 
+where `<<Tp>>` is the type-representation that is used to pass a value of type `T`, and 
 `<<Tr>>` is the type-representation that is used to return a value of type `T`.
-The names of the functions are generated by incrementing a counter X.
 
 ```
 ; If the result is returned as a normal return-value
-declare !pallas.specLib !143 <<Tr>> @pallas.old.X(<<Tp>>)
+declare !pallas.specLib !143 <<Tr>> @"pallas.old SFX"(<<Tp>>)
 
 ; If the result is returned in a parameter
-declare !pallas.specLib !143 void @pallas.old.X(<<Tr>>, <<Tp>>)
+declare !pallas.specLib !143 void @"pallas.old SFX"(<<Tr>>, <<Tp>>)
 
 !143 = !{!"pallas.old"}
 ```
@@ -352,14 +403,13 @@ To be used in the ensures-clause of a function-contract.
 Returns the return-value of the function. 
 
 For every used representation `<<T>>` of a type `T`, a separate function is generated. 
-The names of the functions are generated by incrementing a counter X.
 
 ```
 ; If the result is returned as a regular return-value
-declare !pallas.specLib !129 <<T>> @pallas.result.X()
+declare !pallas.specLib !129 <<T>> @"pallas.result SFX"()
 
 ; If the result is returned in a parameter
-declare !pallas.specLib !129 void @pallas.result.X(<<T>>)
+declare !pallas.specLib !129 void @"pallas.result SFX"(<<T>>)
 
 !129 = !{!"pallas.result"}
 ```
@@ -372,14 +422,14 @@ variables are distinguished by the given string-constant that is passed as the a
 The function-names are generated by incrementing counter `X`.
 
 Names of bound variables are only unique for a given type, i.e. 
-`call float @pallas.boundVar.0(%0)` refers to a different bound variable than `call double @pallas.boundVar.1(%0)` even though both refer to string constant `%0`.
+`call float @"pallas.boundVar SFX1"(%0)` refers to a different bound variable than `call double @"pallas.boundVar SFX2"(%0)` even though both refer to string constant `%0`.
 
 ```
 ; If the result is returned as a regular return-value
-declare !pallas.specLib !163 <<T>> @pallas.boundVar.X(ptr)
+declare !pallas.specLib !163 <<T>> @"pallas.boundVar SFX"(ptr)
 
 ; If T refers to a struct-type
-declare !pallas.specLib !163 void @pallas.boundVar.X(<<T>>, ptr)
+declare !pallas.specLib !163 void @"pallas.boundVar SFX"(<<T>>, ptr)
 
 !163 = !{!"pallas.boundVar"}
 ```
@@ -473,6 +523,22 @@ declare !pallas.specLib !129 i64 @pallas.ptrLength(ptr noundef)
 !129 = !{!"pallas.ptrLength"}
 ```
 
+### Unfolding
+Temporarily unfolds a predicate while evaluating an expression.
+
+
+For a type `T`, specification-functions of the following shape are constructed where `<<Tp>>` is the type-representation that is used to pass a value of type `T`, and `<<Tr>>` is the type-representation that is used to return a value of type `T`.
+The function-names have a prefix of `pallas.unfolding` and contain the representations of the passed-and ret-type in their suffix to ensure correct behavior during linking.
+
+```
+; If the result is returned as a normal return-value
+declare !pallas.specLib !144 <<Tr>> @"pallas.unfolding SFX"(<<Tp>>)
+
+; If the result is returned in a parameter
+declare !pallas.specLib !144 void @"pallas.unfolding SFX"(<<Tr>>, <<Tp>>)
+!144 = !{!"pallas.unfolding"}
+```
+
 
 ### Sequence-type
 A sequence of content-type `T` is encoded as a struct. The first value of the 
@@ -487,18 +553,16 @@ function. The type-name is generated by incrementing a counter `X`.
 Encodes the creation of a new, empty sequence. 
 
 For every type of sequence (`%pallas.seq.Y`), a new function is generated.
-The function-names are generated by incrementing a counter `X`.
 ```
-declare !pallas.specLib !130 void @pallas.seq.new.X(ptr sret(%pallas.seq.Y))
+declare !pallas.specLib !130 void @"pallas.seq.new SFX"(ptr sret(%pallas.seq.Y))
 
 !130 = !{!"pallas.seq.new.X"}
 ```
 
 ### Size of sequence
 For every type of sequence (`%pallas.seq.Y`), a new function is generated.
-The function-names are generated by incrementing a counter `X`.
 ```
-declare !pallas.specLib !129 i64 @pallas.seq.size.X(ptr noundef byval(%pallas.seq.Y))
+declare !pallas.specLib !129 i64 @"pallas.seq.size SFX"(ptr noundef byval(%pallas.seq.Y))
 
 !129 = !{!"pallas.seq.size.X"}
 ```
@@ -508,14 +572,13 @@ Encodes accessing an element of a sequence at a given index.
 
 For every type of sequence (`%pallas.seq.Y` that contains elements of type `T`) 
 and representation od the content type (`<<T>>), a new function is generated.
-The function-names are generated by incrementing a counter `X`.
 
 ```
 ; If the element is returned as a regular return-value
-declare !pallas.specLib !129 <<T>> @pallas.seq.get.X(ptr noundef byval(%pallas.seq.Y), i64 noundef)
+declare !pallas.specLib !129 <<T>> @"pallas.seq.get SFX"(ptr noundef byval(%pallas.seq.Y), i64 noundef)
 
 ; If the element is returned in a parameter
-declare !pallas.specLib !129 void @pallas.seq.get.X(<<T>>, ptr noundef byval(%pallas.seq.Y), i64 noundef)
+declare !pallas.specLib !129 void @"pallas.seq.get SFX"(<<T>>, ptr noundef byval(%pallas.seq.Y), i64 noundef)
 
 !129 = !{!"pallas.seq.get"}
 ```
@@ -523,20 +586,18 @@ declare !pallas.specLib !129 void @pallas.seq.get.X(<<T>>, ptr noundef byval(%pa
 ### Prepend to sequence
 For every type of sequence (`%pallas.seq.Y` that contains elements of type `T`)
 and representation `<<T>>` of the content-type, a new function is generated.
-The function-names are generated by incrementing a counter `X`.
 
 ```
-declare !pallas.specLib !130 void @pallas.seq.prepend.X(ptr sret(%pallas.seq.Y), <<T>>, ptr noundef byval(%pallas.seq.Y))
+declare !pallas.specLib !130 void @"pallas.seq.prepend SFX"(ptr sret(%pallas.seq.Y), <<T>>, ptr noundef byval(%pallas.seq.Y))
 
-!130 = !{!"pallas.seq.prepend.X"}
+!130 = !{!"pallas.seq.prepend"}
 ```
 
 ### Equality of sequences
 For every type of sequence (`%pallas.seq.Y` that contains elements of type `T`), a new function is generated.
-The function-names are generated by incrementing a counter `X`.
 
 ```
-declare !pallas.specLib !130 i1 @pallas.seq.equals.X(ptr noundef byval(%pallas.seq.Y), ptr noundef byval(%pallas.seq.Y))
+declare !pallas.specLib !130 i1 @"pallas.seq.equals SFX"(ptr noundef byval(%pallas.seq.Y), ptr noundef byval(%pallas.seq.Y))
 
 !130 = !{!"pallas.seq.equals"}
 ```

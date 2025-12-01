@@ -4,8 +4,8 @@
 // RUN: %Spec2IR %s -lib %CSpecLib -m | %FileCheck %s
 
 // COM: Check that declarations are present
-// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] i32 @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0), i64 noundef)
-// CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0), i32, ptr noundef byval(%pallas.seq.0))
+// CHECK-DAG: declare !pallas.specLib [[getMD:![0-9]+]] i32 @"pallas.seq.get %struct.S_i32"(ptr noundef byval(%"pallas.seq.%struct.S"), i64 noundef)
+// CHECK-DAG: declare !pallas.specLib [[preMD:![0-9]+]] void @"pallas.seq.prepend %struct.S_i32"(ptr sret(%"pallas.seq.%struct.S"), i32, ptr noundef byval(%"pallas.seq.%struct.S"))
 
 
 // COM: Check that the metadata-annotations are present
@@ -13,8 +13,8 @@
 // CHECK-DAG: [[preMD]] = !{!"pallas.seq.prepend"}
 
 // COM: Check that the spec-functions are called with the corret attributes
-// CHECK-DAG: call void @pallas.seq.prepend.0(ptr sret(%pallas.seq.0) %{{[0-9]+}}, i32 {{%[0-9]+}}, ptr noundef byval(%pallas.seq.0) %{{[0-9]+}})
-// CHECK-DAG: call i32 @pallas.seq.get.0(ptr noundef byval(%pallas.seq.0) %{{[0-9]+}}, i64 noundef 0)
+// CHECK-DAG: call void @"pallas.seq.prepend %struct.S_i32"(ptr sret(%"pallas.seq.%struct.S") %{{[0-9]+}}, i32 {{%[0-9]+}}, ptr noundef byval(%"pallas.seq.%struct.S") %{{[0-9]+}})
+// CHECK-DAG: call i32 @"pallas.seq.get %struct.S_i32"(ptr noundef byval(%"pallas.seq.%struct.S") %{{[0-9]+}}, i64 noundef 0)
 #include <stdint.h>
 
 typedef struct S {

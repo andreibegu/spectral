@@ -131,6 +131,10 @@ namespace sourcespec2ir
             SpecParser::AssertStatementContext *ctx) override;
         std::any visitAssumeStatement(
             SpecParser::AssumeStatementContext *ctx) override;
+        std::any visitFoldStatement(
+            SpecParser::FoldStatementContext *ctx) override;
+        std::any visitUnfoldStatement(
+            SpecParser::UnfoldStatementContext *ctx) override;
 
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).

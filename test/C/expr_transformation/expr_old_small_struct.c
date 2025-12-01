@@ -5,12 +5,12 @@
 // RUN: %Spec2IR %s -lib %CSpecLib -m -lang C | %FileCheck %s
 
 // COM: Declaration is created and has two arguments
-// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] i64 @pallas.old.0(i64)
+// CHECK-DAG: declare !pallas.specLib [[oldMD:![0-9]+]] i64 @"pallas.old i64_i64"(i64)
 
 // COM: Declaration has MD-NODE
 // CHECK-DAG: [[oldMD]] = !{!"pallas.old"}
 // COM: Old-function is called
-// CHECK-DAG: call i64 @pallas.old.0(i64 {{%[0-9]+}})
+// CHECK-DAG: call i64 @"pallas.old i64_i64"(i64 {{%[0-9]+}})
 #include <stdint.h>
 
 typedef struct S {
