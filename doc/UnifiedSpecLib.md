@@ -477,9 +477,17 @@ declare !pallas.specLib !129 i64 @pallas.ptrLength(ptr noundef)
 
 ### Unfolding
 Temporarily unfolds a predicate while evaluating an expression.
-```
-declare !pallas.specLib !144 zeroext i1 @pallas.unfolding(noundef zeroext i1, noundef zeroext i1)
 
+
+For a type `T`, specification-functions of the following shape are constructed where `<<Tp>>` is the type-representation that is used to pass a value of type `T`, and `<<Tr>>` is the type-representation that is used to return a value of type `T`.
+The function-names have a prefix of `pallas.unfolding` and contain the representations of the passed-and ret-type in their suffix to ensure correct behavior during linking.
+
+```
+; If the result is returned as a normal return-value
+declare !pallas.specLib !144 <<Tr>> @pallas.unfoldingX(<<Tp>>)
+
+; If the result is returned in a parameter
+declare !pallas.specLib !144 void @pallas.unfoldingX(<<Tr>>, <<Tp>>)
 !144 = !{!"pallas.unfolding"}
 ```
 

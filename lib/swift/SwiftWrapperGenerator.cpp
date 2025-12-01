@@ -221,7 +221,6 @@ namespace sourcespec2ir
             stream << "@_optimize(none) \n";
             stream << "func _perm(_ loc: " << type << ", _ f: Frac) -> Bool "
                    << "{ fatalError() } \n";
-            // TODO: Generate default-implementation for unfolding of type Bool
         }
 
         // Determine for which types the _bv-functions have to be generated.

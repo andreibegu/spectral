@@ -53,6 +53,13 @@ Where:
 - ```Frac(X, Y)``` encodes a fraction of ```X \ Y```.
 - Fractions are represented by the type ```Frac```
 
+### Predicates
+Temporarily unfold a predicate while evaluating an expression:
+```
+TODO
+``` 
+where ```T``` is the type of the variable, ```PRED``` is the predicate and ```EXPR``` is the expression.
+
 ### Sequence-ADT
 To use sequences that contain elements of type ```T```, the following declares-clause must be added:
 ```
