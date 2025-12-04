@@ -9,6 +9,7 @@
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Type.h>
 
 namespace sourcespec2ir
@@ -18,7 +19,8 @@ namespace sourcespec2ir
         const std::string srcInFile,
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
-        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
+        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers),
+          demangler()
     {
     }
 
@@ -92,15 +94,19 @@ namespace sourcespec2ir
         // Get src-representation of the type using default-implementation
         auto srcType = SourceWrapperGenerator::getSrcReprOfType(type);
 
+        auto demangledPrefix = demangler.demangle(srcType.prefix);
+        srcType.prefix = demangledPrefix;
+
         // Manually handle some cases where the type is not correctly resolved.
         // This is only required in simple examples, where the used type is not
         // used in the code itself. (e.g. Bool is used as a return type,
         // but the code does not contain any local variables of type Bool.).
+        /*
         if (srcType.prefix == "$sytD")
             srcType.prefix = "Void";
         if (srcType.prefix == "$sSbD")
             srcType.prefix = "Bool";
-
+        */
         return srcType;
     }
 
@@ -126,6 +132,15 @@ namespace sourcespec2ir
         SrcTypeRepresentation &baseType, const std::string &typedefName)
     {
         return;
+    }
+
+    void SwiftWrapperGenerator::addOtherQualifier(
+        SrcTypeRepresentation &baseType, const llvm::DIDerivedType &type)
+    {
+        if (type.getTag() == llvm::dwarf::DW_TAG_member)
+            return;
+
+        SourceWrapperGenerator::addOtherQualifier(baseType, type);
     }
 
     void SwiftWrapperGenerator::modifySrcWithWrappers(std::list<SrcLine> &srcLines)
