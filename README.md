@@ -86,7 +86,7 @@ Install the following dependencies (assuming a Ubuntu-based system):
 - llvm-17-dev
 - clang-17
 
-If you want to use the Swift-frontend, make sure that Swift 6.0 is installed and available on your PATH.
+If you want to use the Swift-frontend, make sure that Swift 6.0 is installed and available on your PATH. Additionally, the `swift-demangle` tool must be available on PATH (this is usually included in the default-installation of Swift).
 
 ### Build using CMake and Ninja: 
 Run the following command to generate the ninja build-files in the ```/.build```-folder:
