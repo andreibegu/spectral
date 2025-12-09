@@ -337,7 +337,8 @@ namespace sourcespec2ir
     SrcTypeRepresentation SourceWrapperGenerator::getSrcReprOfType(
         const llvm::DIType *type)
     {
-        if (type == nullptr) {
+        if (type == nullptr)
+        {
             return getVoid();
         }
 
@@ -363,8 +364,23 @@ namespace sourcespec2ir
         }
 
         if (auto *cType = llvm::dyn_cast<llvm::DICompositeType>(type))
+        {
             if (cType->getTag() == llvm::dwarf::DW_TAG_array_type)
                 return getSrcReprOfArrType(cType);
+
+            // Special case for compiler generated 'wrappers' around a type
+            // i.e. unnamed composite types that only contain a single element.
+            if (cType->getTag() == llvm::dwarf::DW_TAG_structure_type &&
+                cType->getName().empty() &&
+                cType->getElements().size() == 1)
+            {
+                if (auto *wrappedType = llvm::dyn_cast<llvm::DIType>(
+                        *cType->getElements().begin()))
+                {
+                    return getSrcReprOfType(wrappedType);
+                }
+            }
+        }
 
         // Assume that the DIType is a plain DIType and just get the name
         auto typeName = type->getName().str();

@@ -1,6 +1,7 @@
 # Library that contains the C++-specific aspects of the specification translation
 add_library(spec2ir_Swift STATIC
     SwiftCompilerDriver.cpp
+    SwiftDemangler.cpp
     SwiftWrapperGenerator.cpp
     SwiftSpecTransformer.cpp
     SwiftSpecUnifier.cpp
