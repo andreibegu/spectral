@@ -3,6 +3,8 @@
 build/
 grammar/.antlr/
 grammar/demo/.antlr/
+# Compiler cache
+sccache.log
 # Local temporary/ working directory
 .tmp
 # Local files used for testing
