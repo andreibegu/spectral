@@ -30,6 +30,10 @@ RETURNS: 'returns';
 PREDICATE: 'predicate';
 PRED_DEF: ':=';
 INLINE: 'inline';
+GHOST: 'ghost';
+METHOD: 'method';
+FUNCTION: 'function';
+
 
 PRED_SIG_START: '(';
 PRED_SIG_END: ')';

@@ -23,6 +23,8 @@ wrapperLocationMarker: SPEC_START 'wrapper location' specExpression? SPEC_EXPR_E
 
 predicateDefBlock: SPEC_START predicateDef+ SPEC_END;
 
+ghostDefBlock: SPEC_START ghostDef SPEC_END;
+
 specContractClause
     : ('requires' specExpression SPEC_EXPR_END) # requiresClause
     | ('ensures'  specExpression SPEC_EXPR_END) # ensuresClause
@@ -60,9 +62,15 @@ specDeclaration
 
 predicateDef: INLINE? 'predicate' predName PRED_SIG_START predicateSig PRED_SIG_END ':=' specExpression SPEC_EXPR_END ;
 
+ghostDef: 'ghost' 
+    type=('method' | 'function') 
+    contr=specContractClause+
+    impl=ghostImpl;
+
 predName: (~PRED_SIG_START)+;
 predicateSig: (~PRED_SIG_END)+;
 argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+ ; 
 specExpression: (~SPEC_EXPR_END)+ ;
+ghostImpl: (~SPEC_END)+;
 
 nonSpec: (~(SPEC_START | SPEC_END))*;
