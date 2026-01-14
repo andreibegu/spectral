@@ -1,21 +1,41 @@
 #include "SourceSpecMatcher.h"
+
+#include "FileUtils.h"
 #include "PallasException.h"
 #include "ParsingUtils.h"
-#include "FileUtils.h"
+#include "SpecLexer.h"
 
 #include <cassert>
 #include <optional>
 
+#include <llvm/ADT/StringExtras.h>
+
+namespace
+{
+    void printGhostMethodMatchingInfo(const sourcespec2ir::SrcRange &loc,
+                                      std::string name, std::string type)
+    {
+        llvm::outs() << "Found ghost " << type << " " << name << " at "
+                     << loc.getStartLine() << "::" << loc.getStartCol()
+                     << " - "
+                     << loc.getEndLine() << "::" << loc.getEndCol()
+                     << "\n";
+    }
+}
+
 namespace sourcespec2ir
 {
-    SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                         const std::string file,
-                                         llvm::Module *irModule,
-                                         bool matchExternalOnly)
+    SourceSpecMatcher::SourceSpecMatcher(
+        SpecParser::FileContext *specParseTree,
+        const std::string file,
+        llvm::Module *irModule,
+        const bool printMatchingInfo,
+        bool matchExternalOnly)
         : specParseTree(specParseTree),
           file(file),
           md5Checksum(utils::getChecksumForFile(file)),
           irModule(irModule),
+          printMatchingInfo(printMatchingInfo),
           matchExternalOnly(matchExternalOnly)
     {
     }
@@ -110,6 +130,47 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitGhostDefBlock(
+        SpecParser::GhostDefBlockContext *ctx)
+    {
+        // Safety-check that the state of the object is valid
+        assert(ghostContract == nullptr);
+
+        // Construct a new ghost function:
+        auto defCtx = ctx->ghostDef();
+        auto srcLoc = utils::getLocFromCtx(ctx, file, md5Checksum);
+        auto defLoc = utils::getGhostImplStartLoc(*defCtx->impl, file,
+                                                  md5Checksum);
+        bool isFunction = defCtx->type->getType() == SpecLexer::FUNCTION;
+        auto definition = utils::getCtxAsStr(*defCtx->impl);
+        std::string name = getGhostMethodName(definition);
+        auto ghostMethod = std::make_unique<GhostMethod>(
+            isFunction, name, definition, srcLoc, defLoc);
+
+        if (printMatchingInfo)
+            printGhostMethodMatchingInfo(
+                srcLoc, name, isFunction ? "function" : "method");
+
+        auto *gMethodPtr = ghostMethod.get();
+        matchedSpecs->ghostMethods.push_back(std::move(ghostMethod));
+
+        auto contractCtx = defCtx->contr;
+        if (contractCtx == nullptr)
+            return 0;
+
+        // Construct contract for ghost function:
+        auto contractLoc = utils::getLocFromCtx(contractCtx, file, md5Checksum);
+        ghostContract = std::make_unique<MatchedGhostContract>(
+            gMethodPtr, contractLoc);
+
+        // Add all statements to the contract by traversing the children
+        for (auto c : contractCtx->specContractClause())
+            visit(c);
+        matchedSpecs->matchedGhostContracts.push_back(std::move(ghostContract));
+
+        return 0;
+    }
+
     std::any SourceSpecMatcher::visitPureFlag(SpecParser::PureFlagContext *ctx)
     {
         // Set pure-flag of contract to true
@@ -155,13 +216,22 @@ namespace sourcespec2ir
         ContractStatementType type, SpecParser::SpecExpressionContext *expr,
         const SrcRange &loc)
     {
-        if (!contract)
-            assert("No contract set while adding statement");
         auto exprStr = utils::getCtxAsStr(*expr);
-        auto extContr = contract->type == External;
-        auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr), extContr);
-        contract->addStatement(std::move(stmnt));
+        if (contract && !ghostContract)
+        {
+            auto extContr = contract->type == External;
+            auto stmnt = std::make_unique<MatchedFContractStatement>(
+                type, exprStr, loc, getExprStartLoc(*expr), extContr);
+            contract->addStatement(std::move(stmnt));
+        }
+        else if (ghostContract && !contract)
+        {
+            auto stmnt = std::make_unique<MatchedFContractStatement>(
+                type, exprStr, loc, getExprStartLoc(*expr), false);
+            ghostContract->addStatement(std::move(stmnt));
+        }
+        else
+            throw utils::PallasException("Failed to add contract statement!");
     }
 
     std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(
@@ -253,7 +323,7 @@ namespace sourcespec2ir
     }
 
     std::any SourceSpecMatcher::visitUnfoldStatement(
-        SpecParser::UnfoldStatementContext *ctx) 
+        SpecParser::UnfoldStatementContext *ctx)
     {
         addToStmntBlock(Unfold, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
@@ -281,5 +351,22 @@ namespace sourcespec2ir
         const SpecParser::SpecExpressionContext &exprCtx)
     {
         return utils::getExprStartLoc(exprCtx, file, md5Checksum);
+    }
+
+    std::string SourceSpecMatcher::getGhostMethodName(llvm::StringRef impl)
+    {
+        // Get index of first '('
+        auto endIdx = impl.find('(');
+        if (endIdx == llvm::StringRef::npos)
+            return "";
+        // Drop '(' and everything after
+        auto prefix = impl.substr(0, endIdx).trim();
+        // Split on whitepace
+        llvm::SmallVector<llvm::StringRef> fragments;
+        llvm::SplitString(prefix, fragments);
+        if (fragments.empty())
+            return "";
+        // Return last fragment
+        return fragments.back().str();
     }
 }

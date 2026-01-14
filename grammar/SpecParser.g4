@@ -9,7 +9,8 @@ spec
     | specStatementBlock 
     | specLoopInvariantBlock 
     | wrapperLocationMarker
-    | predicateDefBlock;
+    | predicateDefBlock
+    | ghostDefBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -62,10 +63,11 @@ specDeclaration
 
 predicateDef: INLINE? 'predicate' predName PRED_SIG_START predicateSig PRED_SIG_END ':=' specExpression SPEC_EXPR_END ;
 
-ghostDef: 'ghost' 
-    type=('method' | 'function') 
-    contr=specContractClause+
+ghostDef: 'ghost' type=('method' | 'function') 
+    contr=ghostContract?
     impl=ghostImpl;
+    
+ghostContract: specContractClause+;
 
 predName: (~PRED_SIG_START)+;
 predicateSig: (~PRED_SIG_END)+;

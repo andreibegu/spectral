@@ -98,8 +98,9 @@ namespace sourcespec2ir
         const std::string &srcFilePath, llvm::Module *irModule,
         llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo,
         bool matchExternalOnly)
-        : SourceSpecMatcher(specParseTree, srcFilePath, irModule, matchExternalOnly),
-          printMatchingInfo(printMatchingInfo), fam(fam)
+        : SourceSpecMatcher(specParseTree, srcFilePath,
+                            irModule, printMatchingInfo, matchExternalOnly),
+          fam(fam)
     {
     }
 
@@ -240,7 +241,7 @@ namespace sourcespec2ir
 
     llvm::SmallVector<llvm::Function *>
     IRBasedSourceSpecMatcher::matchFContract(
-        const std::string matchingStr, const bool isSrcName, SrcRange loc, 
+        const std::string matchingStr, const bool isSrcName, SrcRange loc,
         const bool isGenerated)
     {
         llvm::SmallVector<llvm::Function *> results;

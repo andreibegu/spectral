@@ -187,7 +187,7 @@ namespace sourcespec2ir
             llvm::DIScope *scope);
 
         /**
-         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions 
+         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions
          */
         void rewriteWrapperLocations(
             const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,

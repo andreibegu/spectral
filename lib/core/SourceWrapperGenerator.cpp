@@ -49,6 +49,7 @@ namespace sourcespec2ir
         // Create wrappers for blocks of specification-statements
         for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
             wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
+        // TODO: Generate wrappers for contracts of ghost methods/ functions!
 
         return matchedWrappers;
     }

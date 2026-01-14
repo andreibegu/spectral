@@ -46,7 +46,6 @@ namespace sourcespec2ir
         llvm::Instruction *matchStatementBlock(SrcRange loc) override;
 
     private:
-        const bool printMatchingInfo;
         llvm::FunctionAnalysisManager *fam;
 
         /**

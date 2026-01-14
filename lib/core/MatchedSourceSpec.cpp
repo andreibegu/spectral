@@ -20,6 +20,12 @@ namespace sourcespec2ir
         matchedStmntBlocks.append(
             std::make_move_iterator(specs2->matchedStmntBlocks.begin()),
             std::make_move_iterator(specs2->matchedStmntBlocks.end()));
+        matchedGhostContracts.append(
+            std::make_move_iterator(specs2->matchedGhostContracts.begin()),
+            std::make_move_iterator(specs2->matchedGhostContracts.end()));
+        ghostMethods.append(
+            std::make_move_iterator(specs2->ghostMethods.begin()),
+            std::make_move_iterator(specs2->ghostMethods.end()));
     }
 
     bool MatchedSpecifications::hasDuplicateMappings()
@@ -68,10 +74,25 @@ namespace sourcespec2ir
                 llvm::outs() << "WARNING: Multiple statement blocks were "
                              << "matched to the same instruction in function "
                              << utils::getSrcNameOfFunction(
-                                *i->getParent()->getParent())
+                                    *i->getParent()->getParent())
                              << "\n";
             }
             matchedInsts.insert(i);
+        }
+
+        llvm::SmallSet<GhostMethod *, 8> matchedGMethods;
+        for (const auto &contr : matchedGhostContracts)
+        {
+            auto *m = contr->method;
+            if (matchedGMethods.contains(m))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple contracts were "
+                             << "matched to the same ghost method "
+                             << m->name
+                             << "\n";
+            }
+            matchedGMethods.insert(m);
         }
 
         return hasDuplicates;

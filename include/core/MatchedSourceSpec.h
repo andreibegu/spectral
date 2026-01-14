@@ -1,6 +1,7 @@
 #ifndef PALLAS_MATCHEDSOURCESPEC_H
 #define PALLAS_MATCHEDSOURCESPEC_H
 
+#include <GhostMethod.h>
 #include "wrapper/SrcLocation.h"
 #include "wrapper/WrapperSignature.h"
 
@@ -87,6 +88,28 @@ namespace sourcespec2ir
             llvm::Function *function,
             const SrcRange &srcLoc, const ContractType &type)
             : function(function), srcLoc(srcLoc), type(type)
+        {
+        }
+
+        void addStatement(std::unique_ptr<MatchedFContractStatement> stmnt)
+        {
+            statements.push_back(std::move(stmnt));
+        }
+    };
+
+    /**
+     * A struct that represents a function contract that belongs to a 
+     * ghost method or function.
+     * The order of statement's in the source must be maintained in the vector!
+     */
+    struct MatchedGhostContract
+    {
+        GhostMethod *method;
+        llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
+        SrcRange srcLoc;
+        
+        MatchedGhostContract(GhostMethod *method, const SrcRange &srcLoc)
+            : method(method), srcLoc(srcLoc)
         {
         }
 
@@ -198,11 +221,17 @@ namespace sourcespec2ir
             matchedLoopInvariants;
         llvm::SmallVector<std::unique_ptr<MatchedSpecStatementBlock>>
             matchedStmntBlocks;
+        llvm::SmallVector<std::unique_ptr<MatchedGhostContract>>
+            matchedGhostContracts;
+
+        llvm::SmallVector<std::unique_ptr<GhostMethod>> ghostMethods;
 
         MatchedSpecifications()
             : matchedFContracts(),
               matchedLoopInvariants(),
-              matchedStmntBlocks()
+              matchedStmntBlocks(), 
+              matchedGhostContracts(),
+              ghostMethods()
         {
         }
 

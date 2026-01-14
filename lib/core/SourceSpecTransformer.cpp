@@ -109,6 +109,7 @@ namespace sourcespec2ir
         auto wLocMarkers = wLocCollector.collectLocationMarkers();
 
         // Match the specifications to the IR
+        // (This also collects the ghost functions)
         auto specMatcher = createSpecMatcher(srcParseTree, irModule.get(),
                                              srcInPath, false);
         auto matchedSpecs = specMatcher->matchSpecs();
@@ -130,6 +131,7 @@ namespace sourcespec2ir
                 "Multiple specifications were matched to the same target");
 
         // Generate the wrapper-functions:
+        // TODO: Also generate wrapper functions for the contracts of ghost methods here!
         wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
@@ -138,7 +140,8 @@ namespace sourcespec2ir
         // TODO: Either move this into the WrapperGenerator, or into a new class
         const auto srcWrapperPath = getPathForSourceWithWrappers();
         wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
-                                               *wrappers, *specPredicates);
+                                                *wrappers, *specPredicates);
+        // TODO: Inline the ghost functions
 
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
@@ -161,6 +164,7 @@ namespace sourcespec2ir
         markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
         // Add MD-marker to functions used as predicate definitions.
         markPredicateDefs(*moduleWithWrappers, *specPredicates);
+        // TODO: Mark ghost functions
 
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers),
@@ -171,6 +175,7 @@ namespace sourcespec2ir
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
+        // TODO: Also rewrite the locations in the ghost methods
         rewriteSpecLocations(*matchedSpecs, *specPredicates);
 
         if (outputConfig.printDebugInfo)

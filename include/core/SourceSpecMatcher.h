@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Module.h>
 
@@ -32,7 +33,9 @@ namespace sourcespec2ir
     public:
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
                           const std::string file,
-                          llvm::Module *irModule, bool matchExternalOnly);
+                          llvm::Module *irModule, 
+                          const bool printMatchingInfo,
+                          bool matchExternalOnly);
 
         virtual ~SourceSpecMatcher() = default;
 
@@ -44,6 +47,7 @@ namespace sourcespec2ir
         const std::string file;
         std::string md5Checksum;
         llvm::Module *irModule;
+        const bool printMatchingInfo;
         bool matchExternalOnly;
 
         /**
@@ -98,6 +102,19 @@ namespace sourcespec2ir
         SrcLocation getExprStartLoc(
             const SpecParser::SpecExpressionContext &exprCtx);
 
+        /**
+         * Thive the string-representation of a ghost method, returns the name 
+         * of the ghost method as a string. 
+         * The default-implementation looks for the first occurence of '(' and 
+         * returns the whitespace free character sequence in front of it. 
+         * If the impl. does not contain a '(' character, an empty string is 
+         * returned. 
+         * I.e. for 'int foo(...' it would return 'foo'. 
+         * 
+         * Can be overridden if the default-implementation is not suitable.
+         */
+        virtual std::string getGhostMethodName(llvm::StringRef impl);
+
     private:
         // Struct in which the matched specifications are collected.
         std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;
@@ -106,6 +123,10 @@ namespace sourcespec2ir
         // while the contained contract-statements are collected
         std::unique_ptr<sourcespec2ir::MatchedFunctionContract>
             contract = nullptr;
+        
+        std::unique_ptr<sourcespec2ir::MatchedGhostContract>
+            ghostContract = nullptr;
+        
 
         // Temporary pointer to the current spec-statement-block while the
         // statements are matched.
@@ -136,6 +157,10 @@ namespace sourcespec2ir
         std::any visitUnfoldStatement(
             SpecParser::UnfoldStatementContext *ctx) override;
 
+        // Visitor for ghost methods
+        std::any visitGhostDefBlock(
+            SpecParser::GhostDefBlockContext *ctx) override;
+
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
@@ -149,7 +174,6 @@ namespace sourcespec2ir
 
         WrapperSignature getWrapperSignature(
             SpecParser::WrapperSigClauseContext &ctx);
-
     };
 
 }
