@@ -31,6 +31,13 @@ namespace sourcespec2ir
             bool isInline);
 
         /**
+         * Adds a metadata-node to the function that marks it as a
+         * ghost method.
+         */
+        void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context, 
+            bool isFunction);
+
+        /**
          * Checks if the given function is marked as a predicate definition.
          */
         bool isPredicateDef(const llvm::Function &f);

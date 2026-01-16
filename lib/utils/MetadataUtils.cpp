@@ -34,6 +34,15 @@ namespace sourcespec2ir
             return f.getMetadata(PALLAS_PREDICATE_DEF_MARKER) != nullptr;
         }
 
+        void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context,
+                             bool isFunction)
+        {
+            auto funcFlag = llvm::ConstantAsMetadata::get(
+                llvm::ConstantInt::getBool(context, isFunction));
+            f.setMetadata(PALLAS_GHOST_MARKER,
+                          llvm::MDNode::get(context, funcFlag));
+        }
+
         bool isSubscope(const llvm::DIScope *parentScope,
                         const llvm::DIScope *scope)
         {

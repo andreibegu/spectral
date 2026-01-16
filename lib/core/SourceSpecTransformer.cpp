@@ -131,7 +131,6 @@ namespace sourcespec2ir
                 "Multiple specifications were matched to the same target");
 
         // Generate the wrapper-functions:
-        // TODO: Also generate wrapper functions for the contracts of ghost methods here!
         wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
@@ -139,9 +138,10 @@ namespace sourcespec2ir
         // Insert wrappers into source
         // TODO: Either move this into the WrapperGenerator, or into a new class
         const auto srcWrapperPath = getPathForSourceWithWrappers();
+        auto ghostMethods = matchedSpecs->getGhostMethods();
         wrapperGenerator->buildSrcWithWrappers(srcInPath, srcWrapperPath,
-                                                *wrappers, *specPredicates);
-        // TODO: Inline the ghost functions
+                                               *wrappers, *specPredicates,
+                                               ghostMethods);
 
         // Compile source
         auto moduleWithWrappers = srcCompilerDriver->compileSource(
@@ -162,9 +162,9 @@ namespace sourcespec2ir
         // Add all generated wrapper to the llvm.used-list of the module
         // to ensure that they are copied over during linking.
         markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
-        // Add MD-marker to functions used as predicate definitions.
+        // Mark specification functions
         markPredicateDefs(*moduleWithWrappers, *specPredicates);
-        // TODO: Mark ghost functions
+        markGhostMethods(*moduleWithWrappers, ghostMethods);
 
         auto linker = llvm::Linker(*irModule);
         linker.linkInModule(std::move(moduleWithWrappers),
@@ -175,7 +175,6 @@ namespace sourcespec2ir
 
         // Update the debug-locations in the generated wrapper-functions
         // to match the locations in the original source-file.
-        // TODO: Also rewrite the locations in the ghost methods
         rewriteSpecLocations(*matchedSpecs, *specPredicates);
 
         if (outputConfig.printDebugInfo)
@@ -197,6 +196,8 @@ namespace sourcespec2ir
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
             encodeStmntBlock(*stmntBlock);
+        for (const auto &contract : matchedSpecs->matchedGhostContracts)
+            encodeGhostContract(*contract);
 
         // Check wellformedness of module
         if (outputConfig.printDebugInfo)
@@ -386,7 +387,7 @@ namespace sourcespec2ir
         for (auto &matchedStmnt : contract.statements)
         {
             auto mdNode = encodeFunctionContractStatement(*parentFunction,
-                                                          *matchedStmnt);
+                                                          *matchedStmnt, false);
             contractMDNodes.push_back(mdNode);
         }
 
@@ -398,10 +399,14 @@ namespace sourcespec2ir
 
     llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(
         const llvm::Function &function,
-        const MatchedFContractStatement &stmnt)
+        const MatchedFContractStatement &stmnt,
+        const bool inGhostContract)
     {
         // Get the ir-version of the wrapper-function
-        auto srcWrapperFun = matchedWrappers->fContractWrappers.at(&stmnt).get();
+        auto &wrapperMap = inGhostContract
+                               ? matchedWrappers->ghostContractWrappers
+                               : matchedWrappers->fContractWrappers;
+        auto srcWrapperFun = wrapperMap.at(&stmnt).get();
         auto irWrapperFunction = utils::getFunctionBySrcName(
             *irModule, srcWrapperFun->name);
 
@@ -435,6 +440,26 @@ namespace sourcespec2ir
             mdElems.push_back(arg);
 
         return llvm::MDNode::get(*irContext, mdElems);
+    }
+
+    void SourceSpecTransformer::encodeGhostContract(
+        const MatchedGhostContract &contract)
+    {
+        auto pFunc = utils::getFunctionBySrcName(
+            *irModule, contract.method->name);
+        if (pFunc == nullptr)
+            throw utils::PallasException("Failed to get ghost");
+
+        llvm::SmallVector<llvm::Metadata *> nodes;
+        // Src-location
+        nodes.push_back(encodeSrcLoc(contract.srcLoc));
+        // Specification statements
+        for (auto &matchedStmnt : contract.statements)
+            nodes.push_back(encodeFunctionContractStatement(
+                *pFunc, *matchedStmnt, true));
+
+        auto contractNode = llvm::MDTuple::get(*irContext, nodes);
+        pFunc->setMetadata(PALLAS_GHOST_CONTRACT, contractNode);
     }
 
     llvm::DICompileUnit *SourceSpecTransformer::getCompileUnit(
@@ -501,6 +526,22 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(*matchedWrappers->fContractWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
+        // Handle ghost contracts
+        for (auto &c : matchedSpecs.matchedGhostContracts)
+        {
+            auto f = utils::getFunctionBySrcName(*irModule, c->method->name);
+            if (f == nullptr)
+                throw utils::PallasException("Failed to get ghost");
+
+            auto contrPath = utils::makeAbsPath(c->srcLoc.getFile());
+            auto cu = getCUForFunc(f);
+            auto scopeFile = getFileForFunc(f);
+            auto scope = getScopeForFunc(f);
+            for (auto &stmnt : c->statements)
+                rewriteWrapperLocations(
+                    *matchedWrappers->ghostContractWrappers[stmnt.get()],
+                    stmnt->exprLoc, cu, scopeFile, scope);
+        }
         // Handle loop-invariants
         for (auto &invBlock : matchedSpecs.matchedLoopInvariants)
         {
@@ -540,6 +581,18 @@ namespace sourcespec2ir
                 cu,
                 cu->getFile(),
                 cu->getFile());
+        }
+
+        // Refrite locations in ghost definitions
+        for (auto &g : matchedSpecs.ghostMethods)
+        {
+            auto f = utils::getFunctionBySrcName(*irModule, g->name);
+            if (f == nullptr)
+                throw utils::PallasException("Failed to get ghost");
+            auto path = utils::makeAbsPath(g->srcLoc.getFile());
+            llvm::DICompileUnit *cu = getCompileUnit(path);
+            rewriteSpecLocations(*f, g->defLoc, std::make_pair(0, 0),
+                                 cu, cu->getFile(), cu->getFile());
         }
     }
 
@@ -921,6 +974,21 @@ namespace sourcespec2ir
             irFunctions.push_back(f);
         }
         llvm::appendToUsed(module, irFunctions);
+    }
+
+    void SourceSpecTransformer::markGhostMethods(
+        llvm::Module &module, llvm::ArrayRef<GhostMethod *> ghostMethods)
+    {
+        llvm::SmallVector<llvm::GlobalValue *> irGhosts;
+        for (auto &ghost : ghostMethods)
+        {
+            auto f = utils::getFunctionBySrcName(module, ghost->name);
+            if (f == nullptr)
+                throw utils::PallasException("Failed to get ghost");
+            utils::markGhostMethod(*f, module.getContext(), ghost->isFunction);
+            irGhosts.push_back(f);
+        }
+        llvm::appendToUsed(module, irGhosts);
     }
 
     std::string SourceSpecTransformer::getPathForSourceWithWrappers()

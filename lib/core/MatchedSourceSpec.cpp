@@ -98,4 +98,12 @@ namespace sourcespec2ir
         return hasDuplicates;
     }
 
+    llvm::SmallVector<GhostMethod *> MatchedSpecifications::getGhostMethods() 
+    {
+        llvm::SmallVector<GhostMethod *> res;
+        for (auto &g : ghostMethods) 
+            res.push_back(g.get());
+        return res;
+    }
+
 }

@@ -8,6 +8,7 @@
 #include <cassert>
 #include <optional>
 
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringExtras.h>
 
 namespace
@@ -149,7 +150,7 @@ namespace sourcespec2ir
 
         if (printMatchingInfo)
             printGhostMethodMatchingInfo(
-                srcLoc, name, isFunction ? "function" : "method");
+                srcLoc, name, defCtx->type->getText());
 
         auto *gMethodPtr = ghostMethod.get();
         matchedSpecs->ghostMethods.push_back(std::move(ghostMethod));
@@ -160,8 +161,9 @@ namespace sourcespec2ir
 
         // Construct contract for ghost function:
         auto contractLoc = utils::getLocFromCtx(contractCtx, file, md5Checksum);
+        auto sig = getSigForGhostMethod(definition);
         ghostContract = std::make_unique<MatchedGhostContract>(
-            gMethodPtr, contractLoc);
+            gMethodPtr, contractLoc, sig);
 
         // Add all statements to the contract by traversing the children
         for (auto c : contractCtx->specContractClause())
@@ -368,5 +370,56 @@ namespace sourcespec2ir
             return "";
         // Return last fragment
         return fragments.back().str();
+    }
+
+    llvm::SmallVector<std::string> SourceSpecMatcher::getGhostMethodArgs(
+        llvm::StringRef impl)
+    {
+        // Get the string between the first '(' and ')'
+        auto openIdx = impl.find('(');
+        auto closeIdx = impl.find(')');
+        if (openIdx == llvm::StringRef::npos ||
+            closeIdx == llvm::StringRef::npos ||
+            closeIdx <= openIdx)
+        {
+            throw utils::PallasException(
+                "Invalid argument list of ghost method / function.");
+        }
+        auto argLen = closeIdx - (openIdx + 1);
+        auto argStr = impl.substr(openIdx + 1, argLen);
+
+        // Split arguments on ','
+        llvm::SmallVector<llvm::StringRef> args;
+        argStr.split(args, ',');
+
+        // Trim whitespace and convert to string
+        llvm::SmallVector<std::string> res;
+        for (const auto &arg : args)
+            res.push_back(arg.trim().str());
+
+        return res;
+    }
+
+    std::string SourceSpecMatcher::getGhostMethodRetTy(llvm::StringRef impl)
+    {
+        // We assume that everything in front of the funcion-name is the
+        // return type. I.e. 'TYPE name (....'
+        auto prefix = impl.take_while([](char c)
+                                      { return c != '('; })
+                          .trim();
+        auto tStr = prefix.substr(0, prefix.find_last_of(" \t\n\v\f\r"));
+        return tStr.trim().str();
+    }
+
+    WrapperSignature SourceSpecMatcher::getSigForGhostMethod(
+        llvm::StringRef impl)
+    {
+        // Currently the wrapper can only access the arguments of the function.
+        // If global variables are also suppoed to be supported, this needs to
+        // be extended.
+        WrapperSignature sig;
+        sig.parentRetTy = getGhostMethodRetTy(impl);
+        sig.args = getGhostMethodArgs(impl);
+        return sig;
     }
 }

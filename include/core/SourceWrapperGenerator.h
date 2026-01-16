@@ -109,8 +109,8 @@ namespace sourcespec2ir
             const SrcWrapperFunction &wFun) = 0;
 
         /**
-         * Analogous to getOffsetToExprStart for wrapper fucntions, but for 
-         * predicate definitions. 
+         * Analogous to getOffsetToExprStart for wrapper fucntions, but for
+         * predicate definitions.
          */
         virtual std::pair<size_t, size_t> getOffsetToExprStart(
             const SpecPredicate &pDef) = 0;
@@ -122,6 +122,14 @@ namespace sourcespec2ir
          * The default-implementation returns the line of the given function.
          */
         size_t getWrapperInsertLoc(const MatchedFunctionContract &contract);
+
+        /**
+         * Return the line-number where the wrapper-functions for the
+         * given ghost contract should be inserted.
+         * The default-implementation returns the line of the 
+         * contract definition.
+         */
+        size_t getWrapperInsertLoc(const MatchedGhostContract &contract);
 
         /**
          * Return the line-number where the wrapper-function for the
@@ -168,7 +176,8 @@ namespace sourcespec2ir
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
             llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-            llvm::ArrayRef<SpecPredicate> predicates);
+            llvm::ArrayRef<SpecPredicate> predicates, 
+            llvm::ArrayRef<GhostMethod *> ghostMethods);
 
         /**
          * Returns a textual representation of the given DIType that matches the
@@ -360,6 +369,14 @@ namespace sourcespec2ir
          */
         void wrapFunctionContractBlock(
             const MatchedFunctionContract &contract,
+            MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Creates a wrapping-function for every statement in the
+         * given ghost contract.
+         */
+        void wrapGhostContract(
+            const MatchedGhostContract &contract,
             MatchedWrapperFunctions &matchedWrappers);
 
         /**

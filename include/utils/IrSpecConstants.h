@@ -14,6 +14,8 @@ namespace sourcespec2ir
 
     const std::string PALLAS_EXT_FUN_CONTRACT_BLOCK = "pallas.extContract";
 
+    const std::string PALLAS_GHOST_CONTRACT = "pallas.ghostContract";
+
     const std::string PALLAS_ENSURES = "pallas.ensures";
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
@@ -38,6 +40,9 @@ namespace sourcespec2ir
 
     // Identifier to mark predicate definitions
     const std::string PALLAS_PREDICATE_DEF_MARKER = "pallas.predDef";
+
+    // Identifier to mark ghost methods
+    const std::string PALLAS_GHOST_MARKER = "pallas.ghost";
 
     // String that is used to identify a MD-Tuple as a source-location
     const std::string PALLAS_SRC_LOCATION_MARKER = "pallas.srcLoc";

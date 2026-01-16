@@ -107,9 +107,11 @@ namespace sourcespec2ir
         GhostMethod *method;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
+        const WrapperSignature wrapperSig;
         
-        MatchedGhostContract(GhostMethod *method, const SrcRange &srcLoc)
-            : method(method), srcLoc(srcLoc)
+        MatchedGhostContract(GhostMethod *method, const SrcRange &srcLoc, 
+            const WrapperSignature &wrapperSig)
+            : method(method), srcLoc(srcLoc), wrapperSig(wrapperSig)
         {
         }
 
@@ -245,6 +247,11 @@ namespace sourcespec2ir
          * LLVM construct. 
          */
         bool hasDuplicateMappings();
+
+        /**
+         * Returns vector of pointers to all ghost methods. 
+         */
+        llvm::SmallVector<GhostMethod *> getGhostMethods();
     };
 
 }

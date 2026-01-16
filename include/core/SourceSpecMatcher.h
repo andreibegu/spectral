@@ -115,6 +115,39 @@ namespace sourcespec2ir
          */
         virtual std::string getGhostMethodName(llvm::StringRef impl);
 
+        /**
+         * Given a string that represents a language-specific definition of a 
+         * ghost method or function, return the arguments of the method.
+         * The default implementation assumes a C-style syntax 
+         * (i.e. function arguments are enclosed in '(' and ')' and separated 
+         * by ','). 
+         * E.g. for 'int foo(int a, int b) { ...' it would return 
+         * 'int a' and 'int b'.
+         * 
+         * If the default implementation is not suitable for a particular
+         * language, it can be overridden. 
+         */
+        virtual llvm::SmallVector<std::string> getGhostMethodArgs(
+            llvm::StringRef impl);
+
+        /**
+         * Given a string that represents a language-specific definition of a 
+         * ghost method / function, return the method's return type as a string.
+         * The default implementation assumes a C-style syntax 
+         * 
+         * If the default implementation is not suitable for a particular
+         * language, it can be overridden. 
+         */
+        virtual std::string getGhostMethodRetTy(llvm::StringRef impl);
+
+        /**
+         * Given a string that represents a language-specific definition of a 
+         * ghost method or function, return a WrapperSignature for this 
+         * function. 
+         * Uses getGhostMethodArgs and getGhostMethodRetTy. 
+         */
+        virtual WrapperSignature getSigForGhostMethod(llvm::StringRef impl);
+
     private:
         // Struct in which the matched specifications are collected.
         std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;

@@ -49,7 +49,9 @@ namespace sourcespec2ir
         // Create wrappers for blocks of specification-statements
         for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
             wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
-        // TODO: Generate wrappers for contracts of ghost methods/ functions!
+        // Wrapper for ghost functions
+        for (const auto &ghostContr : matchedSpecs.matchedGhostContracts)
+            wrapGhostContract(*ghostContr, *matchedWrappers);
 
         return matchedWrappers;
     }
@@ -67,7 +69,6 @@ namespace sourcespec2ir
         {
             // Get signature that was explicitly defined in contract
             sig = contract.wrapperSignature.value();
-            // TODO: Handle encoding of args in this case.
             argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
         }
         else if (pFunc->getSubprogram() != nullptr &&
@@ -96,6 +97,28 @@ namespace sourcespec2ir
                     wName, wStr, argList->getArrayRef(), insertPos);
         }
     };
+
+    void SourceWrapperGenerator::wrapGhostContract(
+        const MatchedGhostContract &contract,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        auto sig = contract.wrapperSig;
+        // Arg-list stays empty because the function args are encoded implicitly
+        llvm::SetVector<llvm::DILocalVariable *> argList;
+        auto insertPos = getWrapperInsertLoc(contract);
+        for (auto &stmnt : contract.statements)
+        {
+            auto wName = getNameForWrapperFunction();
+            auto wStr = getWrapperFunctionString(
+                contract.wrapperSig, stmnt->expr, wName);
+            // For now the wrappers of ghost contracts are placed in the same
+            // collection as those of normal contracts.
+            // Might want to change that later
+            matchedWrappers.ghostContractWrappers[stmnt.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wName, wStr, argList.getArrayRef(), insertPos);
+        }
+    }
 
     namespace
     {
@@ -523,6 +546,12 @@ namespace sourcespec2ir
     }
 
     size_t SourceWrapperGenerator::getWrapperInsertLoc(
+        const MatchedGhostContract &contract)
+    {
+        return contract.srcLoc.getStartLine();
+    }
+
+    size_t SourceWrapperGenerator::getWrapperInsertLoc(
         const MatchedLoopInvariantBlock &invBlock)
     {
         return utils::getDeclSubprog(*invBlock.parentFunction)->getLine();
@@ -650,7 +679,8 @@ namespace sourcespec2ir
     void SourceWrapperGenerator::buildSrcWithWrappers(
         const std::string &inPath, const std::string &outPath,
         llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-        llvm::ArrayRef<SpecPredicate> predicates)
+        llvm::ArrayRef<SpecPredicate> predicates,
+        llvm::ArrayRef<GhostMethod *> ghostMethods)
     {
         // Load file as vector of lines
         auto srcLines = readSrcFile(inPath);
@@ -670,6 +700,12 @@ namespace sourcespec2ir
                 pDef.name, pDef.args, pDef.body);
             auto insertPos = findInsertPos(pDef.srcLoc.getStartLine(), *srcLines);
             insertLines(*srcLines, strRepr, insertPos);
+        }
+
+        for (auto &ghost : ghostMethods)
+        {
+            auto pos = findInsertPos(ghost->srcLoc.getStartLine(), *srcLines);
+            insertLines(*srcLines, ghost->definition, pos);
         }
 
         // Call entry-point for subclasses to customize the generated source.

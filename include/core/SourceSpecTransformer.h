@@ -128,7 +128,13 @@ namespace sourcespec2ir
         /**
          * Encodes a block of function-contract statements into metadata
          */
-        void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
+        void encodeFunctionContractBlock(
+            const MatchedFunctionContract &contract);
+
+        /**
+         * Encodes a ghost contract into metadata
+         */
+        void encodeGhostContract(const MatchedGhostContract &contract);
 
         /**
          * Encodes a statement of a function contract into a metadata-node.
@@ -137,7 +143,8 @@ namespace sourcespec2ir
          */
         llvm::MDNode *encodeFunctionContractStatement(
             const llvm::Function &function,
-            const MatchedFContractStatement &stmnt);
+            const MatchedFContractStatement &stmnt, 
+            const bool inGhostContract);
 
         /**
          * Encodes a block of loop-invariants into metadata.
@@ -238,6 +245,13 @@ namespace sourcespec2ir
          */
         void markPredicateDefs(llvm::Module &module,
                                llvm::ArrayRef<SpecPredicate> preds);
+
+        /**
+         * Adds a metadata-marker to every function that is used as a
+         * ghost method.
+         */
+        void markGhostMethods(llvm::Module &module,
+                              llvm::ArrayRef<GhostMethod *> ghostMethods);
 
         /**
          * Generates a MDTuple that encodes a source-location.
