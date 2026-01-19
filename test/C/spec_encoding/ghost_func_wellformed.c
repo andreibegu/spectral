@@ -33,9 +33,9 @@ int myMult(int a, int b) {
 // CHECK-SAME: !pallas.ghostContract [[ghostContrMD:![0-9]+]]
 
 // COM: Check that the ghost-marker marks the ghost function as side-effect free
-// CHECK-DAG: [[ghostMarkerMD]] = !{i1 true}
+// CHECK-DAG: [[ghostMarkerMD]] = !{!""}
 
 // COM: Check that the contract of the ghost function is wellformed:
-// CHECK: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], [[requiresMD:![0-9]+]]}
+// CHECK: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], i1 true, i1 false, [[requiresMD:![0-9]+]]}
 // CHECK: [[contrLocMD]] = !{!"pallas.srcLoc", i64 12, i64 1, i64 12, i64 24, [[fileMD:![0-9]+]]}
 // CHECK: [[requiresMD]] = !{!"pallas.requires", [[contrLocMD:![0-9]+]], ptr [[wrapper:@PALLAS_SPEC_[0-9]]]}

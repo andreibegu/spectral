@@ -34,8 +34,7 @@ namespace sourcespec2ir
          * Adds a metadata-node to the function that marks it as a
          * ghost method.
          */
-        void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context, 
-            bool isFunction);
+        void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context);
 
         /**
          * Checks if the given function is marked as a predicate definition.

@@ -453,6 +453,15 @@ namespace sourcespec2ir
         llvm::SmallVector<llvm::Metadata *> nodes;
         // Src-location
         nodes.push_back(encodeSrcLoc(contract.srcLoc));
+        // Pure-flag
+        bool isFunction = contract.method->isFunction;
+        nodes.push_back(llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::getBool(*irContext, isFunction)));
+        // Assumed-flag
+        // Always false for now, added to ensure consistency with encoding
+        // of external function.
+        nodes.push_back(llvm::ConstantAsMetadata::get(
+            llvm::ConstantInt::getBool(*irContext, false)));
         // Specification statements
         for (auto &matchedStmnt : contract.statements)
             nodes.push_back(encodeFunctionContractStatement(
@@ -985,7 +994,7 @@ namespace sourcespec2ir
             auto f = utils::getFunctionBySrcName(module, ghost->name);
             if (f == nullptr)
                 throw utils::PallasException("Failed to get ghost");
-            utils::markGhostMethod(*f, module.getContext(), ghost->isFunction);
+            utils::markGhostMethod(*f, module.getContext());
             irGhosts.push_back(f);
         }
         llvm::appendToUsed(module, irGhosts);
