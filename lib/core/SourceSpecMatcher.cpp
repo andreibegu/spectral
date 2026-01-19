@@ -155,11 +155,8 @@ namespace sourcespec2ir
         auto *gMethodPtr = ghostMethod.get();
         matchedSpecs->ghostMethods.push_back(std::move(ghostMethod));
 
-        auto contractCtx = defCtx->contr;
-        if (contractCtx == nullptr)
-            return 0;
-
         // Construct contract for ghost function:
+        auto contractCtx = defCtx->contr;
         auto contractLoc = utils::getLocFromCtx(contractCtx, file, md5Checksum);
         auto sig = getSigForGhostMethod(definition);
         ghostContract = std::make_unique<MatchedGhostContract>(
