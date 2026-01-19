@@ -507,6 +507,37 @@ namespace sourcespec2ir
         const MatchedSpecifications &matchedSpecs,
         llvm::ArrayRef<SpecPredicate> predDefs)
     {
+
+        // Rewrite locations in ghost definitions
+        for (auto &g : matchedSpecs.ghostMethods)
+        {
+            auto f = utils::getFunctionBySrcName(*irModule, g->name);
+            if (f == nullptr)
+                throw utils::PallasException("Failed to get ghost");
+            auto path = utils::makeAbsPath(g->srcLoc.getFile());
+            llvm::DICompileUnit *cu = getCompileUnit(path);
+            rewriteSpecLocations(*f, g->defLoc, std::make_pair(0, 0),
+                                 cu, cu->getFile(), cu->getFile());
+        }
+
+        // Rewrite locations in predicate definitions
+        for (auto &p : predDefs)
+        {
+            auto irFunc = utils::getFunctionBySrcName(*irModule, p.name);
+            if (irFunc == nullptr)
+                throw utils::PallasException(
+                    "Failed to get IR-function for predicate");
+            auto path = utils::makeAbsPath(p.srcLoc.getFile());
+            llvm::DICompileUnit *cu = getCompileUnit(path);
+            rewriteSpecLocations(
+                *irFunc,
+                p.exprLoc,
+                wrapperGenerator->getOffsetToExprStart(p),
+                cu,
+                cu->getFile(),
+                cu->getFile());
+        }
+
         // Handle function-contracts
         for (auto &contr : matchedSpecs.matchedFContracts)
         {
@@ -574,35 +605,6 @@ namespace sourcespec2ir
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
 
-        // Rewrite locations in predicate definitions
-        for (auto &p : predDefs)
-        {
-            auto irFunc = utils::getFunctionBySrcName(*irModule, p.name);
-            if (irFunc == nullptr)
-                throw utils::PallasException(
-                    "Failed to get IR-function for predicate");
-            auto path = utils::makeAbsPath(p.srcLoc.getFile());
-            llvm::DICompileUnit *cu = getCompileUnit(path);
-            rewriteSpecLocations(
-                *irFunc,
-                p.exprLoc,
-                wrapperGenerator->getOffsetToExprStart(p),
-                cu,
-                cu->getFile(),
-                cu->getFile());
-        }
-
-        // Refrite locations in ghost definitions
-        for (auto &g : matchedSpecs.ghostMethods)
-        {
-            auto f = utils::getFunctionBySrcName(*irModule, g->name);
-            if (f == nullptr)
-                throw utils::PallasException("Failed to get ghost");
-            auto path = utils::makeAbsPath(g->srcLoc.getFile());
-            llvm::DICompileUnit *cu = getCompileUnit(path);
-            rewriteSpecLocations(*f, g->defLoc, std::make_pair(0, 0),
-                                 cu, cu->getFile(), cu->getFile());
-        }
     }
 
     void SourceSpecTransformer::rewriteWrapperLocations(
