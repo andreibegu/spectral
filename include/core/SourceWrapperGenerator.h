@@ -126,7 +126,7 @@ namespace sourcespec2ir
         /**
          * Return the line-number where the wrapper-functions for the
          * given ghost contract should be inserted.
-         * The default-implementation returns the line of the 
+         * The default-implementation returns the line of the
          * contract definition.
          */
         size_t getWrapperInsertLoc(const MatchedGhostContract &contract);
@@ -176,7 +176,7 @@ namespace sourcespec2ir
         void buildSrcWithWrappers(
             const std::string &inPath, const std::string &outPath,
             llvm::ArrayRef<SrcWrapperFunction *> wrapperFunctions,
-            llvm::ArrayRef<SpecPredicate> predicates, 
+            llvm::ArrayRef<SpecPredicate> predicates,
             llvm::ArrayRef<GhostMethod *> ghostMethods);
 
         /**
@@ -248,6 +248,16 @@ namespace sourcespec2ir
          */
         virtual std::string buildArgStr(const SrcTypeRepresentation &type,
                                         const std::string &name);
+
+        /**
+         * Given a string containing the definition of a function argument,
+         * return the name of the argument.
+         * The default implementation assumes C-style argument definitions.
+         * E.g. for 'int a' this would return 'a'.
+         * Frontends might have to override this to match it to the languages
+         * specific syntax.
+         */
+        virtual std::string getArgName(llvm::StringRef argDef);
 
         /**
          * Constructs a string representation for a DICompositeType with the
@@ -383,15 +393,35 @@ namespace sourcespec2ir
          * Creates a wrapping-function for every statement in the
          * given loop-invariant-block.
          */
-        void wrapLoopInvariantBlock(const MatchedLoopInvariantBlock &invBlock,
-                                    MatchedWrapperFunctions &matchedWrappers);
+        void wrapLoopInvariantBlock(
+            const MatchedLoopInvariantBlock &invBlock,
+            const MatchedFunctionContract *parentContract,
+            MatchedWrapperFunctions &matchedWrappers);
 
         /**
          * Creates a wrapping-function for every statement in the
          * given statement-block.
          */
-        void wrapSpecStatementBlock(const MatchedSpecStatementBlock &stmntBlock,
-                                    MatchedWrapperFunctions &matchedWrappers);
+        void wrapSpecStatementBlock(
+            const MatchedSpecStatementBlock &stmntBlock,
+            const MatchedFunctionContract *parentContract,
+            MatchedWrapperFunctions &matchedWrappers);
+
+        /**
+         * Adds the ghost arguments from the given contract to the given
+         * wrapper signature.
+         */
+        void addGhostArgsToSig(WrapperSignature &sig,
+                               const MatchedFunctionContract &contr);
+
+        /**
+         * Extracts the names of the given and yields arguments and adds them 
+         * to the corresponding vectors. 
+         * If contr is null, nothing happens.
+         */
+        void addGhostArgNames(const MatchedFunctionContract *contr,
+                              llvm::SmallVector<std::string> &givenArgs,
+                              llvm::SmallVector<std::string> &yieldsArgs);
     };
 
 }

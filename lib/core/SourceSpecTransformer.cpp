@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
@@ -229,6 +230,19 @@ namespace sourcespec2ir
         return extContracts;
     }
 
+    namespace
+    {
+        llvm::MDTuple *buildGhostArgNode(
+            llvm::LLVMContext &context,
+            llvm::ArrayRef<llvm::DILocalVariable *> vars)
+        {
+
+            llvm::SmallVector<llvm::Metadata *> mdVec(vars.begin(), vars.end());
+            auto *tup = llvm::MDTuple::get(context, mdVec);
+            return tup;
+        }
+    }
+
     void SourceSpecTransformer::encodeLoopInvBlock(
         const MatchedLoopInvariantBlock &invBlock)
     {
@@ -276,6 +290,19 @@ namespace sourcespec2ir
 
         // Add ref to wrapper-function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
+
+        // Given args
+        auto givenVars = getVarsForWrapperArgs(*irWrapperFunction,
+                                               srcWrapperFun->givenArgs);
+        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
+        mdElems.push_back(givenNode);
+
+        // Yields args
+        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
+                                                srcWrapperFun->yieldsArgs);
+        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
+        mdElems.push_back(yieldsNode);
+
         // Add references to the metadata-nodes that describe how the arguments
         // of the specification-function relate to the original variables.
         for (auto arg : srcWrapperFun->argList)
@@ -338,6 +365,18 @@ namespace sourcespec2ir
 
         // Add reference to function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
+
+        // Given args
+        auto givenVars = getVarsForWrapperArgs(*irWrapperFun,
+                                               srcWrapperFun->givenArgs);
+        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
+        mdElems.push_back(givenNode);
+
+        // Yields args
+        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFun,
+                                                srcWrapperFun->yieldsArgs);
+        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
+        mdElems.push_back(yieldsNode);
 
         // Add references to the metadata-nodes that describe how the arguments
         // of the specification-function relate to the original variables.
@@ -416,7 +455,7 @@ namespace sourcespec2ir
         // Generate the metadata that encodes the contract statement:
         llvm::SmallVector<llvm::Metadata *> mdElems;
 
-        // Add statement identifier
+        // Statement identifier
         std::string mdId;
         if (stmnt.type == Requires)
             mdId = PALLAS_REQUIRES;
@@ -427,12 +466,24 @@ namespace sourcespec2ir
         auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
         mdElems.push_back(mdIdentifier);
 
-        // Add src-location information
+        // Src-location information
         mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
-        // Add reference to function
+        // Reference to wrapper function
         auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
         mdElems.push_back(specFuncAsMd);
+
+        // Given args
+        auto givenVars = getVarsForWrapperArgs(*irWrapperFunction,
+                                               srcWrapperFun->givenArgs);
+        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
+        mdElems.push_back(givenNode);
+
+        // Yields args
+        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
+                                                srcWrapperFun->yieldsArgs);
+        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
+        mdElems.push_back(yieldsNode);
 
         // Add references to the metadata-nodes that describe how the arguments
         // of the specification-function relate to the original variables.
@@ -604,7 +655,6 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(*matchedWrappers->statementWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
         }
-
     }
 
     void SourceSpecTransformer::rewriteWrapperLocations(
@@ -1071,6 +1121,37 @@ namespace sourcespec2ir
         if (cu == nullptr)
             throw utils::PallasException("Encountered a function without a compile-unit.");
         return cu;
+    }
+
+    llvm::SmallVector<llvm::DILocalVariable *>
+    SourceSpecTransformer::getVarsForWrapperArgs(
+        const llvm::Function &wFunc, llvm::ArrayRef<std::string> argNames)
+    {
+        // Collect all DIVariables that are referenced in the wrapper function
+        // and marked as an argument and map them to their name.
+        llvm::StringMap<llvm::DILocalVariable *> namesToVars;
+        for (auto it = llvm::inst_begin(wFunc), end = llvm::inst_end(wFunc);
+             it != end; ++it)
+        {
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
+            {
+                auto *var = intr->getVariable();
+                auto name = var->getName();
+                if (var->getArg() != 0 && !namesToVars.contains(name))
+                    namesToVars.insert({name, var});
+            }
+        }
+
+        llvm::SmallVector<llvm::DILocalVariable *> argVars;
+        for (auto name : argNames)
+        {
+            auto i = namesToVars.find(name);
+            if (i == namesToVars.end())
+                throw utils::PallasException(
+                    "Failed to find DIVariable for ghost argument.");
+            argVars.push_back(i->getValue());
+        }
+        return argVars;
     }
 
     /*

@@ -27,6 +27,8 @@ SRC: 'src';
 WRAPPER_LOC: 'wrapper location';
 ARGS: 'args';
 RETURNS: 'returns';
+GIVEN: 'given';
+YIELDS: 'yields';
 PREDICATE: 'predicate';
 PRED_DEF: ':=';
 INLINE: 'inline';

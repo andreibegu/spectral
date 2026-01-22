@@ -14,7 +14,7 @@ spec
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
-specContractBlock: SPEC_START specMappingClause? specPureFlag? specContractClause+ SPEC_END;
+specContractBlock: SPEC_START specMappingClause? givenDefClause* yieldsDefClause* specPureFlag? specContractClause+ SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;
 
@@ -33,6 +33,10 @@ specContractClause
 
 specMappingClause
     : 'assumed'? 'contract' 'for' ('external' | 'generated') ('ir' | 'src')? specExpression SPEC_EXPR_END wrapperSigClause?;
+
+givenDefClause: 'given' specExpression SPEC_EXPR_END;
+
+yieldsDefClause: 'yields' specExpression SPEC_EXPR_END;
 
 /* Specification of signature for external contracts */
 wrapperSigClause: wrapperArgClause wrapperRetClause;

@@ -77,6 +77,8 @@ namespace sourcespec2ir
     struct MatchedFunctionContract
     {
         llvm::Function *function;
+        llvm::SmallVector<std::string> givenArgs;
+        llvm::SmallVector<std::string> yieldsArgs;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
         const ContractType type;
@@ -246,12 +248,19 @@ namespace sourcespec2ir
          * Checks that no two specification-elements are matched to the same 
          * LLVM construct. 
          */
-        bool hasDuplicateMappings();
+        bool hasDuplicateMappings() const;
 
         /**
          * Returns vector of pointers to all ghost methods. 
          */
-        llvm::SmallVector<GhostMethod *> getGhostMethods();
+        llvm::SmallVector<GhostMethod *> getGhostMethods() const;
+
+        /**
+         * If a contract is matched to the given function, return this contract. 
+         * Otherwise returns a nullptr.
+         */
+        const MatchedFunctionContract *getContractForFunc(
+            const llvm::Function &f) const;
     };
 
 }

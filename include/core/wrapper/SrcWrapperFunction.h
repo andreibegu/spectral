@@ -19,9 +19,13 @@ namespace sourcespec2ir
         std::string name;
         std::string stringRepr;
         llvm::SmallVector<llvm::DILocalVariable *> argList;
+        llvm::SmallVector<std::string> givenArgs;
+        llvm::SmallVector<std::string> yieldsArgs;
         size_t insertLoc;
         SrcWrapperFunction(std::string name, std::string stringRepr,
                            llvm::ArrayRef<llvm::DILocalVariable *> argList, 
+                           llvm::ArrayRef<std::string> givenArgs,
+                           llvm::ArrayRef<std::string> yieldsArgs,
                            size_t insertLoc);
     };
 }

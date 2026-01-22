@@ -45,10 +45,18 @@ namespace sourcespec2ir
             wrapFunctionContractBlock(*contract, *matchedWrappers);
         // Create wrappers for loop-invariants
         for (const auto &invBlock : matchedSpecs.matchedLoopInvariants)
-            wrapLoopInvariantBlock(*invBlock, *matchedWrappers);
+        {
+            auto *parentContr = matchedSpecs.getContractForFunc(
+                *invBlock->parentFunction);
+            wrapLoopInvariantBlock(*invBlock, parentContr, *matchedWrappers);
+        }
         // Create wrappers for blocks of specification-statements
         for (const auto &stmntBlock : matchedSpecs.matchedStmntBlocks)
-            wrapSpecStatementBlock(*stmntBlock, *matchedWrappers);
+        {
+            auto *parentContr = matchedSpecs.getContractForFunc(
+                *stmntBlock->inst->getParent()->getParent());
+            wrapSpecStatementBlock(*stmntBlock, parentContr, *matchedWrappers);
+        }
         // Wrapper for ghost functions
         for (const auto &ghostContr : matchedSpecs.matchedGhostContracts)
             wrapGhostContract(*ghostContr, *matchedWrappers);
@@ -83,6 +91,12 @@ namespace sourcespec2ir
         if (!sig.has_value())
             throw utils::PallasException("Unable to get signature for wrapper");
 
+        // Add ghost arguments to the wrapper signature
+        addGhostArgsToSig(*sig, contract);
+        llvm::SmallVector<std::string> givenArgs;
+        llvm::SmallVector<std::string> yieldsArgs;
+        addGhostArgNames(&contract, givenArgs, yieldsArgs);
+
         auto insertPos = (contract.type == Normal)
                              ? getWrapperInsertLoc(contract)
                              : getExternalWrapperInsertLoc(contract);
@@ -94,7 +108,8 @@ namespace sourcespec2ir
             auto wStr = getWrapperFunctionString(sig.value(), stmnt->expr, wName);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wName, wStr, argList->getArrayRef(), insertPos);
+                    wName, wStr, argList->getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
         }
     };
 
@@ -111,12 +126,15 @@ namespace sourcespec2ir
             auto wName = getNameForWrapperFunction();
             auto wStr = getWrapperFunctionString(
                 contract.wrapperSig, stmnt->expr, wName);
+            llvm::SmallVector<std::string> givenArgs;
+            llvm::SmallVector<std::string> yieldsArgs;
             // For now the wrappers of ghost contracts are placed in the same
             // collection as those of normal contracts.
             // Might want to change that later
             matchedWrappers.ghostContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wName, wStr, argList.getArrayRef(), insertPos);
+                    wName, wStr, argList.getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
         }
     }
 
@@ -207,6 +225,7 @@ namespace sourcespec2ir
 
     void SourceWrapperGenerator::wrapLoopInvariantBlock(
         const MatchedLoopInvariantBlock &invBlock,
+        const MatchedFunctionContract *parentContract,
         MatchedWrapperFunctions &matchedWrappers)
     {
         // Determine the variables that can be referenced in the invariant
@@ -214,21 +233,31 @@ namespace sourcespec2ir
             invBlock.parentFunction, invBlock.loopHeader);
         auto insertPos = getWrapperInsertLoc(invBlock);
 
+        // Build signature for the wrapper functions
+        auto wSig = getWrapperSignature(argList->getArrayRef());
+
+        llvm::SmallVector<std::string> givenArgs;
+        llvm::SmallVector<std::string> yieldsArgs;
+        addGhostArgNames(parentContract, givenArgs, yieldsArgs);
+        if (parentContract != nullptr)
+            addGhostArgsToSig(wSig, *parentContract);
+
         // Generate wrappers for the individual invariants
         for (auto &inv : invBlock.invariants)
         {
             auto wrapperName = getNameForWrapperFunction();
-            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
                 wSig, inv->expr, wrapperName);
             matchedWrappers.loopInvWrappers[inv.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
         }
     }
 
     void SourceWrapperGenerator::wrapSpecStatementBlock(
         const MatchedSpecStatementBlock &stmntBlock,
+        const MatchedFunctionContract *parentContract,
         MatchedWrapperFunctions &matchedWrappers)
     {
         // Determine the variables that can be referenced in the statement
@@ -236,16 +265,25 @@ namespace sourcespec2ir
         // Get insert-location for wrapper-function
         auto insertPos = getWrapperInsertLoc(stmntBlock);
 
+        // Build wrapper signature
+        auto wSig = getWrapperSignature(argList->getArrayRef());
+
+        llvm::SmallVector<std::string> givenArgs;
+        llvm::SmallVector<std::string> yieldsArgs;
+        addGhostArgNames(parentContract, givenArgs, yieldsArgs);
+        if (parentContract != nullptr)
+            addGhostArgsToSig(wSig, *parentContract);
+
         // Generate wrapper for the individual statements
         for (auto &stmnt : stmntBlock.statements)
         {
             auto wrapperName = getNameForWrapperFunction();
-            auto wSig = getWrapperSignature(argList->getArrayRef());
             auto wrapperStr = getWrapperFunctionString(
                 wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(), insertPos);
+                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
         }
     }
 
@@ -446,6 +484,13 @@ namespace sourcespec2ir
         return type.prefix.str().str() + " " + name + type.suffix.str().str();
     }
 
+    std::string SourceWrapperGenerator::getArgName(llvm::StringRef argDef)
+    {
+        llvm::SmallVector<llvm::StringRef> tokens;
+        argDef.split(tokens, ' ', -1, false);
+        return tokens.back().str();
+    }
+
     WrapperSignature SourceWrapperGenerator::getWrapperSignature(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const llvm::DIType *returnType)
@@ -466,6 +511,28 @@ namespace sourcespec2ir
         }
 
         return sig;
+    }
+
+    void SourceWrapperGenerator::addGhostArgsToSig(
+        WrapperSignature &sig, const MatchedFunctionContract &contr)
+    {
+        for (auto &g : contr.givenArgs)
+            sig.addArg(g);
+        for (auto &y : contr.yieldsArgs)
+            sig.addArg(y);
+    }
+
+    void SourceWrapperGenerator::addGhostArgNames(
+        const MatchedFunctionContract *contr,
+        llvm::SmallVector<std::string> &givenArgs,
+        llvm::SmallVector<std::string> &yieldsArgs)
+    {
+        if (contr == nullptr)
+            return;
+        for (auto gDef : contr->givenArgs)
+            givenArgs.push_back(getArgName(gDef));
+        for (auto yDef : contr->yieldsArgs)
+            yieldsArgs.push_back(getArgName(yDef));
     }
 
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)

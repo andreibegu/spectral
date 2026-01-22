@@ -143,7 +143,7 @@ namespace sourcespec2ir
          */
         llvm::MDNode *encodeFunctionContractStatement(
             const llvm::Function &function,
-            const MatchedFContractStatement &stmnt, 
+            const MatchedFContractStatement &stmnt,
             const bool inGhostContract);
 
         /**
@@ -286,6 +286,15 @@ namespace sourcespec2ir
          * Get a DICompileUnit for the given path.
          */
         llvm::DICompileUnit *getCompileUnit(const std::string &path);
+
+        /**
+         * Given a wrapper-function, return the DIVariables that correspond
+         * to the functions arguments with the given names. 
+         * The order of the result is the same as that of the input list 
+         * of names. 
+         */
+        llvm::SmallVector<llvm::DILocalVariable *> getVarsForWrapperArgs(
+            const llvm::Function &wFunc, llvm::ArrayRef<std::string> argNames);
     };
 
 }

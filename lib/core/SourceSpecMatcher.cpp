@@ -211,6 +211,30 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitGivenDefClause(
+        SpecParser::GivenDefClauseContext *ctx)
+    {
+        if (contract == nullptr)
+            throw utils::PallasException(
+                "Given-clause only allowed in contracts.");
+
+        auto defStr = utils::getCtxAsStr(*ctx->specExpression());
+        contract->givenArgs.push_back(defStr);
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsDefClause(
+        SpecParser::YieldsDefClauseContext *ctx)
+    {
+        if (contract == nullptr)
+            throw utils::PallasException(
+                "Yields-clause only allowed in contracts.");
+
+        auto defStr = utils::getCtxAsStr(*ctx->specExpression());
+        contract->yieldsArgs.push_back(defStr);
+        return 0;
+    }
+
     void SourceSpecMatcher::addToFContract(
         ContractStatementType type, SpecParser::SpecExpressionContext *expr,
         const SrcRange &loc)

@@ -28,7 +28,7 @@ namespace sourcespec2ir
             std::make_move_iterator(specs2->ghostMethods.end()));
     }
 
-    bool MatchedSpecifications::hasDuplicateMappings()
+    bool MatchedSpecifications::hasDuplicateMappings() const
     {
         bool hasDuplicates = false;
 
@@ -98,12 +98,22 @@ namespace sourcespec2ir
         return hasDuplicates;
     }
 
-    llvm::SmallVector<GhostMethod *> MatchedSpecifications::getGhostMethods() 
+    llvm::SmallVector<GhostMethod *>
+    MatchedSpecifications::getGhostMethods() const
     {
         llvm::SmallVector<GhostMethod *> res;
-        for (auto &g : ghostMethods) 
+        for (auto &g : ghostMethods)
             res.push_back(g.get());
         return res;
+    }
+
+    const MatchedFunctionContract *MatchedSpecifications::getContractForFunc(
+        const llvm::Function &f) const
+    {
+        for (const auto &c : matchedFContracts)
+            if (c->function != nullptr && c->function == &f)
+                return c.get();
+        return nullptr;
     }
 
 }

@@ -174,6 +174,10 @@ namespace sourcespec2ir
             SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(
             SpecParser::EnsuresClauseContext *ctx) override;
+        std::any visitGivenDefClause(
+            SpecParser::GivenDefClauseContext *ctx) override;
+        std::any visitYieldsDefClause(
+            SpecParser::YieldsDefClauseContext *ctx) override;
 
         // Visitor for loop-invariants
         std::any visitSpecLoopInvariantBlock(
