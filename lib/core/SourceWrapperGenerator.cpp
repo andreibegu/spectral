@@ -484,13 +484,6 @@ namespace sourcespec2ir
         return type.prefix.str().str() + " " + name + type.suffix.str().str();
     }
 
-    std::string SourceWrapperGenerator::getArgName(llvm::StringRef argDef)
-    {
-        llvm::SmallVector<llvm::StringRef> tokens;
-        argDef.split(tokens, ' ', -1, false);
-        return tokens.back().str();
-    }
-
     WrapperSignature SourceWrapperGenerator::getWrapperSignature(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
         const llvm::DIType *returnType)
@@ -517,9 +510,9 @@ namespace sourcespec2ir
         WrapperSignature &sig, const MatchedFunctionContract &contr)
     {
         for (auto &g : contr.givenArgs)
-            sig.addArg(g);
+            sig.addArg(g.defStr);
         for (auto &y : contr.yieldsArgs)
-            sig.addArg(y);
+            sig.addArg(y.defStr);
     }
 
     void SourceWrapperGenerator::addGhostArgNames(
@@ -530,9 +523,9 @@ namespace sourcespec2ir
         if (contr == nullptr)
             return;
         for (auto gDef : contr->givenArgs)
-            givenArgs.push_back(getArgName(gDef));
+            givenArgs.push_back(gDef.argName);
         for (auto yDef : contr->yieldsArgs)
-            yieldsArgs.push_back(getArgName(yDef));
+            yieldsArgs.push_back(yDef.argName);
     }
 
     std::string SourceWrapperGenerator::getSrcNamespace(llvm::DIScope *scope)

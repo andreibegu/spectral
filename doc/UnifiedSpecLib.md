@@ -59,7 +59,7 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 
 ### External & Generated Contracts
 External and generated contracts are encoded similarly to regular contracts with the following differences:
-- The metadata-node of the contract is labled as `!pallas.extContract` (insead of being labled as `!pallas.fcontract`)
+- The metadata-node of the contract is labled as `!pallas.extContract` (instead of being labled as `!pallas.fcontract`)
 - In the metdata-nodes that encode the clauses of the contract, the list of DIVariables is always empty. Instead, the values that should be passed to the wrapper functions are encoded implicitly. I.e. for external contracts, the signature of the corresponding wrapper functions must always be the same as the signature of the function to which the function is applied. The values passed to the wrapper function then correspond to the arguments of the function to which the contract is attached. 
 
 ### Ghost contracts

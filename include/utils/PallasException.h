@@ -17,13 +17,22 @@ namespace sourcespec2ir
         public:
             PallasException(const std::string &msg) : msg(msg) {}
 
-            const char* what() const noexcept override 
+            const char *what() const noexcept override
             {
                 return msg.c_str();
             }
 
         private:
             std::string msg;
+        };
+
+        class PallasNotImplementedException : PallasException
+        {
+        public:
+            PallasNotImplementedException()
+                : PallasException("Not Implemented!")
+            {
+            }
         };
 
     }

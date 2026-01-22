@@ -32,8 +32,8 @@ namespace sourcespec2ir
     enum SpecStatementType
     {
         Assert,
-        Assume, 
-        Fold, 
+        Assume,
+        Fold,
         Unfold
     };
 
@@ -62,6 +62,24 @@ namespace sourcespec2ir
         }
     };
 
+    /**
+     * Struct that represents a definition of a ghost argument.
+     */
+    struct GhostArgumentDef
+    {
+        const std::string defStr;
+        const std::string argName;
+        const SrcRange srcLoc;
+        const SrcLocation defStartLoc;
+
+        GhostArgumentDef(const std::string &defStr, const std::string &argName,
+                         const SrcRange &srcLoc, const SrcLocation &defStartLoc)
+            : defStr(defStr), argName(argName),
+              srcLoc(srcLoc), defStartLoc(defStartLoc)
+        {
+        }
+    };
+
     enum ContractType
     {
         Normal,
@@ -77,15 +95,15 @@ namespace sourcespec2ir
     struct MatchedFunctionContract
     {
         llvm::Function *function;
-        llvm::SmallVector<std::string> givenArgs;
-        llvm::SmallVector<std::string> yieldsArgs;
+        llvm::SmallVector<GhostArgumentDef, 4> givenArgs;
+        llvm::SmallVector<GhostArgumentDef, 4> yieldsArgs;
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
         const ContractType type;
         bool isPure = false;
         bool isAssumed = false;
         std::optional<WrapperSignature> wrapperSignature = std::nullopt;
-        
+
         MatchedFunctionContract(
             llvm::Function *function,
             const SrcRange &srcLoc, const ContractType &type)
@@ -100,7 +118,7 @@ namespace sourcespec2ir
     };
 
     /**
-     * A struct that represents a function contract that belongs to a 
+     * A struct that represents a function contract that belongs to a
      * ghost method or function.
      * The order of statement's in the source must be maintained in the vector!
      */
@@ -110,9 +128,9 @@ namespace sourcespec2ir
         llvm::SmallVector<std::unique_ptr<MatchedFContractStatement>> statements;
         SrcRange srcLoc;
         const WrapperSignature wrapperSig;
-        
-        MatchedGhostContract(GhostMethod *method, const SrcRange &srcLoc, 
-            const WrapperSignature &wrapperSig)
+
+        MatchedGhostContract(GhostMethod *method, const SrcRange &srcLoc,
+                             const WrapperSignature &wrapperSig)
             : method(method), srcLoc(srcLoc), wrapperSig(wrapperSig)
         {
         }
@@ -233,7 +251,7 @@ namespace sourcespec2ir
         MatchedSpecifications()
             : matchedFContracts(),
               matchedLoopInvariants(),
-              matchedStmntBlocks(), 
+              matchedStmntBlocks(),
               matchedGhostContracts(),
               ghostMethods()
         {
@@ -245,18 +263,18 @@ namespace sourcespec2ir
         void merge(std::unique_ptr<MatchedSpecifications> specs2);
 
         /**
-         * Checks that no two specification-elements are matched to the same 
-         * LLVM construct. 
+         * Checks that no two specification-elements are matched to the same
+         * LLVM construct.
          */
         bool hasDuplicateMappings() const;
 
         /**
-         * Returns vector of pointers to all ghost methods. 
+         * Returns vector of pointers to all ghost methods.
          */
         llvm::SmallVector<GhostMethod *> getGhostMethods() const;
 
         /**
-         * If a contract is matched to the given function, return this contract. 
+         * If a contract is matched to the given function, return this contract.
          * Otherwise returns a nullptr.
          */
         const MatchedFunctionContract *getContractForFunc(

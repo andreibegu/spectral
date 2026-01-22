@@ -218,8 +218,11 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Given-clause only allowed in contracts.");
 
-        auto defStr = utils::getCtxAsStr(*ctx->specExpression());
-        contract->givenArgs.push_back(defStr);
+        auto defExpr = ctx->specExpression();
+        auto defStr = utils::getCtxAsStr(*defExpr);
+        GhostArgumentDef argDef(defStr, getArgName(defStr),
+                                getLocFromCtx(ctx), getExprStartLoc(*defExpr));
+        contract->givenArgs.push_back(argDef);
         return 0;
     }
 
@@ -230,8 +233,11 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Yields-clause only allowed in contracts.");
 
-        auto defStr = utils::getCtxAsStr(*ctx->specExpression());
-        contract->yieldsArgs.push_back(defStr);
+        auto defExpr = ctx->specExpression();
+        auto defStr = utils::getCtxAsStr(*defExpr);
+        GhostArgumentDef argDef(defStr, getArgName(defStr),
+                                getLocFromCtx(ctx), getExprStartLoc(*defExpr));
+        contract->yieldsArgs.push_back(argDef);
         return 0;
     }
 
@@ -374,6 +380,13 @@ namespace sourcespec2ir
         const SpecParser::SpecExpressionContext &exprCtx)
     {
         return utils::getExprStartLoc(exprCtx, file, md5Checksum);
+    }
+
+    std::string SourceSpecMatcher::getArgName(llvm::StringRef argDef)
+    {
+        llvm::SmallVector<llvm::StringRef> tokens;
+        argDef.split(tokens, ' ', -1, false);
+        return tokens.back().str();
     }
 
     std::string SourceSpecMatcher::getGhostMethodName(llvm::StringRef impl)

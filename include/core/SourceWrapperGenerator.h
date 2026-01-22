@@ -250,16 +250,6 @@ namespace sourcespec2ir
                                         const std::string &name);
 
         /**
-         * Given a string containing the definition of a function argument,
-         * return the name of the argument.
-         * The default implementation assumes C-style argument definitions.
-         * E.g. for 'int a' this would return 'a'.
-         * Frontends might have to override this to match it to the languages
-         * specific syntax.
-         */
-        virtual std::string getArgName(llvm::StringRef argDef);
-
-        /**
          * Constructs a string representation for a DICompositeType with the
          * DW_TAG_array_type-tag.
          * Can be overwritten by subclasses if the default-implementation

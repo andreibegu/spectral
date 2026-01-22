@@ -137,6 +137,11 @@ namespace sourcespec2ir
         void encodeGhostContract(const MatchedGhostContract &contract);
 
         /**
+         * Encodes the definition fo a ghost argument into a metadata-node
+         */
+        llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
+
+        /**
          * Encodes a statement of a function contract into a metadata-node.
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.
@@ -289,9 +294,9 @@ namespace sourcespec2ir
 
         /**
          * Given a wrapper-function, return the DIVariables that correspond
-         * to the functions arguments with the given names. 
-         * The order of the result is the same as that of the input list 
-         * of names. 
+         * to the functions arguments with the given names.
+         * The order of the result is the same as that of the input list
+         * of names.
          */
         llvm::SmallVector<llvm::DILocalVariable *> getVarsForWrapperArgs(
             const llvm::Function &wFunc, llvm::ArrayRef<std::string> argNames);

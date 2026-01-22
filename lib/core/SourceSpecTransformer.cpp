@@ -422,6 +422,20 @@ namespace sourcespec2ir
             llvm::ConstantInt::getBool(*irContext, contract.isAssumed));
         contractMDNodes.push_back(assumedFlagConst);
 
+        // Given args
+        llvm::SmallVector<llvm::Metadata *> givenDefs;
+        for (auto &g : contract.givenArgs)
+            givenDefs.push_back(encodeGhostArgDef(g));
+        auto givenNodes = llvm::MDTuple::get(*irContext, givenDefs);
+        contractMDNodes.push_back(givenNodes);
+
+        // Yields args
+        llvm::SmallVector<llvm::Metadata *> yieldsDefs;
+        for (auto &y : contract.yieldsArgs)
+            yieldsDefs.push_back(encodeGhostArgDef(y));
+        auto yieldsNodes = llvm::MDTuple::get(*irContext, yieldsDefs);
+        contractMDNodes.push_back(yieldsNodes);
+
         // Transform specification statements
         for (auto &matchedStmnt : contract.statements)
         {
@@ -434,6 +448,17 @@ namespace sourcespec2ir
         auto label = contract.type == External ? PALLAS_EXT_FUN_CONTRACT_BLOCK
                                                : PALLAS_FUN_CONTRACT_BLOCK;
         parentFunction->setMetadata(label, contractMDNode);
+    }
+
+    llvm::MDTuple*SourceSpecTransformer::encodeGhostArgDef(
+        const GhostArgumentDef &argDef)
+    {
+        llvm::SmallVector<llvm::Metadata *> nodes;
+        // location
+        nodes.push_back(encodeSrcLoc(argDef.srcLoc));
+        // name
+        nodes.push_back(llvm::MDString::get(*irContext, argDef.argName));
+        return llvm::MDTuple::get(*irContext, nodes);
     }
 
     llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(
