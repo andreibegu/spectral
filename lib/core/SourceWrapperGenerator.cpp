@@ -72,11 +72,11 @@ namespace sourcespec2ir
 
         // Get Wrapper-signature
         std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
-        std::optional<WrapperSignature> sig = std::nullopt;
+        std::optional<WrapperSignature> baseSig = std::nullopt;
         if (contract.type == External && contract.wrapperSignature.has_value())
         {
             // Get signature that was explicitly defined in contract
-            sig = contract.wrapperSignature.value();
+            baseSig = contract.wrapperSignature.value();
             argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
         }
         else if (pFunc->getSubprogram() != nullptr &&
@@ -85,18 +85,23 @@ namespace sourcespec2ir
             // Construct signature from debug-info
             argList = getSrcVariablesForFunction(*pFunc);
             auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
-            sig = getWrapperSignature(argList->getArrayRef(), rType);
+            baseSig = getWrapperSignature(argList->getArrayRef(), rType);
         }
 
-        if (!sig.has_value())
+        if (!baseSig.has_value())
             throw utils::PallasException("Unable to get signature for wrapper");
 
         // Add ghost arguments to the wrapper signature
-        addGhostArgsToSig(*sig, contract);
+        // For requires-clauses the yields-arguments are skipped
+        WrapperSignature requiresSig = baseSig.value();
+        addGhostArgsToSig(requiresSig, contract, true);
+        WrapperSignature ensuresSig = baseSig.value();
+        addGhostArgsToSig(ensuresSig, contract, false);
+
         llvm::SmallVector<std::string> givenArgs;
         llvm::SmallVector<std::string> yieldsArgs;
         addGhostArgNames(&contract, givenArgs, yieldsArgs);
-
+        llvm::SmallVector<std::string> emptyYields;
         auto insertPos = (contract.type == Normal)
                              ? getWrapperInsertLoc(contract)
                              : getExternalWrapperInsertLoc(contract);
@@ -104,12 +109,15 @@ namespace sourcespec2ir
         // Wrap clauses of the contract
         for (auto &stmnt : contract.statements)
         {
+            bool isRequires = stmnt->type == Requires;
             auto wName = getNameForWrapperFunction();
-            auto wStr = getWrapperFunctionString(sig.value(), stmnt->expr, wName);
+            auto &sig = isRequires ? requiresSig : ensuresSig;
+            auto &yields = isRequires ? emptyYields : yieldsArgs;
+            auto wStr = getWrapperFunctionString(sig, stmnt->expr, wName);
             matchedWrappers.fContractWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
                     wName, wStr, argList->getArrayRef(),
-                    givenArgs, yieldsArgs, insertPos);
+                    givenArgs, yields, insertPos);
         }
     };
 
@@ -507,12 +515,14 @@ namespace sourcespec2ir
     }
 
     void SourceWrapperGenerator::addGhostArgsToSig(
-        WrapperSignature &sig, const MatchedFunctionContract &contr)
+        WrapperSignature &sig, const MatchedFunctionContract &contr,
+        bool skipYields)
     {
         for (auto &g : contr.givenArgs)
             sig.addArg(g.defStr);
-        for (auto &y : contr.yieldsArgs)
-            sig.addArg(y.defStr);
+        if (!skipYields)
+            for (auto &y : contr.yieldsArgs)
+                sig.addArg(y.defStr);
     }
 
     void SourceWrapperGenerator::addGhostArgNames(

@@ -402,7 +402,8 @@ namespace sourcespec2ir
          * wrapper signature.
          */
         void addGhostArgsToSig(WrapperSignature &sig,
-                               const MatchedFunctionContract &contr);
+                               const MatchedFunctionContract &contr, 
+                               bool skipYields = false);
 
         /**
          * Extracts the names of the given and yields arguments and adds them 

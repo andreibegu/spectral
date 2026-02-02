@@ -450,7 +450,7 @@ namespace sourcespec2ir
         parentFunction->setMetadata(label, contractMDNode);
     }
 
-    llvm::MDTuple*SourceSpecTransformer::encodeGhostArgDef(
+    llvm::MDTuple *SourceSpecTransformer::encodeGhostArgDef(
         const GhostArgumentDef &argDef)
     {
         llvm::SmallVector<llvm::Metadata *> nodes;
@@ -504,9 +504,13 @@ namespace sourcespec2ir
         auto *givenNode = buildGhostArgNode(*irContext, givenVars);
         mdElems.push_back(givenNode);
 
-        // Yields args
-        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
-                                                srcWrapperFun->yieldsArgs);
+        // Yields args (Skip for requires-clauses)
+        llvm::SmallVector<llvm::DILocalVariable *> yieldsVars;
+        if (stmnt.type != Requires)
+        {
+            yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
+                                               srcWrapperFun->yieldsArgs);
+        }
         auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
         mdElems.push_back(yieldsNode);
 
