@@ -10,7 +10,9 @@ spec
     | specLoopInvariantBlock 
     | wrapperLocationMarker
     | predicateDefBlock
-    | ghostDefBlock;
+    | ghostDefBlock
+    | givenBindingBlock
+    | yieldsBindingBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -37,6 +39,14 @@ specMappingClause
 givenDefClause: 'given' specExpression SPEC_EXPR_END;
 
 yieldsDefClause: 'yields' specExpression SPEC_EXPR_END;
+
+givenBindingBlock: SPEC_START 'given' givenArgBinding+ SPEC_END;
+givenArgBinding: gArg=ghostArgBindingLeft '=' expr=specExpression SPEC_EXPR_END;
+
+yieldsBindingBlock: SPEC_START 'yields' yieldsArgBinding+ SPEC_END;
+yieldsArgBinding: expr=ghostArgBindingLeft '=' yArg=specExpression SPEC_EXPR_END;
+
+ghostArgBindingLeft: (~('=' | SPEC_END | SPEC_EXPR_END))+;
 
 /* Specification of signature for external contracts */
 wrapperSigClause: wrapperArgClause wrapperRetClause;
@@ -76,7 +86,7 @@ ghostContract: specContractClause*;
 predName: (~PRED_SIG_START)+;
 predicateSig: (~PRED_SIG_END)+;
 argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+ ; 
-specExpression: (~SPEC_EXPR_END)+ ;
+specExpression: (~(SPEC_EXPR_END | SPEC_END))+ ;
 ghostImpl: (~SPEC_END)+;
 
 nonSpec: (~(SPEC_START | SPEC_END))*;

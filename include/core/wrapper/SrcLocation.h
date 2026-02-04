@@ -26,6 +26,7 @@ namespace sourcespec2ir
         inline size_t getColumn() const { return column; }
         inline const std::string &getFile() const { return file; }
         inline const std::string &getMD5() const { return md5Checksum; }
+        std::string asShortString() const;
     };
 
     /**
@@ -47,6 +48,7 @@ namespace sourcespec2ir
         inline size_t getEndCol() const { return endLoc.getColumn(); }
         inline const std::string &getFile() const { return startLoc.getFile(); }
         inline const std::string &getMD5() const { return startLoc.getMD5(); }
+        std::string asShortString(bool lineOnly=true) const;
     };
 }
 

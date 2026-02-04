@@ -35,6 +35,7 @@ INLINE: 'inline';
 GHOST: 'ghost';
 METHOD: 'method';
 FUNCTION: 'function';
+EQUALS: '=';
 
 
 PRED_SIG_START: '(';

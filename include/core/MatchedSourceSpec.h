@@ -10,6 +10,7 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instruction.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/Metadata.h>
 
 #include <optional>
@@ -230,6 +231,55 @@ namespace sourcespec2ir
     };
 
     /**
+     * A struct that represents a binding of an expression to a given-variable
+     * or of a yields variable to another ghost variable.
+     */
+    struct MatchedGhostArgBinding
+    {
+        // The name of the ghost argument
+        std::string ghostArg;
+        // String repr. of the expression
+        std::string exprStr;
+        // The start- and end-position of the binding in the source-file
+        SrcRange srcLoc;
+        // The start-position of the expression in the source-file.
+        SrcLocation exprLoc;
+
+        MatchedGhostArgBinding(const std::string &ghostArg,
+                               const std::string &exprStr,
+                               const SrcRange &srcLoc,
+                               const SrcLocation &exprLoc)
+            : ghostArg(ghostArg),
+              exprStr(exprStr),
+              srcLoc(srcLoc),
+              exprLoc(exprLoc)
+        {
+        }
+    };
+
+    /**
+     * A struct that represents a set of bindings to given-arguments that are
+     * matched to a function-call.
+     */
+    struct MatchedGhostArgBindingBlock
+    {
+        llvm::CallInst *call;
+        llvm::SmallVector<MatchedGhostArgBinding, 2> bindings;
+        SrcRange srcLoc;
+
+        MatchedGhostArgBindingBlock(
+            llvm::CallInst *call, const SrcRange &srcLoc)
+            : call(call), srcLoc(srcLoc)
+        {
+        }
+
+        void addBinding(MatchedGhostArgBinding binding)
+        {
+            bindings.push_back(std::move(binding));
+        }
+    };
+
+    /**
      * Struct that bundles the matched specifications.
      * Contains matched function-contracts and loop-invariants.
      *
@@ -245,6 +295,10 @@ namespace sourcespec2ir
             matchedStmntBlocks;
         llvm::SmallVector<std::unique_ptr<MatchedGhostContract>>
             matchedGhostContracts;
+        llvm::SmallVector<std::unique_ptr<MatchedGhostArgBindingBlock>>
+            matchedGivenBindings;
+        llvm::SmallVector<std::unique_ptr<MatchedGhostArgBindingBlock>>
+            matchedYieldsBindings;
 
         llvm::SmallVector<std::unique_ptr<GhostMethod>> ghostMethods;
 
@@ -253,6 +307,8 @@ namespace sourcespec2ir
               matchedLoopInvariants(),
               matchedStmntBlocks(),
               matchedGhostContracts(),
+              matchedGivenBindings(),
+              matchedYieldsBindings(),
               ghostMethods()
         {
         }

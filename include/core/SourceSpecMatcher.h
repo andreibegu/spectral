@@ -90,6 +90,13 @@ namespace sourcespec2ir
         virtual llvm::Instruction *matchStatementBlock(SrcRange loc) = 0;
 
         /**
+         * Given the location of a block of ghost argument-bindings, returns a
+         * pointer to the call instruction that the specification refers to.
+         * If the specification cannot be matched, an exception it thrown.
+         */
+        virtual llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) = 0;
+
+        /**
          * Returns a SrcRang for the given ParserRuleContext.
          * Sets file and checksum to the file that is opened by this matcher.
          */
@@ -162,18 +169,18 @@ namespace sourcespec2ir
         // Struct in which the matched specifications are collected.
         std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;
 
-        // Temporarily stores the pointer to the current function-contract
-        // while the contained contract-statements are collected
+        // Temporary pointers to the currently matched specification construct:
         std::unique_ptr<sourcespec2ir::MatchedFunctionContract>
             contract = nullptr;
 
         std::unique_ptr<sourcespec2ir::MatchedGhostContract>
             ghostContract = nullptr;
 
-        // Temporary pointer to the current spec-statement-block while the
-        // statements are matched.
         std::unique_ptr<sourcespec2ir::MatchedSpecStatementBlock>
             stmntBlock = nullptr;
+
+        std::unique_ptr<sourcespec2ir::MatchedGhostArgBindingBlock>
+            ghostArgBindingBlock = nullptr;
 
         // Visitors for function-contracts
         std::any visitSpecContractBlock(
@@ -206,6 +213,17 @@ namespace sourcespec2ir
         // Visitor for ghost methods
         std::any visitGhostDefBlock(
             SpecParser::GhostDefBlockContext *ctx) override;
+
+        // Visitor for bindings of ghost arguments
+        std::any visitGivenBindingBlock(
+            SpecParser::GivenBindingBlockContext *ctx) override;
+        std::any visitGivenArgBinding(
+            SpecParser::GivenArgBindingContext *ctx) override;
+
+        std::any visitYieldsBindingBlock(
+            SpecParser::YieldsBindingBlockContext *ctx) override;
+        std::any visitYieldsArgBinding(
+            SpecParser::YieldsArgBindingContext *ctx) override;
 
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).

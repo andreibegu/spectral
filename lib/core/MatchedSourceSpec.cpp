@@ -23,6 +23,12 @@ namespace sourcespec2ir
         matchedGhostContracts.append(
             std::make_move_iterator(specs2->matchedGhostContracts.begin()),
             std::make_move_iterator(specs2->matchedGhostContracts.end()));
+        matchedGivenBindings.append(
+            std::make_move_iterator(specs2->matchedGivenBindings.begin()),
+            std::make_move_iterator(specs2->matchedGivenBindings.end()));
+        matchedYieldsBindings.append(
+            std::make_move_iterator(specs2->matchedYieldsBindings.begin()),
+            std::make_move_iterator(specs2->matchedYieldsBindings.end()));
         ghostMethods.append(
             std::make_move_iterator(specs2->ghostMethods.begin()),
             std::make_move_iterator(specs2->ghostMethods.end()));
@@ -93,6 +99,38 @@ namespace sourcespec2ir
                              << "\n";
             }
             matchedGMethods.insert(m);
+        }
+
+        llvm::SmallSet<llvm::CallInst *, 8> matchedGiven;
+        for (const auto &gBinding : matchedGivenBindings)
+        {
+            auto *callInst = gBinding->call;
+            if (matchedGiven.contains(callInst))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple bindings of given-arguments "
+                             << "were matched to the same call to "
+                             << utils::getSrcNameOfFunction(
+                                    *callInst->getFunction())
+                             << "\n";
+            }
+            matchedGiven.insert(callInst);
+        }
+
+        llvm::SmallSet<llvm::CallInst *, 8> matchedYields;
+        for (const auto &yBinding : matchedYieldsBindings)
+        {
+            auto *callInst = yBinding->call;
+            if (matchedYields.contains(callInst))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple bindings of yields-arguments "
+                             << "were matched to the same call to "
+                             << utils::getSrcNameOfFunction(
+                                    *callInst->getFunction())
+                             << "\n";
+            }
+            matchedYields.insert(callInst);
         }
 
         return hasDuplicates;

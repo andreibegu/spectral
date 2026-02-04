@@ -132,6 +132,7 @@ namespace sourcespec2ir
                 "Multiple specifications were matched to the same target");
 
         // Generate the wrapper-functions:
+        // TODO: Also generate wrappers for arg-bindings
         wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();

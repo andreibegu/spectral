@@ -370,6 +370,78 @@ namespace sourcespec2ir
         stmntBlock->addStatement(std::move(stmnt));
     }
 
+    std::any SourceSpecMatcher::visitGivenBindingBlock(
+        SpecParser::GivenBindingBlockContext *ctx)
+    {
+        assert(ghostArgBindingBlock == nullptr);
+
+        // Match to call-instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto callInstr = matchGhostArgBindingBlock(loc);
+        assert(callInstr != nullptr);
+
+        ghostArgBindingBlock = std::make_unique<MatchedGhostArgBindingBlock>(
+            callInstr, loc);
+
+        // Add bindings:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedGivenBindings.push_back(
+            std::move(ghostArgBindingBlock));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitGivenArgBinding(
+        SpecParser::GivenArgBindingContext *ctx)
+    {
+        assert(ghostArgBindingBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->gArg);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = getExprStartLoc(*ctx->expr);
+        ghostArgBindingBlock->addBinding(
+            MatchedGhostArgBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsBindingBlock(
+        SpecParser::YieldsBindingBlockContext *ctx)
+    {
+        assert(ghostArgBindingBlock == nullptr);
+
+        // Match to call-instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto callInstr = matchGhostArgBindingBlock(loc);
+        assert(callInstr != nullptr);
+
+        ghostArgBindingBlock = std::make_unique<MatchedGhostArgBindingBlock>(
+            callInstr, loc);
+
+        // Add bindings:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedYieldsBindings.push_back(
+            std::move(ghostArgBindingBlock));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsArgBinding(
+        SpecParser::YieldsArgBindingContext *ctx)
+    {
+        assert(ghostArgBindingBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->yArg);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = loc.startLoc;
+        ghostArgBindingBlock->addBinding(
+            MatchedGhostArgBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
     SrcRange SourceSpecMatcher::getLocFromCtx(
         const antlr4::ParserRuleContext *ctx)
     {

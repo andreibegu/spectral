@@ -27,46 +27,53 @@
 
 namespace
 {
-    // Returns the given line- and column-info as a string
-    std::string getLocationString(size_t startLine, size_t endLine)
-    {
-        return std::to_string(startLine) + "-" + std::to_string(endLine);
-    }
-
-    void printContractMatchingInfo(size_t startLine, size_t endLine,
+    void printContractMatchingInfo(const sourcespec2ir::SrcRange &specLoc,
                                    std::string fName)
     {
-        auto locStr = getLocationString(startLine, endLine);
-        llvm::outs() << "Matched contract at " << locStr
+        llvm::outs() << "Matched contract at " << specLoc.asShortString()
                      << " to " << fName << "\n";
     }
 
-    void printExternalContractMatchingInfo(size_t startLine, size_t endLine,
-                                           std::string fName, bool isGenerated)
+    void printExternalContractMatchingInfo(
+        const sourcespec2ir::SrcRange &specLoc,
+        std::string fName, bool isGenerated)
     {
-        auto locStr = getLocationString(startLine, endLine);
         auto cType = isGenerated ? "generated" : "external";
-        llvm::outs() << "Matched " << cType << " contract at " << locStr
+        llvm::outs() << "Matched " << cType << " contract at "
+                     << specLoc.asShortString()
                      << " to " << fName << "\n";
     }
 
-    void printInvMatchingInfo(size_t specSLine, size_t specELine,
+    void printInvMatchingInfo(const sourcespec2ir::SrcRange &specLoc,
                               size_t loopSLine)
     {
-        auto specLocStr = getLocationString(specSLine, specELine);
-        auto loopLocStr = std::to_string(loopSLine);
-        llvm::outs() << "Matched invariant at " << specLocStr
-                     << " to loop at " << loopLocStr << "\n";
+        llvm::outs() << "Matched invariant at " << specLoc.asShortString()
+                     << " to loop at " << std::to_string(loopSLine) << "\n";
     }
 
-    void printStmntBlockMatchingInfo(size_t specSLine, size_t specELine,
-                                     size_t instLine, size_t instCol)
+    std::string getLocString(const llvm::DebugLoc &dbgLoc)
     {
-        auto specLocStr = getLocationString(specSLine, specELine);
-        auto instLocStr = std::to_string(instLine) + "::" +
-                          std::to_string(instCol);
+        return std::to_string(dbgLoc.getLine()) + "::" +
+               std::to_string(dbgLoc.getCol());
+    }
+
+    void printStmntBlockMatchingInfo(const sourcespec2ir::SrcRange &specLoc,
+                                     const llvm::Instruction *instr)
+    {
+        auto specLocStr = specLoc.asShortString();
+        auto instLocStr = getLocString(instr->getDebugLoc());
         llvm::outs() << "Matched statement-block at " << specLocStr
                      << " to instruction at " << instLocStr << "\n";
+    }
+
+    void printGhostArgBindingMatchingInfo(sourcespec2ir::SrcRange specLoc,
+                                          const llvm::CallInst *callInst)
+    {
+        llvm::outs() << "Matched ghost argument binding at "
+                     << specLoc.asShortString(false)
+                     << " to call at "
+                     << getLocString(callInst->getDebugLoc())
+                     << "\n";
     }
 
     /**
@@ -232,8 +239,7 @@ namespace sourcespec2ir
         if (printMatchingInfo)
         {
             printContractMatchingInfo(
-                loc.getStartLine(), loc.getEndLine(),
-                utils::getSrcNameOfFunction(*closestFunction));
+                loc, utils::getSrcNameOfFunction(*closestFunction));
         }
 
         return closestFunction;
@@ -258,8 +264,7 @@ namespace sourcespec2ir
                 results.push_back(&f);
                 if (printMatchingInfo)
                     printExternalContractMatchingInfo(
-                        loc.getStartLine(), loc.getEndLine(),
-                        utils::getSrcNameOfFunction(f), isGenerated);
+                        loc, utils::getSrcNameOfFunction(f), isGenerated);
             }
         }
         return results;
@@ -302,7 +307,7 @@ namespace sourcespec2ir
             throw utils::PallasException("Failed to match the loop-invariant");
 
         if (printMatchingInfo)
-            printInvMatchingInfo(startLine, loc.getEndLine(), closestLoopStart);
+            printInvMatchingInfo(loc, closestLoopStart);
 
         return std::make_pair(parentFunction, closestLoop);
     }
@@ -349,13 +354,65 @@ namespace sourcespec2ir
             throw utils::PallasException("Failed to match statement-block");
 
         if (printMatchingInfo)
+            printStmntBlockMatchingInfo(loc, closestInst);
+        return closestInst;
+    }
+
+    llvm::CallInst *
+    IRBasedSourceSpecMatcher::matchGhostArgBindingBlock(SrcRange loc)
+    {
+        // Get the function in which the block is located:
+        auto pFunc = getFirstFunctionAbove(loc.getStartLine());
+        if (pFunc == nullptr)
+            throw utils::PallasException(
+                "Failed to get enclosing function for ghost argument binding.");
+
+        // Find the closest call-instruction in front of the spec.
+        llvm::CallInst *closestCall = nullptr;
+        for (auto it = inst_begin(pFunc), e = inst_end(pFunc); it != e; ++it)
         {
-            printStmntBlockMatchingInfo(startLine, endLine,
-                                        closestInst->getDebugLoc().getLine(),
-                                        closestInst->getDebugLoc().getCol());
+            auto call = llvm::dyn_cast<llvm::CallInst>(&*it);
+            if (call == nullptr)
+                continue;
+            // Get location of instruction
+            auto dbgLoc = call->getDebugLoc();
+            if (!dbgLoc)
+                continue;
+            const auto iLine = dbgLoc.getLine();
+            const auto iCol = dbgLoc.getCol();
+
+            // Skip calls after the start of the spec:
+            if (iLine > loc.getStartLine() ||
+                (iLine == loc.getStartLine() && iCol > loc.getStartCol()))
+                continue;
+
+            // Skip debug-intrinsics
+            if (llvm::isa<llvm::DbgVariableIntrinsic>(&*it))
+                continue;
+
+            // Check if current call is closer than current closest call
+            if (closestCall == nullptr)
+                closestCall = call;
+            else
+            {
+                auto closestLine = closestCall->getDebugLoc().getCol();
+                auto closestCol = closestCall->getDebugLoc().getLine();
+                if (iLine > closestLine ||
+                    (iLine == closestLine && iCol > closestCol))
+                {
+                    closestCall = call;
+                }
+            }
         }
 
-        return closestInst;
+        if (closestCall == nullptr)
+            throw utils::PallasException(
+                "Failed to match ghost argument binding");
+
+        if (printMatchingInfo)
+            printGhostArgBindingMatchingInfo(loc, closestCall);
+
+        return closestCall;
     }
 
     llvm::Function *IRBasedSourceSpecMatcher::getFirstFunctionAbove(
