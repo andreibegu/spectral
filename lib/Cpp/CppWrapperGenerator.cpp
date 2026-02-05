@@ -18,6 +18,9 @@ namespace sourcespec2ir
         const std::string &expr,
         const std::string &functionName)
     {
+        auto rType = sig.returnTy.has_value()
+                         ? sig.returnTy.value().prefix.str().str()
+                         : "bool";
         std::stringstream stream;
 
         stream << "#pragma clang diagnostic push \n";
@@ -26,7 +29,7 @@ namespace sourcespec2ir
         stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
 
         stream << "__attribute__((used)) \n";
-        stream << " bool " << functionName << "(";
+        stream << " " << rType << " " << functionName << "(";
 
         // Construct arg-list
         bool firstArg = true;
@@ -85,7 +88,8 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    SrcTypeRepresentation CppWrapperGenerator::getVoid() {
+    SrcTypeRepresentation CppWrapperGenerator::getVoid()
+    {
         return SrcTypeRepresentation("void");
     }
 
@@ -138,6 +142,11 @@ namespace sourcespec2ir
         // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include \"cpp_spec_lib.h\"", 0));
+    }
+
+    SourceSyntaxResolver CppWrapperGenerator::getSyntaxResolver()
+    {
+        return SourceSyntaxResolver();
     }
 
 }

@@ -57,6 +57,18 @@ namespace sourcespec2ir
                 *stmntBlock->inst->getParent()->getParent());
             wrapSpecStatementBlock(*stmntBlock, parentContr, *matchedWrappers);
         }
+
+        // Create wrappers for blocks of bindings to given-args:
+        for (const auto &givenBlock : matchedSpecs.matchedGivenBindings)
+        {
+            auto *parentContr = matchedSpecs.getContractForFunc(
+                *givenBlock->call->getParent()->getParent());
+            auto *callContr = matchedSpecs.getContractForFunc(
+                *givenBlock->call->getCalledFunction());
+            wrapGivenArgBlock(
+                *givenBlock, parentContr, callContr, *matchedWrappers);
+        }
+
         // Wrapper for ghost functions
         for (const auto &ghostContr : matchedSpecs.matchedGhostContracts)
             wrapGhostContract(*ghostContr, *matchedWrappers);
@@ -85,7 +97,8 @@ namespace sourcespec2ir
             // Construct signature from debug-info
             argList = getSrcVariablesForFunction(*pFunc);
             auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
-            baseSig = getWrapperSignature(argList->getArrayRef(), rType);
+            baseSig = getWrapperSignature(
+                argList->getArrayRef(), std::nullopt, rType);
         }
 
         if (!baseSig.has_value())
@@ -242,7 +255,7 @@ namespace sourcespec2ir
         auto insertPos = getWrapperInsertLoc(invBlock);
 
         // Build signature for the wrapper functions
-        auto wSig = getWrapperSignature(argList->getArrayRef());
+        auto wSig = getWrapperSignature(argList->getArrayRef(), std::nullopt);
 
         llvm::SmallVector<std::string> givenArgs;
         llvm::SmallVector<std::string> yieldsArgs;
@@ -274,7 +287,7 @@ namespace sourcespec2ir
         auto insertPos = getWrapperInsertLoc(stmntBlock);
 
         // Build wrapper signature
-        auto wSig = getWrapperSignature(argList->getArrayRef());
+        auto wSig = getWrapperSignature(argList->getArrayRef(), std::nullopt);
 
         llvm::SmallVector<std::string> givenArgs;
         llvm::SmallVector<std::string> yieldsArgs;
@@ -289,6 +302,51 @@ namespace sourcespec2ir
             auto wrapperStr = getWrapperFunctionString(
                 wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
+                std::make_unique<SrcWrapperFunction>(
+                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
+        }
+    }
+
+    void SourceWrapperGenerator::wrapGivenArgBlock(
+        const MatchedGhostArgBindingBlock &bindingBlock,
+        const MatchedFunctionContract *parentContract,
+        const MatchedFunctionContract *calledContract,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        auto syntaxResolver = getSyntaxResolver();
+        // Get accessible variables:
+        auto argList = getVarsForStatement(bindingBlock.call);
+        // Get insert-location for wrapper-function
+        auto insertPos = getWrapperInsertLoc(bindingBlock);
+
+        for (auto &binding : bindingBlock.bindings)
+        {
+            // Get return-type of wrapper
+            auto *argDef = calledContract->getGivenArg(binding.ghostArg);
+            if (argDef == nullptr)
+            {
+                std::stringstream s;
+                s << "Unknown given-arg in binding: "
+                  << binding.ghostArg;
+                throw utils::PallasException(s.str());
+            }
+            auto wRetTy = syntaxResolver.getTypeForGhostArgDef(argDef->defStr);
+
+            // Signature of the wrapper
+            auto wSig = getWrapperSignature(argList->getArrayRef(), wRetTy);
+
+            // Extend signature with ghost-arguments
+            llvm::SmallVector<std::string> givenArgs;
+            llvm::SmallVector<std::string> yieldsArgs;
+            addGhostArgNames(parentContract, givenArgs, yieldsArgs);
+            if (parentContract != nullptr)
+                addGhostArgsToSig(wSig, *parentContract);
+
+            auto wrapperName = getNameForWrapperFunction();
+            auto wrapperStr = getWrapperFunctionString(
+                wSig, binding.exprStr, wrapperName);
+            matchedWrappers.givenBindingWrappers[&binding] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(),
                     givenArgs, yieldsArgs, insertPos);
@@ -494,7 +552,8 @@ namespace sourcespec2ir
 
     WrapperSignature SourceWrapperGenerator::getWrapperSignature(
         const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-        const llvm::DIType *returnType)
+        const std::optional<SrcTypeRepresentation> &retType,
+        const llvm::DIType *parentRetTy)
     {
         WrapperSignature sig;
         for (auto *var : srcVars)
@@ -504,11 +563,12 @@ namespace sourcespec2ir
             const auto varStr = buildArgStr(varType, varName);
             sig.addArg(varStr);
         }
+        sig.returnTy = retType;
 
-        if (returnType != nullptr)
+        if (parentRetTy != nullptr)
         {
             // TOOD: Check that suffix is empty
-            sig.parentRetTy = getSrcReprOfType(returnType).prefix.str().str();
+            sig.parentRetTy = getSrcReprOfType(parentRetTy).prefix.str().str();
         }
 
         return sig;
@@ -642,6 +702,22 @@ namespace sourcespec2ir
         auto parentFunc = instr->getParent()->getParent();
         if (parentFunc->getSubprogram() == nullptr)
             throw utils::PallasException("Cannot get line-info for function");
+        return utils::getDeclSubprog(*parentFunc)->getLine();
+    }
+
+    size_t SourceWrapperGenerator::getWrapperInsertLoc(
+        const MatchedGhostArgBindingBlock &bindingBlock)
+    {
+        auto call = bindingBlock.call;
+        // Get the parent-function of the call
+        if (call == nullptr || call->getParent() == nullptr ||
+            call->getParent()->getParent() == nullptr ||
+            call->getParent()->getParent()->getSubprogram() == nullptr)
+        {
+            throw utils::PallasException(
+                "Cannot get insert location for call instruction");
+        }
+        auto parentFunc = call->getParent()->getParent();
         return utils::getDeclSubprog(*parentFunc)->getLine();
     }
 

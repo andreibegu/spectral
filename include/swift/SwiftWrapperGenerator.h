@@ -51,6 +51,8 @@ namespace sourcespec2ir
         std::string buildArgStr(const SrcTypeRepresentation &type,
                                 const std::string &name) override;
 
+        SourceSyntaxResolver getSyntaxResolver() override;
+
     private:
         SwiftDemangler demangler;
 

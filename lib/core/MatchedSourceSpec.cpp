@@ -154,4 +154,13 @@ namespace sourcespec2ir
         return nullptr;
     }
 
+    const GhostArgumentDef *MatchedFunctionContract::getGivenArg(
+        const std::string &name) const
+    {
+        for (const auto &gDef : givenArgs)
+            if (gDef.argName == name)
+                return &gDef;
+        return nullptr;
+    }
+
 }

@@ -32,6 +32,8 @@ namespace sourcespec2ir
 
     const std::string PALLAS_UNFOLD = "pallas.unfold";
 
+    const std::string PALLAS_GIVEN_BINDING_BLOCK = "pallas.givenBindings";
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 

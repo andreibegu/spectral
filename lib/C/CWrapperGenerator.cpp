@@ -20,6 +20,9 @@ namespace sourcespec2ir
         const std::string &functionName)
     {
         std::stringstream stream;
+        auto rType = sig.returnTy.has_value()
+                         ? sig.returnTy.value().prefix.str().str()
+                         : "bool";
 
         // Use #pragma to enforce warnings being treated as errors
         // in wrapper-functions
@@ -28,7 +31,7 @@ namespace sourcespec2ir
         stream << "#pragma clang diagnostic error \"-Wpedantic\" \n";
         stream << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
 
-        stream << "bool " << functionName << " (";
+        stream << rType << " " << functionName << " (";
 
         // Argument-list
         if (sig.args.empty())
@@ -90,7 +93,8 @@ namespace sourcespec2ir
         return std::make_pair(1, 7);
     }
 
-    SrcTypeRepresentation CWrapperGenerator::getVoid() {
+    SrcTypeRepresentation CWrapperGenerator::getVoid()
+    {
         return SrcTypeRepresentation("void");
     }
 
@@ -131,5 +135,10 @@ namespace sourcespec2ir
         // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include <c_spec_lib.h>", 0));
+    }
+
+    SourceSyntaxResolver CWrapperGenerator::getSyntaxResolver()
+    {
+        return SourceSyntaxResolver();
     }
 }

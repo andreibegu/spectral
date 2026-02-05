@@ -142,6 +142,19 @@ namespace sourcespec2ir
         llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
 
         /**
+         * Encodes a block of bindings to given-arguments. 
+         */
+        void encodeGivenBindingBlock(const MatchedGhostArgBindingBlock &bBlock);
+
+        /**
+         * Encodes an individual binding from a block of given-arg bindings into
+         * a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeGivenBinding(const MatchedGhostArgBinding &binding);
+
+        /**
          * Encodes a statement of a function contract into a metadata-node.
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.

@@ -131,9 +131,12 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Multiple specifications were matched to the same target");
 
+        // TODO: Insert check to make sure that all ghost-arg bindings are
+        //       complete and wellformed.
+
         // Generate the wrapper-functions:
-        // TODO: Also generate wrappers for arg-bindings
-        wrapperGenerator = createWrapperGenerator(*specDeclarations, *wLocMarkers);
+        wrapperGenerator = createWrapperGenerator(
+            *specDeclarations, *wLocMarkers);
         matchedWrappers = wrapperGenerator->generateWrapperFunctions(*matchedSpecs);
         auto wrappers = matchedWrappers->getWrappers();
 
@@ -191,7 +194,6 @@ namespace sourcespec2ir
         }
 
         // Generate metadata for specifications
-        // TODO: Change the encoding to also work if multiple contracts are attached to one function etc.
         for (const auto &contract : matchedSpecs->matchedFContracts)
             encodeFunctionContractBlock(*contract);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
@@ -200,6 +202,9 @@ namespace sourcespec2ir
             encodeStmntBlock(*stmntBlock);
         for (const auto &contract : matchedSpecs->matchedGhostContracts)
             encodeGhostContract(*contract);
+        for (const auto &bBlock : matchedSpecs->matchedGivenBindings)
+            encodeGivenBindingBlock(*bBlock);
+        // TODO: Handle yields args
 
         // Check wellformedness of module
         if (outputConfig.printDebugInfo)
@@ -346,7 +351,7 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFun, *irContext);
 
         // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *, 2> mdElems;
+        llvm::SmallVector<llvm::Metadata *, 8> mdElems;
         // Add statement identifier
         std::string mdId;
         if (stmnt.type == Assert)
@@ -385,6 +390,59 @@ namespace sourcespec2ir
             mdElems.push_back(arg);
 
         return llvm::MDNode::get(*irContext, mdElems);
+    }
+
+    void SourceSpecTransformer::encodeGivenBindingBlock(
+        const MatchedGhostArgBindingBlock &bBlock)
+    {
+        llvm::SmallVector<llvm::Metadata *> nodes;
+
+        // Src-location
+        nodes.push_back(encodeSrcLoc(bBlock.srcLoc));
+
+        // Bindings
+        for (auto &b : bBlock.bindings)
+            nodes.push_back(encodeGivenBinding(b));
+
+        // Attach node to function
+        auto blockNode = llvm::MDTuple::get(*irContext, nodes);
+        bBlock.call->setMetadata(PALLAS_GIVEN_BINDING_BLOCK, blockNode);
+    }
+
+    llvm::MDNode *SourceSpecTransformer::encodeGivenBinding(
+        const MatchedGhostArgBinding &binding)
+    {
+        auto srcWrapper = matchedWrappers->givenBindingWrappers.at(&binding).get();
+        auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
+
+        // Add a metadata-marker to wrapper
+        utils::markGeneratedSpecFunction(*irWrapper, *irContext);
+
+        llvm::SmallVector<llvm::Metadata *, 8> nodes;
+
+        // Src location
+        nodes.push_back(encodeSrcLoc(binding.srcLoc));
+
+        // Wrapper function
+        nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
+
+        // Given args
+        auto givenVars = getVarsForWrapperArgs(*irWrapper,
+                                               srcWrapper->givenArgs);
+        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
+        nodes.push_back(givenNode);
+
+        // Yields args
+        auto yieldsVars = getVarsForWrapperArgs(*irWrapper,
+                                                srcWrapper->yieldsArgs);
+        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
+        nodes.push_back(yieldsNode);
+
+        // DIVariables
+        for (auto arg : srcWrapper->argList)
+            nodes.push_back(arg);
+
+        return llvm::MDNode::get(*irContext, nodes);
     }
 
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
@@ -684,6 +742,18 @@ namespace sourcespec2ir
             for (auto &stmnt : stmntBlock->statements)
                 rewriteWrapperLocations(*matchedWrappers->statementWrappers[stmnt.get()],
                                         stmnt->exprLoc, cu, scopeFile, scope);
+        }
+        // Handle given-arg bindings
+        for (auto &bindingBlock : matchedSpecs.matchedGivenBindings)
+        {
+            auto parentFunc = bindingBlock->call->getParent()->getParent();
+            auto cu = getCUForFunc(parentFunc);
+            auto scopeFile = getFileForFunc(parentFunc);
+            auto scope = getScopeForFunc(parentFunc);
+            for (auto &b : bindingBlock->bindings)
+                rewriteWrapperLocations(
+                    *matchedWrappers->givenBindingWrappers[&b], b.exprLoc, cu,
+                    scopeFile, scope);
         }
     }
 

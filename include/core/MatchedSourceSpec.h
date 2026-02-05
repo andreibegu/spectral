@@ -112,6 +112,13 @@ namespace sourcespec2ir
         {
         }
 
+
+        /**
+         * Returns a pointer to the given argument with the given name. 
+         * If no argument with the provided name exists, a nullptr is returned.
+         */
+        const GhostArgumentDef *getGivenArg(const std::string &name) const;
+
         void addStatement(std::unique_ptr<MatchedFContractStatement> stmnt)
         {
             statements.push_back(std::move(stmnt));

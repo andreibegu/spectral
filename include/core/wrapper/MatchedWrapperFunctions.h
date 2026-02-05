@@ -28,6 +28,8 @@ namespace sourcespec2ir
             statementWrappers;
         std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
             ghostContractWrappers;
+        std::map<const MatchedGhostArgBinding *, std::unique_ptr<SrcWrapperFunction>>
+            givenBindingWrappers;
 
         MatchedWrapperFunctions();
 

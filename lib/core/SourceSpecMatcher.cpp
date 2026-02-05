@@ -194,6 +194,7 @@ namespace sourcespec2ir
         // Extract return-type
         auto *retClause = ctx.wrapperRetClause();
         sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
+        sig.returnTy = std::nullopt;
         return sig;
     }
 
@@ -525,6 +526,7 @@ namespace sourcespec2ir
         // be extended.
         WrapperSignature sig;
         sig.parentRetTy = getGhostMethodRetTy(impl);
+        sig.returnTy = std::nullopt;
         sig.args = getGhostMethodArgs(impl);
         return sig;
     }

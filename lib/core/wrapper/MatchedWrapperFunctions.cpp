@@ -21,6 +21,8 @@ namespace sourcespec2ir
             wrappers->push_back(wrapper.get());
         for (auto &[stmnt, wrapper] : ghostContractWrappers)
             wrappers->push_back(wrapper.get());
+        for (auto &[stmnt, wrapper] : givenBindingWrappers)
+            wrappers->push_back(wrapper.get());
         return wrappers;
     }
 

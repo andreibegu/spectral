@@ -10,6 +10,7 @@
 #include "wrapper/WrapperSignature.h"
 #include "SpecDeclaration.h"
 #include "SpecPredicate.h"
+#include "SourceSyntaxResolver.h"
 
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/SetVector.h>
@@ -35,7 +36,7 @@ namespace sourcespec2ir
         /**
          * Generates a new wrapper-generator.
          * The provided references to the specDeclarations and InsertLocations
-         * must remain valid for the lifetime of the SourceWrapperGenerator.
+         * must remain valid for the lifetime of the WrapperGenerator.
          */
         SourceWrapperGenerator(
             const std::string srcInFile,
@@ -121,7 +122,7 @@ namespace sourcespec2ir
          * inserted.
          * The default-implementation returns the line of the given function.
          */
-        size_t getWrapperInsertLoc(const MatchedFunctionContract &contract);
+        virtual size_t getWrapperInsertLoc(const MatchedFunctionContract &contract);
 
         /**
          * Return the line-number where the wrapper-functions for the
@@ -129,7 +130,8 @@ namespace sourcespec2ir
          * The default-implementation returns the line of the
          * contract definition.
          */
-        size_t getWrapperInsertLoc(const MatchedGhostContract &contract);
+        virtual size_t getWrapperInsertLoc(
+            const MatchedGhostContract &contract);
 
         /**
          * Return the line-number where the wrapper-function for the
@@ -137,21 +139,31 @@ namespace sourcespec2ir
          * function, should be inserted.
          * The default-implementation returns the line of the parent-function.
          */
-        size_t getWrapperInsertLoc(const MatchedLoopInvariantBlock &invBlock);
+        virtual size_t getWrapperInsertLoc(
+            const MatchedLoopInvariantBlock &invBlock);
 
         /**
          * Return the line-number where the wrapper-function for a given
          * specification-statement should be inserted.
          * The default-implementation returns the line of the parent-function.
          */
-        size_t getWrapperInsertLoc(const MatchedSpecStatementBlock &stmntBlock);
+        virtual size_t getWrapperInsertLoc(
+            const MatchedSpecStatementBlock &stmntBlock);
+
+        /**
+         * Return the line number where the wrapper functions for a block of
+         * bindings to given-arguments should be inserted.
+         * The default implementation returns the line of the parent-function.
+         */
+        virtual size_t getWrapperInsertLoc(
+            const MatchedGhostArgBindingBlock &bindingBlock);
 
         /**
          * Return the line-number where the wrapper-functions for a given
          * contract that is mapped to an external or generated function
          * should be inserted.
          */
-        size_t getExternalWrapperInsertLoc(
+        virtual size_t getExternalWrapperInsertLoc(
             const MatchedFunctionContract &contract);
 
         /**
@@ -212,6 +224,7 @@ namespace sourcespec2ir
 
     protected:
         const std::string srcInFile;
+        const SourceSyntaxResolver syntaxResolver;
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers;
 
@@ -232,15 +245,21 @@ namespace sourcespec2ir
         };
 
         /**
+         * Return an appropriate SyntaxResolver for the used language.
+         */
+        virtual SourceSyntaxResolver getSyntaxResolver() = 0;
+
+        /**
          * Build a wrapper-signature based on the given DILocalVariables that
-         * represent the arguments and the given DIType that represents the
-         * return-type.
+         * represent the arguments, the return type of the wrapper and the
+         * DIType that represents the return-type` of the parent function.
          * Frontends can override this to influence the construction of the
          * wrapper-function's signature.
          */
         virtual WrapperSignature getWrapperSignature(
             const llvm::ArrayRef<llvm::DILocalVariable *> &srcVars,
-            const llvm::DIType *returnType = nullptr);
+            const std::optional<SrcTypeRepresentation> &retType,
+            const llvm::DIType *parentRetTy = nullptr);
 
         /**
          * Build a string-representation of an argument from a string of the
@@ -397,17 +416,23 @@ namespace sourcespec2ir
             const MatchedFunctionContract *parentContract,
             MatchedWrapperFunctions &matchedWrappers);
 
+        void wrapGivenArgBlock(
+            const MatchedGhostArgBindingBlock &bindingBlock,
+            const MatchedFunctionContract *parentContract,
+            const MatchedFunctionContract *calledContract,
+            MatchedWrapperFunctions &matchedWrappers);
+
         /**
          * Adds the ghost arguments from the given contract to the given
          * wrapper signature.
          */
         void addGhostArgsToSig(WrapperSignature &sig,
-                               const MatchedFunctionContract &contr, 
+                               const MatchedFunctionContract &contr,
                                bool skipYields = false);
 
         /**
-         * Extracts the names of the given and yields arguments and adds them 
-         * to the corresponding vectors. 
+         * Extracts the names of the given and yields arguments and adds them
+         * to the corresponding vectors.
          * If contr is null, nothing happens.
          */
         void addGhostArgNames(const MatchedFunctionContract *contr,
