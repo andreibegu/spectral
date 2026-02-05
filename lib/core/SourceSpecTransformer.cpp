@@ -1,3 +1,4 @@
+#include <map>
 #include <stdexcept>
 #include <vector>
 
@@ -193,9 +194,11 @@ namespace sourcespec2ir
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
 
+        std::map<const GhostArgumentDef *, llvm::Metadata *> ghostArgDefMap;
+
         // Generate metadata for specifications
         for (const auto &contract : matchedSpecs->matchedFContracts)
-            encodeFunctionContractBlock(*contract);
+            encodeFunctionContractBlock(*contract, ghostArgDefMap);
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
@@ -203,7 +206,18 @@ namespace sourcespec2ir
         for (const auto &contract : matchedSpecs->matchedGhostContracts)
             encodeGhostContract(*contract);
         for (const auto &bBlock : matchedSpecs->matchedGivenBindings)
-            encodeGivenBindingBlock(*bBlock);
+        {
+            auto *calledFunc = bBlock->call->getCalledFunction();
+            auto *calleeContr = matchedSpecs->getContractForFunc(*calledFunc);
+            if (calleeContr == nullptr)
+            {
+                std::stringstream s;
+                s << "Failed to find contract for function"
+                  << utils::getSrcNameOfFunction(*calledFunc);
+                throw utils::PallasException(s.str());
+            }
+            encodeGivenBindingBlock(*bBlock, *calleeContr, ghostArgDefMap);
+        }
         // TODO: Handle yields args
 
         // Check wellformedness of module
@@ -393,7 +407,9 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::encodeGivenBindingBlock(
-        const MatchedGhostArgBindingBlock &bBlock)
+        const MatchedGhostArgBindingBlock &bBlock,
+        const MatchedFunctionContract &calleeContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
         llvm::SmallVector<llvm::Metadata *> nodes;
 
@@ -402,7 +418,8 @@ namespace sourcespec2ir
 
         // Bindings
         for (auto &b : bBlock.bindings)
-            nodes.push_back(encodeGivenBinding(b));
+            nodes.push_back(
+                encodeGivenBinding(b, calleeContract, ghostArgDefMap));
 
         // Attach node to function
         auto blockNode = llvm::MDTuple::get(*irContext, nodes);
@@ -410,7 +427,9 @@ namespace sourcespec2ir
     }
 
     llvm::MDNode *SourceSpecTransformer::encodeGivenBinding(
-        const MatchedGhostArgBinding &binding)
+        const MatchedGhostArgBinding &binding,
+        const MatchedFunctionContract &calleeContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
         auto srcWrapper = matchedWrappers->givenBindingWrappers.at(&binding).get();
         auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
@@ -419,6 +438,18 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapper, *irContext);
 
         llvm::SmallVector<llvm::Metadata *, 8> nodes;
+
+        // MD-encoding of the arg-definition
+        auto argDef = calleeContract.getGivenArg(binding.ghostArg);
+        if (argDef == nullptr || !ghostArgDefMap.contains(argDef))
+        {
+            std::stringstream s;
+            s << "Failed find definition of given-argument: "
+              << binding.ghostArg << " at " << binding.srcLoc.asShortString();
+            throw utils::PallasException(s.str());
+        }
+        auto *argMD = ghostArgDefMap.at(argDef);
+        nodes.push_back(argMD);
 
         // Src location
         nodes.push_back(encodeSrcLoc(binding.srcLoc));
@@ -463,7 +494,8 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::encodeFunctionContractBlock(
-        const MatchedFunctionContract &contract)
+        const MatchedFunctionContract &contract,
+        std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
         const auto parentFunction = contract.function;
         llvm::SmallVector<llvm::Metadata *> contractMDNodes;
@@ -484,14 +516,14 @@ namespace sourcespec2ir
         // Given args
         llvm::SmallVector<llvm::Metadata *> givenDefs;
         for (auto &g : contract.givenArgs)
-            givenDefs.push_back(encodeGhostArgDef(g));
+            givenDefs.push_back(encodeGhostArgDef(g, ghostArgDefMap));
         auto givenNodes = llvm::MDTuple::get(*irContext, givenDefs);
         contractMDNodes.push_back(givenNodes);
 
         // Yields args
         llvm::SmallVector<llvm::Metadata *> yieldsDefs;
         for (auto &y : contract.yieldsArgs)
-            yieldsDefs.push_back(encodeGhostArgDef(y));
+            yieldsDefs.push_back(encodeGhostArgDef(y, ghostArgDefMap));
         auto yieldsNodes = llvm::MDTuple::get(*irContext, yieldsDefs);
         contractMDNodes.push_back(yieldsNodes);
 
@@ -510,14 +542,20 @@ namespace sourcespec2ir
     }
 
     llvm::MDTuple *SourceSpecTransformer::encodeGhostArgDef(
-        const GhostArgumentDef &argDef)
+        const GhostArgumentDef &argDef,
+        std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
         llvm::SmallVector<llvm::Metadata *> nodes;
         // location
         nodes.push_back(encodeSrcLoc(argDef.srcLoc));
         // name
         nodes.push_back(llvm::MDString::get(*irContext, argDef.argName));
-        return llvm::MDTuple::get(*irContext, nodes);
+
+        auto mdEncoding = llvm::MDTuple::get(*irContext, nodes);
+
+        // Keep mapping of GhostArgumentDef to MD-nodes
+        ghostArgDefMap[&argDef] = mdEncoding;
+        return mdEncoding;
     }
 
     llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(

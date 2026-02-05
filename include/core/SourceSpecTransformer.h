@@ -129,7 +129,8 @@ namespace sourcespec2ir
          * Encodes a block of function-contract statements into metadata
          */
         void encodeFunctionContractBlock(
-            const MatchedFunctionContract &contract);
+            const MatchedFunctionContract &contract,
+            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Encodes a ghost contract into metadata
@@ -137,14 +138,19 @@ namespace sourcespec2ir
         void encodeGhostContract(const MatchedGhostContract &contract);
 
         /**
-         * Encodes the definition fo a ghost argument into a metadata-node
+         * Encodes the definition of a ghost argument into a metadata-node
          */
-        llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
+        llvm::MDTuple *encodeGhostArgDef(
+            const GhostArgumentDef &argDef,
+            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
-         * Encodes a block of bindings to given-arguments. 
+         * Encodes a block of bindings to given-arguments.
          */
-        void encodeGivenBindingBlock(const MatchedGhostArgBindingBlock &bBlock);
+        void encodeGivenBindingBlock(
+            const MatchedGhostArgBindingBlock &bBlock, 
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Encodes an individual binding from a block of given-arg bindings into
@@ -152,7 +158,10 @@ namespace sourcespec2ir
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.
          */
-        llvm::MDNode *encodeGivenBinding(const MatchedGhostArgBinding &binding);
+        llvm::MDNode *encodeGivenBinding(
+            const MatchedGhostArgBinding &binding, 
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Encodes a statement of a function contract into a metadata-node.
