@@ -218,7 +218,29 @@ namespace sourcespec2ir
             }
             encodeGivenBindingBlock(*bBlock, *calleeContr, ghostArgDefMap);
         }
-        // TODO: Handle yields args
+        for (const auto &bBlock : matchedSpecs->matchedYieldsBindings)
+        {
+            auto *calledFunc = bBlock->call->getCalledFunction();
+            auto *calleeContr = matchedSpecs->getContractForFunc(*calledFunc);
+            if (calleeContr == nullptr)
+            {
+                std::stringstream s;
+                s << "Failed to find contract for function"
+                  << utils::getSrcNameOfFunction(*calledFunc);
+                throw utils::PallasException(s.str());
+            }
+            auto *parentFunc = bBlock->call->getParent()->getParent();
+            auto *parentContr = matchedSpecs->getContractForFunc(*parentFunc);
+            if (parentContr == nullptr)
+            {
+                std::stringstream s;
+                s << "Failed to find contract for function"
+                  << utils::getSrcNameOfFunction(*parentFunc);
+                throw utils::PallasException(s.str());
+            }
+            encodeYieldsBindingBlock(
+                *bBlock, *parentContr, *calleeContr, ghostArgDefMap);
+        }
 
         // Check wellformedness of module
         if (outputConfig.printDebugInfo)
@@ -444,7 +466,7 @@ namespace sourcespec2ir
         if (argDef == nullptr || !ghostArgDefMap.contains(argDef))
         {
             std::stringstream s;
-            s << "Failed find definition of given-argument: "
+            s << "Failed to find definition of given-argument: "
               << binding.ghostArg << " at " << binding.srcLoc.asShortString();
             throw utils::PallasException(s.str());
         }
@@ -472,6 +494,65 @@ namespace sourcespec2ir
         // DIVariables
         for (auto arg : srcWrapper->argList)
             nodes.push_back(arg);
+
+        return llvm::MDNode::get(*irContext, nodes);
+    }
+
+    void SourceSpecTransformer::encodeYieldsBindingBlock(
+        const MatchedGhostArgBindingBlock &bBlock,
+        const MatchedFunctionContract &parentContract,
+        const MatchedFunctionContract &calleeContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
+    {
+        llvm::SmallVector<llvm::Metadata *> nodes;
+
+        // Src-location
+        nodes.push_back(encodeSrcLoc(bBlock.srcLoc));
+
+        // Bindings
+        for (auto &b : bBlock.bindings)
+            nodes.push_back(encodeYieldsBinding(
+                b, parentContract, calleeContract, ghostArgDefMap));
+
+        // Attach node to function
+        auto blockNode = llvm::MDTuple::get(*irContext, nodes);
+        bBlock.call->setMetadata(PALLAS_YIELDS_BINDING_BLOCK, blockNode);
+    }
+
+    llvm::MDNode * SourceSpecTransformer::encodeYieldsBinding(
+        const MatchedGhostArgBinding &binding,
+        const MatchedFunctionContract &parentContract,
+        const MatchedFunctionContract &calleeContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
+    {
+        llvm::SmallVector<llvm::Metadata *, 8> nodes;
+
+        // Src location
+        nodes.push_back(encodeSrcLoc(binding.srcLoc));
+        
+        // Target var (ghost var from parent function)
+        auto targetVarName = llvm::StringRef(binding.exprStr).trim().str();
+        auto targetVarDef = parentContract.getGhostArg(targetVarName);
+        if (targetVarDef == nullptr || !ghostArgDefMap.contains(targetVarDef)) {
+            std::stringstream s;
+            s << "Failed to find definition of ghost-argument: "
+              << binding.exprStr << " at " << binding.exprLoc.asShortString();
+            throw utils::PallasException(s.str());
+        }
+        auto targetVarMD = ghostArgDefMap.at(targetVarDef);
+        nodes.push_back(targetVarMD);
+
+        // Source var (yields-arg from called function)
+        auto sourceArgDef = calleeContract.getYieldsArg(binding.ghostArg);
+        if (sourceArgDef == nullptr || !ghostArgDefMap.contains(sourceArgDef))
+        {
+            std::stringstream s;
+            s << "Failed to find definition of yields-argument: "
+              << binding.ghostArg << " at " << binding.srcLoc.asShortString();
+            throw utils::PallasException(s.str());
+        }
+        auto *sourceArgMD = ghostArgDefMap.at(sourceArgDef);
+        nodes.push_back(sourceArgMD);
 
         return llvm::MDNode::get(*irContext, nodes);
     }

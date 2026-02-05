@@ -148,7 +148,7 @@ namespace sourcespec2ir
          * Encodes a block of bindings to given-arguments.
          */
         void encodeGivenBindingBlock(
-            const MatchedGhostArgBindingBlock &bBlock, 
+            const MatchedGhostArgBindingBlock &bBlock,
             const MatchedFunctionContract &calleeContract,
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
@@ -159,7 +159,28 @@ namespace sourcespec2ir
          * lies with the llvm-context.
          */
         llvm::MDNode *encodeGivenBinding(
-            const MatchedGhostArgBinding &binding, 
+            const MatchedGhostArgBinding &binding,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a block of bindings to yields-arguments.
+         */
+        void encodeYieldsBindingBlock(
+            const MatchedGhostArgBindingBlock &bBlock,
+            const MatchedFunctionContract &parentContract,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes an individual binding from a block of yields-arg bindings 
+         * into a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeYieldsBinding(
+            const MatchedGhostArgBinding &binding,
+            const MatchedFunctionContract &parentContract,
             const MatchedFunctionContract &calleeContract,
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 

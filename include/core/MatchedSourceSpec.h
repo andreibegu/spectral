@@ -119,6 +119,18 @@ namespace sourcespec2ir
          */
         const GhostArgumentDef *getGivenArg(const std::string &name) const;
 
+        /**
+         * Returns a pointer to the yields argument with the given name. 
+         * If no argument with the provided name exists, a nullptr is returned.
+         */
+        const GhostArgumentDef *getYieldsArg(const std::string &name) const;
+
+        /**
+         * Returns a pointer to a ghost argument with the given name. 
+         * If no argument with the provided name exists, a nullptr is returned.
+         */
+        const GhostArgumentDef *getGhostArg(const std::string &name) const;
+
         void addStatement(std::unique_ptr<MatchedFContractStatement> stmnt)
         {
             statements.push_back(std::move(stmnt));
