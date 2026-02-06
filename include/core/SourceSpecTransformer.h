@@ -159,7 +159,7 @@ namespace sourcespec2ir
          * lies with the llvm-context.
          */
         llvm::MDNode *encodeGivenBinding(
-            const MatchedGhostArgBinding &binding,
+            const MatchedGhostVarBinding &binding,
             const MatchedFunctionContract &calleeContract,
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
@@ -173,15 +173,33 @@ namespace sourcespec2ir
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
-         * Encodes an individual binding from a block of yields-arg bindings 
+         * Encodes an individual binding from a block of yields-arg bindings
          * into a md-node.
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.
          */
         llvm::MDNode *encodeYieldsBinding(
-            const MatchedGhostArgBinding &binding,
+            const MatchedGhostVarBinding &binding,
             const MatchedFunctionContract &parentContract,
             const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a block of assignments to ghost arguments.
+         */
+        void encodeGhostAssignBlock(
+            const MatchedGhostAssignBlock &aBlock,
+            const MatchedFunctionContract &parentContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes an individual assignment to a ghost variable into a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeGhostAssign(
+            const MatchedGhostVarBinding &assignment,
+            const MatchedFunctionContract &parentContract,
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
@@ -219,16 +237,24 @@ namespace sourcespec2ir
         llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
 
         /**
-         * Check if the specifications regarding ghost arguments are wellformed. 
-         * If not, an exception is raised. 
+         * Check if the specifications regarding ghost arguments are wellformed.
+         * If not, an exception is raised.
          * Checks that:
          * - The names of ghost args of the same function do no conflict
-         * - All blocks of given-bindings mention all given-arguments of 
+         * - All blocks of given-bindings mention all given-arguments of
          *      the called function
          * - All blocks of ghost-argument bindings only mention ghost arguments
-         *    that are defined in the contract of the called function. 
+         *    that are defined in the contract of the called function.
          */
         void checkGhostArgsWellformed(
+            const MatchedSpecifications &matchedSpec) const;
+
+        /**
+         * Checks that the ghost-assignment annotations only refer to ghost
+         * variables that are in scope.
+         * If not, an exception is raised.
+         */
+        void checkGhostAssignsWellformed(
             const MatchedSpecifications &matchedSpec) const;
 
         /**
@@ -253,6 +279,14 @@ namespace sourcespec2ir
             std::pair<size_t, size_t> srcOffset,
             llvm::DICompileUnit *cu, llvm::DIFile *scopeFile,
             llvm::DIScope *scope);
+
+        /**
+         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions
+         * Uses the given function to get the compile-unit, scopeFile and scope.
+         */
+        void rewriteWrapperLocations(
+            const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+            llvm::Function *parentFunc);
 
         /**
          * Wrapper around rewriteSpecLocations for the use with WrapperFunctions

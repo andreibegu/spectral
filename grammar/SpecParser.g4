@@ -12,7 +12,8 @@ spec
     | predicateDefBlock
     | ghostDefBlock
     | givenBindingBlock
-    | yieldsBindingBlock;
+    | yieldsBindingBlock
+    |ghostAssignBlock;
 
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
@@ -27,6 +28,8 @@ wrapperLocationMarker: SPEC_START 'wrapper location' specExpression? SPEC_EXPR_E
 predicateDefBlock: SPEC_START predicateDef+ SPEC_END;
 
 ghostDefBlock: SPEC_START ghostDef SPEC_END;
+
+ghostAssignBlock: SPEC_START ghostAssign+ SPEC_END;
 
 specContractClause
     : ('requires' specExpression SPEC_EXPR_END) # requiresClause
@@ -45,6 +48,8 @@ givenArgBinding: gArg=ghostArgBindingLeft '=' expr=specExpression SPEC_EXPR_END;
 
 yieldsBindingBlock: SPEC_START 'yields' yieldsArgBinding+ SPEC_END;
 yieldsArgBinding: expr=ghostArgBindingLeft '=' yArg=specExpression SPEC_EXPR_END;
+
+ghostAssign: 'ghost' 'assign' gVar=ghostArgBindingLeft '=' expr=specExpression SPEC_EXPR_END;
 
 ghostArgBindingLeft: (~('=' | SPEC_END | SPEC_EXPR_END))+;
 

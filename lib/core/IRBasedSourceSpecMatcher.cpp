@@ -76,6 +76,15 @@ namespace
                      << "\n";
     }
 
+    void printGhostAssignMatchingInfo(const sourcespec2ir::SrcRange &specLoc,
+                                      const llvm::Instruction *instr)
+    {
+        auto specLocStr = specLoc.asShortString();
+        auto instLocStr = getLocString(instr->getDebugLoc());
+        llvm::outs() << "Matched ghost assignment-block at " << specLocStr
+                     << " to instruction at " << instLocStr << "\n";
+    }
+
     /**
      * Returns a tuple with the minimum and maximum line-numbers
      * that are covered by the given loop.
@@ -312,7 +321,8 @@ namespace sourcespec2ir
         return std::make_pair(parentFunction, closestLoop);
     }
 
-    llvm::Instruction *IRBasedSourceSpecMatcher::matchStatementBlock(SrcRange loc)
+    llvm::Instruction *IRBasedSourceSpecMatcher::getClosestInstructionAfter(
+        const SrcRange &loc)
     {
         // Get the first function above the spec-block
         // TODO: Consider the range that is covered by the function instead of
@@ -323,8 +333,12 @@ namespace sourcespec2ir
         auto parentFunc = getFirstFunctionAbove(startLine);
 
         if (parentFunc == nullptr)
-            throw utils::PallasException(
-                "Failed to get enclosing function for statement-block");
+        {
+            std::stringstream s;
+            s << "Failed to get enclosing function for specification-block at "
+              << loc.asShortString();
+            throw utils::PallasException(s.str());
+        }
 
         // Traverse instructions from beginning to the end and find the first
         // instruction that is located after the end of the specification-block.
@@ -350,8 +364,18 @@ namespace sourcespec2ir
             break;
         }
 
+        return closestInst;
+    }
+    llvm::Instruction *IRBasedSourceSpecMatcher::matchStatementBlock(SrcRange loc)
+    {
+        auto closestInst = getClosestInstructionAfter(loc);
+
         if (closestInst == nullptr)
-            throw utils::PallasException("Failed to match statement-block");
+        {
+            std::stringstream s;
+            s << "Failed to match statement-block at " << loc.asShortString();
+            throw utils::PallasException(s.str());
+        }
 
         if (printMatchingInfo)
             printStmntBlockMatchingInfo(loc, closestInst);
@@ -413,6 +437,23 @@ namespace sourcespec2ir
             printGhostArgBindingMatchingInfo(loc, closestCall);
 
         return closestCall;
+    }
+
+    llvm::Instruction *IRBasedSourceSpecMatcher::matchGhostAssignBlock(SrcRange loc)
+    {
+        auto closestInst = getClosestInstructionAfter(loc);
+
+        if (closestInst == nullptr)
+        {
+            std::stringstream s;
+            s << "Failed to match ghost assignment-block at "
+              << loc.asShortString();
+            throw utils::PallasException(s.str());
+        }
+
+        if (printMatchingInfo)
+            printGhostAssignMatchingInfo(loc, closestInst);
+        return closestInst;
     }
 
     llvm::Function *IRBasedSourceSpecMatcher::getFirstFunctionAbove(

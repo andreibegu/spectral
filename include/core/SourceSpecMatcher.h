@@ -97,6 +97,13 @@ namespace sourcespec2ir
         virtual llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) = 0;
 
         /**
+         * Given the location of a block of assignments to ghost arguments, 
+         * returns a pointer to the instruction that the spec refers to.
+         * If the specification cannot be matched, an exception it thrown.
+         */
+        virtual llvm::Instruction *matchGhostAssignBlock(SrcRange loc) = 0;
+
+        /**
          * Returns a SrcRang for the given ParserRuleContext.
          * Sets file and checksum to the file that is opened by this matcher.
          */
@@ -182,6 +189,9 @@ namespace sourcespec2ir
         std::unique_ptr<sourcespec2ir::MatchedGhostArgBindingBlock>
             ghostArgBindingBlock = nullptr;
 
+        std::unique_ptr<sourcespec2ir::MatchedGhostAssignBlock>
+            ghostAssignBlock = nullptr;
+
         // Visitors for function-contracts
         std::any visitSpecContractBlock(
             SpecParser::SpecContractBlockContext *ctx) override;
@@ -224,6 +234,12 @@ namespace sourcespec2ir
             SpecParser::YieldsBindingBlockContext *ctx) override;
         std::any visitYieldsArgBinding(
             SpecParser::YieldsArgBindingContext *ctx) override;
+
+        // Visitors for ghost assignments
+        std::any visitGhostAssignBlock(
+            SpecParser::GhostAssignBlockContext *ctx) override;
+        std::any visitGhostAssign(
+            SpecParser::GhostAssignContext *ctx) override;
 
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).

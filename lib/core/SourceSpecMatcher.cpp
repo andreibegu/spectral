@@ -403,7 +403,7 @@ namespace sourcespec2ir
         auto loc = getLocFromCtx(ctx);
         auto exprStartLoc = getExprStartLoc(*ctx->expr);
         ghostArgBindingBlock->addBinding(
-            MatchedGhostArgBinding(argName, exprStr, loc, exprStartLoc));
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
         return 0;
     }
 
@@ -439,7 +439,42 @@ namespace sourcespec2ir
         auto loc = getLocFromCtx(ctx);
         auto exprStartLoc = loc.startLoc;
         ghostArgBindingBlock->addBinding(
-            MatchedGhostArgBinding(argName, exprStr, loc, exprStartLoc));
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitGhostAssignBlock(
+        SpecParser::GhostAssignBlockContext *ctx)
+    {
+        assert(ghostAssignBlock == nullptr);
+
+        // Match to instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto instr = matchGhostAssignBlock(loc);
+        assert(instr != nullptr);
+
+        ghostAssignBlock = std::make_unique<MatchedGhostAssignBlock>(
+            instr, loc);
+
+        // Add assignments:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedGhostAssigns.push_back(
+            std::move(ghostAssignBlock));
+        return 0;
+    }
+    std::any SourceSpecMatcher::visitGhostAssign(
+        SpecParser::GhostAssignContext *ctx)
+    {
+        assert(ghostAssignBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->gVar);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = getExprStartLoc(*ctx->expr);
+        ghostAssignBlock->addAssignment(
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
         return 0;
     }
 

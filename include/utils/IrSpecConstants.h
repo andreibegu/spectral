@@ -36,6 +36,8 @@ namespace sourcespec2ir
 
     const std::string PALLAS_YIELDS_BINDING_BLOCK = "pallas.yieldsBindings";
 
+    const std::string PALLAS_GHOST_ASSIGN_BLOCK = "pallas.ghostAssignments";
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 

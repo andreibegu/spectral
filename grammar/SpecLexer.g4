@@ -36,6 +36,7 @@ GHOST: 'ghost';
 METHOD: 'method';
 FUNCTION: 'function';
 EQUALS: '=';
+ASSIGN: 'assign';
 
 
 PRED_SIG_START: '(';

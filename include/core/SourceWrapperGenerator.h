@@ -159,6 +159,14 @@ namespace sourcespec2ir
             const MatchedGhostArgBindingBlock &bindingBlock);
 
         /**
+         * Return the line number where the wrapper functions for a block of
+         * assignments to ghost variable arguments should be inserted.
+         * The default implementation returns the line of the parent-function.
+         */
+        virtual size_t getWrapperInsertLoc(
+            const MatchedGhostAssignBlock &assignBlock);
+
+        /**
          * Return the line-number where the wrapper-functions for a given
          * contract that is mapped to an external or generated function
          * should be inserted.
@@ -420,6 +428,11 @@ namespace sourcespec2ir
             const MatchedGhostArgBindingBlock &bindingBlock,
             const MatchedFunctionContract *parentContract,
             const MatchedFunctionContract *calledContract,
+            MatchedWrapperFunctions &matchedWrappers);
+
+        void wrapGhostAssignBlock(
+            const MatchedGhostAssignBlock &assignBlock,
+            const MatchedFunctionContract *parentContract,
             MatchedWrapperFunctions &matchedWrappers);
 
         /**

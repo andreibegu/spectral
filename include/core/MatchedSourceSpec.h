@@ -112,21 +112,20 @@ namespace sourcespec2ir
         {
         }
 
-
         /**
-         * Returns a pointer to the given argument with the given name. 
+         * Returns a pointer to the given argument with the given name.
          * If no argument with the provided name exists, a nullptr is returned.
          */
         const GhostArgumentDef *getGivenArg(const std::string &name) const;
 
         /**
-         * Returns a pointer to the yields argument with the given name. 
+         * Returns a pointer to the yields argument with the given name.
          * If no argument with the provided name exists, a nullptr is returned.
          */
         const GhostArgumentDef *getYieldsArg(const std::string &name) const;
 
         /**
-         * Returns a pointer to a ghost argument with the given name. 
+         * Returns a pointer to a ghost argument with the given name.
          * If no argument with the provided name exists, a nullptr is returned.
          */
         const GhostArgumentDef *getGhostArg(const std::string &name) const;
@@ -253,7 +252,7 @@ namespace sourcespec2ir
      * A struct that represents a binding of an expression to a given-variable
      * or of a yields variable to another ghost variable.
      */
-    struct MatchedGhostArgBinding
+    struct MatchedGhostVarBinding
     {
         // The name of the ghost argument
         std::string ghostArg;
@@ -264,7 +263,7 @@ namespace sourcespec2ir
         // The start-position of the expression in the source-file.
         SrcLocation exprLoc;
 
-        MatchedGhostArgBinding(const std::string &ghostArg,
+        MatchedGhostVarBinding(const std::string &ghostArg,
                                const std::string &exprStr,
                                const SrcRange &srcLoc,
                                const SrcLocation &exprLoc)
@@ -277,13 +276,13 @@ namespace sourcespec2ir
     };
 
     /**
-     * A struct that represents a set of bindings to given-arguments that are
+     * A struct that represents a set of bindings to ghost-arguments that are
      * matched to a function-call.
      */
     struct MatchedGhostArgBindingBlock
     {
         llvm::CallInst *call;
-        llvm::SmallVector<MatchedGhostArgBinding, 2> bindings;
+        llvm::SmallVector<MatchedGhostVarBinding, 2> bindings;
         SrcRange srcLoc;
 
         MatchedGhostArgBindingBlock(
@@ -292,9 +291,29 @@ namespace sourcespec2ir
         {
         }
 
-        void addBinding(MatchedGhostArgBinding binding)
+        void addBinding(MatchedGhostVarBinding binding)
         {
             bindings.push_back(std::move(binding));
+        }
+    };
+
+    /**
+     * Representation of a set of assignments to ghost variables that are
+     * matched to an instruction.
+     */
+    struct MatchedGhostAssignBlock
+    {
+        llvm::Instruction *instr;
+        llvm::SmallVector<MatchedGhostVarBinding, 2> assignments;
+        SrcRange srcLoc;
+
+        MatchedGhostAssignBlock(
+            llvm::Instruction *instr, const SrcRange &srcLoc)
+            : instr(instr), srcLoc(srcLoc) {}
+
+        void addAssignment(MatchedGhostVarBinding assignment)
+        {
+            assignments.push_back(std::move(assignment));
         }
     };
 
@@ -318,6 +337,8 @@ namespace sourcespec2ir
             matchedGivenBindings;
         llvm::SmallVector<std::unique_ptr<MatchedGhostArgBindingBlock>>
             matchedYieldsBindings;
+        llvm::SmallVector<std::unique_ptr<MatchedGhostAssignBlock>>
+            matchedGhostAssigns;
 
         llvm::SmallVector<std::unique_ptr<GhostMethod>> ghostMethods;
 
@@ -328,6 +349,7 @@ namespace sourcespec2ir
               matchedGhostContracts(),
               matchedGivenBindings(),
               matchedYieldsBindings(),
+              matchedGhostAssigns(),
               ghostMethods()
         {
         }

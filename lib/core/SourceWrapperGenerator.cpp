@@ -69,6 +69,14 @@ namespace sourcespec2ir
                 *givenBlock, parentContr, callContr, *matchedWrappers);
         }
 
+        // Create wrapper for assignments to ghost variables
+        for (const auto &assignBlock : matchedSpecs.matchedGhostAssigns)
+        {
+            auto *parentContr = matchedSpecs.getContractForFunc(
+                *assignBlock->instr->getParent()->getParent());
+            wrapGhostAssignBlock(*assignBlock, parentContr, *matchedWrappers);
+        }
+
         // Wrapper for ghost functions
         for (const auto &ghostContr : matchedSpecs.matchedGhostContracts)
             wrapGhostContract(*ghostContr, *matchedWrappers);
@@ -349,6 +357,49 @@ namespace sourcespec2ir
             matchedWrappers.givenBindingWrappers[&binding] =
                 std::make_unique<SrcWrapperFunction>(
                     wrapperName, wrapperStr, argList->getArrayRef(),
+                    givenArgs, yieldsArgs, insertPos);
+        }
+    }
+
+    void SourceWrapperGenerator::wrapGhostAssignBlock(
+        const MatchedGhostAssignBlock &assignBlock,
+        const MatchedFunctionContract *parentContract,
+        MatchedWrapperFunctions &matchedWrappers)
+    {
+        auto syntaxResolver = getSyntaxResolver();
+        // Get accessible variables:
+        auto argList = getVarsForStatement(assignBlock.instr);
+        // Get insert-location for wrapper-function
+        auto insertPos = getWrapperInsertLoc(assignBlock);
+
+        for (auto &a : assignBlock.assignments)
+        {
+            // Get wrapper ret-type
+            auto *vDef = parentContract->getGhostArg(a.ghostArg);
+            if (vDef == nullptr)
+            {
+                std::stringstream s;
+                s << "Unknown ghost variable: " << a.ghostArg;
+                throw utils::PallasException(s.str());
+            }
+            auto wRTy = syntaxResolver.getTypeForGhostArgDef(vDef->defStr);
+
+            // Signature of the wrapper
+            auto wSig = getWrapperSignature(argList->getArrayRef(), wRTy);
+
+            // Extend signature with ghost-arguments
+            llvm::SmallVector<std::string> givenArgs;
+            llvm::SmallVector<std::string> yieldsArgs;
+            addGhostArgNames(parentContract, givenArgs, yieldsArgs);
+            if (parentContract != nullptr)
+                addGhostArgsToSig(wSig, *parentContract);
+
+            auto wrapperName = getNameForWrapperFunction();
+            auto wrapperStr = getWrapperFunctionString(
+                wSig, a.exprStr, wrapperName);
+            matchedWrappers.ghostAssignWrappers[&a] = 
+                std::make_unique<SrcWrapperFunction>(
+                    wrapperName, wrapperStr, argList->getArrayRef(), 
                     givenArgs, yieldsArgs, insertPos);
         }
     }
@@ -718,6 +769,22 @@ namespace sourcespec2ir
                 "Cannot get insert location for call instruction");
         }
         auto parentFunc = call->getParent()->getParent();
+        return utils::getDeclSubprog(*parentFunc)->getLine();
+    }
+
+    size_t SourceWrapperGenerator::getWrapperInsertLoc(
+        const MatchedGhostAssignBlock &assignBlock)
+    {
+        auto instr = assignBlock.instr;
+        // Get the parent-function of the call
+        if (instr == nullptr || instr->getParent() == nullptr ||
+            instr->getParent()->getParent() == nullptr ||
+            instr->getParent()->getParent()->getSubprogram() == nullptr)
+        {
+            throw utils::PallasException(
+                "Cannot get insert location for instruction");
+        }
+        auto parentFunc = instr->getParent()->getParent();
         return utils::getDeclSubprog(*parentFunc)->getLine();
     }
 
