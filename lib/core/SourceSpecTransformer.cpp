@@ -4,6 +4,8 @@
 
 #include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/StringSet.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
@@ -132,8 +134,8 @@ namespace sourcespec2ir
             throw utils::PallasException(
                 "Multiple specifications were matched to the same target");
 
-        // TODO: Insert check to make sure that all ghost-arg bindings are
-        //       complete and wellformed.
+        // Ensure that specifications about ghost arguments are wellformed
+        checkGhostArgsWellformed(*matchedSpecs);
 
         // Generate the wrapper-functions:
         wrapperGenerator = createWrapperGenerator(
@@ -519,7 +521,7 @@ namespace sourcespec2ir
         bBlock.call->setMetadata(PALLAS_YIELDS_BINDING_BLOCK, blockNode);
     }
 
-    llvm::MDNode * SourceSpecTransformer::encodeYieldsBinding(
+    llvm::MDNode *SourceSpecTransformer::encodeYieldsBinding(
         const MatchedGhostArgBinding &binding,
         const MatchedFunctionContract &parentContract,
         const MatchedFunctionContract &calleeContract,
@@ -529,11 +531,12 @@ namespace sourcespec2ir
 
         // Src location
         nodes.push_back(encodeSrcLoc(binding.srcLoc));
-        
+
         // Target var (ghost var from parent function)
         auto targetVarName = llvm::StringRef(binding.exprStr).trim().str();
         auto targetVarDef = parentContract.getGhostArg(targetVarName);
-        if (targetVarDef == nullptr || !ghostArgDefMap.contains(targetVarDef)) {
+        if (targetVarDef == nullptr || !ghostArgDefMap.contains(targetVarDef))
+        {
             std::stringstream s;
             s << "Failed to find definition of ghost-argument: "
               << binding.exprStr << " at " << binding.exprLoc.asShortString();
@@ -873,6 +876,127 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(
                     *matchedWrappers->givenBindingWrappers[&b], b.exprLoc, cu,
                     scopeFile, scope);
+        }
+    }
+
+    namespace
+    {
+        void throwDuplicateGhostArgDefName(
+            const std::string &argName, const llvm::Function &f)
+        {
+            std::stringstream s;
+            s << "Duplicate name of ghost argument: "
+              << argName << " in function "
+              << utils::getSrcNameOfFunction(f);
+            throw utils::PallasException(s.str());
+        }
+
+        void throwBindingNoContract(const MatchedGhostArgBindingBlock &bindings,
+                                    const llvm::Function &f)
+        {
+            std::stringstream s;
+            s << "Ghost binding (" << bindings.srcLoc.asShortString() << ") "
+              << "attached to function without ghost arguments: "
+              << utils::getSrcNameOfFunction(f);
+            throw utils::PallasException(s.str());
+        }
+    };
+
+    void SourceSpecTransformer::checkGhostArgsWellformed(
+        const MatchedSpecifications &matchedSpec) const
+    {
+        // Check that names of ghost args do not conflict
+        for (const auto &contr : matchedSpec.matchedFContracts)
+        {
+            llvm::StringSet gArgNames;
+            for (auto &gArg : contr->givenArgs)
+            {
+                if (gArgNames.contains(gArg.argName))
+                    throwDuplicateGhostArgDefName(gArg.argName, *contr->function);
+                gArgNames.insert(gArg.argName);
+            }
+            for (auto &yArg : contr->yieldsArgs)
+            {
+                if (gArgNames.contains(yArg.argName))
+                    throwDuplicateGhostArgDefName(yArg.argName, *contr->function);
+                gArgNames.insert(yArg.argName);
+            }
+        }
+
+        // Check that given-bindings mention all given-args
+        for (const auto &gBindings : matchedSpec.matchedGivenBindings)
+        {
+            // Check that the called function has a contract
+            auto *calledFunc = gBindings->call->getCalledFunction();
+            auto *calleeContr = matchedSpec.getContractForFunc(*calledFunc);
+            if (calleeContr == nullptr)
+                throwBindingNoContract(*gBindings, *calledFunc);
+            // Check that the number of given args matches
+            if (calleeContr->givenArgs.size() != gBindings->bindings.size())
+            {
+                std::stringstream s;
+                s << "Number of given-args does not match between call "
+                  << "and contract (" << gBindings->srcLoc.asShortString() << ")";
+                throw utils::PallasException(s.str());
+            }
+
+            // Check all args in the binding-block
+            llvm::StringSet gArgNames;
+            for (const auto &b : gBindings->bindings)
+            {
+                // Check for duplicates
+                if (gArgNames.contains(b.ghostArg))
+                {
+                    std::stringstream s;
+                    s << "Given argument occurs more than once:"
+                      << b.ghostArg << " at " << b.srcLoc.asShortString();
+                    throw utils::PallasException(s.str());
+                }
+                gArgNames.insert(b.ghostArg);
+                // Check if defined in contract
+                if (calleeContr->getGivenArg(b.ghostArg) == nullptr)
+                {
+                    std::stringstream s;
+                    s << "Argument " << b.ghostArg
+                      << " (" << b.srcLoc.asShortString() << ") "
+                      << " is not defined in contract of called function.";
+                    throw utils::PallasException(s.str());
+                }
+            }
+        }
+
+        // Check yields-binding blocks
+        for (const auto &yBindings : matchedSpec.matchedYieldsBindings)
+        {
+            // Check that the called function has a contract
+            auto *calledFunc = yBindings->call->getCalledFunction();
+            auto *calleeContr = matchedSpec.getContractForFunc(*calledFunc);
+            if (calleeContr == nullptr)
+                throwBindingNoContract(*yBindings, *calledFunc);
+
+            // Check all args in the binding-block
+            llvm::StringSet yArgNames;
+            for (const auto &b : yBindings->bindings)
+            {
+                // Check for duplicates
+                if (yArgNames.contains(b.ghostArg))
+                {
+                    std::stringstream s;
+                    s << "Yields argument occurs more than once:"
+                      << b.ghostArg << " at " << b.srcLoc.asShortString();
+                    throw utils::PallasException(s.str());
+                }
+                yArgNames.insert(b.ghostArg);
+                // Check if defined in contract
+                if (calleeContr->getYieldsArg(b.ghostArg) == nullptr)
+                {
+                    std::stringstream s;
+                    s << "Argument " << b.ghostArg
+                      << " (" << b.srcLoc.asShortString() << ") "
+                      << " is not defined in contract of called function.";
+                    throw utils::PallasException(s.str());
+                }
+            }
         }
     }
 

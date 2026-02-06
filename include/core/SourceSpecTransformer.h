@@ -219,6 +219,19 @@ namespace sourcespec2ir
         llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
 
         /**
+         * Check if the specifications regarding ghost arguments are wellformed. 
+         * If not, an exception is raised. 
+         * Checks that:
+         * - The names of ghost args of the same function do no conflict
+         * - All blocks of given-bindings mention all given-arguments of 
+         *      the called function
+         * - All blocks of ghost-argument bindings only mention ghost arguments
+         *    that are defined in the contract of the called function. 
+         */
+        void checkGhostArgsWellformed(
+            const MatchedSpecifications &matchedSpec) const;
+
+        /**
          * Modifies the debug-locations of the instructions in the generated
          * wrapper-functions and predicate definitions to represent the
          * locations from the original source-file.
