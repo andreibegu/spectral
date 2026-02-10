@@ -471,7 +471,7 @@ namespace sourcespec2ir
         auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
 
         // Add a metadata-marker to wrapper
-        utils::markGeneratedSpecFunction(*irWrapper, *irContext);
+        utils::markGhostWrapper(*irWrapper, *irContext);
 
         llvm::SmallVector<llvm::Metadata *, 8> nodes;
 
@@ -601,7 +601,7 @@ namespace sourcespec2ir
         auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
 
         // Add a metadata-marker to wrapper
-        utils::markGeneratedSpecFunction(*irWrapper, *irContext);
+        utils::markGhostWrapper(*irWrapper, *irContext);
 
         llvm::SmallVector<llvm::Metadata *, 8> nodes;
 

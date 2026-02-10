@@ -44,6 +44,9 @@ namespace sourcespec2ir
     // Metadata-identifier that is used to mark generated functions that wrap specification expressions
     const std::string PALLAS_GENERATED_MARKER = "pallas.exprWrapper";
 
+    // Metadata-identifier that marks generated functions that wrap ghost expressions
+    const std::string PALLAS_GHOST_WRAPPER_MARKER = "pallas.ghostWrapper";
+
     // Identifier to mark predicate definitions
     const std::string PALLAS_PREDICATE_DEF_MARKER = "pallas.predDef";
 

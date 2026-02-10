@@ -23,6 +23,16 @@ namespace sourcespec2ir
          */
         bool isGeneratedSpecFunction(const llvm::Function &f);
 
+        /** 
+         * Adds metadata marker to mark the passed function as a ghost wrapper. 
+         */
+        void markGhostWrapper(llvm::Function &f, llvm::LLVMContext &context);
+
+        /**
+         * Checks if the given function is marked as a ghost wrapper.
+         */
+        bool isGhostWrapper(const llvm::Function &f);
+
         /**
          * Adds a metadata-node to the function that marks it as a
          * definition of a predicate.

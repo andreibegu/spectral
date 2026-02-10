@@ -398,6 +398,7 @@ namespace sourcespec2ir
             auto parentF = oldCall->getParent()->getParent();
             // Calls to spec-functions are only allowed from within wrapper-functions
             if (!utils::isGeneratedSpecFunction(*parentF) &&
+                !utils::isGhostWrapper(*parentF) &&
                 !utils::isPredicateDef(*parentF))
             {
                 throw utils::PallasException(
@@ -520,6 +521,7 @@ namespace sourcespec2ir
         {
             // Skip all functions that do not contain generated specifications.
             if (!utils::isGeneratedSpecFunction(f) &&
+                !utils::isGhostWrapper(f) &&
                 !utils::isPredicateDef(f))
                 continue;
 
