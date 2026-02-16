@@ -218,10 +218,13 @@ namespace sourcespec2ir
         for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
             encodeLoopInvBlock(*invBlock);
         for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
-            encodeStmntBlock(*stmntBlock);
+        {
+            auto *parentFunc = stmntBlock->inst->getParent()->getParent();
+            auto *parentContr = matchedSpecs->getContractForFunc(*parentFunc);
+            encodeStmntBlock(*stmntBlock, parentContr, ghostArgDefMap);
+        }
         for (const auto &contract : matchedSpecs->matchedGhostContracts)
             encodeGhostContract(*contract);
-
         for (const auto &bBlock : matchedSpecs->matchedGivenBindings)
         {
             auto *calledFunc = bBlock->call->getCalledFunction();
@@ -244,16 +247,6 @@ namespace sourcespec2ir
                 throwNoContractForFunc(*parentFunc);
             encodeYieldsBindingBlock(
                 *bBlock, *parentContr, *calleeContr, ghostArgDefMap);
-        }
-
-        // Ghost assignments
-        for (const auto &gaBlock : matchedSpecs->matchedGhostAssigns)
-        {
-            auto *parentFunc = gaBlock->instr->getParent()->getParent();
-            auto *parentContr = matchedSpecs->getContractForFunc(*parentFunc);
-            if (parentContr == nullptr)
-                throwNoContractForFunc(*parentFunc);
-            encodeGhostAssignBlock(*gaBlock, *parentContr, ghostArgDefMap);
         }
 
         // Check wellformedness of module
@@ -370,7 +363,9 @@ namespace sourcespec2ir
     }
 
     void SourceSpecTransformer::encodeStmntBlock(
-        const MatchedSpecStatementBlock &stmntBlock)
+        const MatchedSpecStatementBlock &stmntBlock,
+        const MatchedFunctionContract *parentContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
         const auto inst = stmntBlock.inst;
         if (stmntBlock.inst == nullptr)
@@ -383,7 +378,8 @@ namespace sourcespec2ir
         stmntNodes.push_back(encodeSrcLoc(stmntBlock.srcLoc));
 
         for (auto &stmnt : stmntBlock.statements)
-            stmntNodes.push_back(encodeSpecStatement(*stmnt));
+            stmntNodes.push_back(
+                encodeSpecStatement(*stmnt, parentContract, ghostArgDefMap));
 
         // Build md-node to attach to function
         auto blockMDNode = llvm::MDTuple::get(*irContext, stmntNodes);
@@ -391,18 +387,29 @@ namespace sourcespec2ir
     }
 
     llvm::MDNode *SourceSpecTransformer::encodeSpecStatement(
-        const MatchedSpecStatement &stmnt)
+        const MatchedSpecStatement &stmnt,
+        const MatchedFunctionContract *parentContract,
+        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
     {
+        bool isGhostAssign = stmnt.type == GhostAssign;
+
+        if (isGhostAssign && parentContract == nullptr)
+            throw utils::PallasException(
+                "Ghost assignments may only occur in functions that define ghost variables.");
+
         auto srcWrapperFun = matchedWrappers->statementWrappers.at(&stmnt).get();
         auto irWrapperFun = utils::getFunctionBySrcName(
             *irModule, srcWrapperFun->name);
 
-        // Add a metadata-marker to generated specification-function
-        utils::markGeneratedSpecFunction(*irWrapperFun, *irContext);
+        // Mark wrapper function
+        if (isGhostAssign)
+            utils::markGhostWrapper(*irWrapperFun, *irContext);
+        else
+            utils::markGeneratedSpecFunction(*irWrapperFun, *irContext);
 
         // Generate the metadata that encodes the contract statement:
         llvm::SmallVector<llvm::Metadata *, 8> mdElems;
-        // Add statement identifier
+        // Statement identifier
         std::string mdId;
         if (stmnt.type == Assert)
             mdId = PALLAS_ASSERT;
@@ -412,12 +419,30 @@ namespace sourcespec2ir
             mdId = PALLAS_FOLD;
         else if (stmnt.type == Unfold)
             mdId = PALLAS_UNFOLD;
+        else if (stmnt.type == GhostAssign)
+            mdId = PALLAS_GHOST_ASSIGN;
         else
             throw utils::PallasException("Unsupported statement-type");
         mdElems.push_back(llvm::MDString::get(*irContext, mdId));
 
         // Add info on srcLocation
         mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
+
+        // MD-encoding of the variable definition (for ghost assign)
+        if (isGhostAssign)
+        {
+            auto vDef = parentContract->getGhostArg(stmnt.ghostVarName.value());
+            if (vDef == nullptr || !ghostArgDefMap.contains(vDef))
+            {
+                std::stringstream s;
+                s << "Failed to find definition of ghost variable: "
+                  << stmnt.ghostVarName.value() << " at "
+                  << stmnt.srcLoc.asShortString();
+                throw utils::PallasException(s.str());
+            }
+            auto *gVarMD = ghostArgDefMap.at(vDef);
+            mdElems.push_back(gVarMD);
+        }
 
         // Add reference to function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
@@ -568,77 +593,6 @@ namespace sourcespec2ir
         }
         auto *sourceArgMD = ghostArgDefMap.at(sourceArgDef);
         nodes.push_back(sourceArgMD);
-
-        return llvm::MDNode::get(*irContext, nodes);
-    }
-
-    void SourceSpecTransformer::encodeGhostAssignBlock(
-        const MatchedGhostAssignBlock &aBlock,
-        const MatchedFunctionContract &parentContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        llvm::SmallVector<llvm::Metadata *> nodes;
-
-        // Src-location
-        nodes.push_back(encodeSrcLoc(aBlock.srcLoc));
-
-        // Bindings
-        for (auto &a : aBlock.assignments)
-            nodes.push_back(
-                encodeGhostAssign(a, parentContract, ghostArgDefMap));
-
-        // Attach node to function
-        auto blockNode = llvm::MDTuple::get(*irContext, nodes);
-        aBlock.instr->setMetadata(PALLAS_GHOST_ASSIGN_BLOCK, blockNode);
-    }
-
-    llvm::MDNode *SourceSpecTransformer::encodeGhostAssign(
-        const MatchedGhostVarBinding &assignment,
-        const MatchedFunctionContract &parentContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        auto srcWrapper = matchedWrappers->ghostAssignWrappers.at(&assignment).get();
-        auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
-
-        // Add a metadata-marker to wrapper
-        utils::markGhostWrapper(*irWrapper, *irContext);
-
-        llvm::SmallVector<llvm::Metadata *, 8> nodes;
-
-        // MD-encoding of the variable definition
-        auto vDef = parentContract.getGhostArg(assignment.ghostArg);
-        if (vDef == nullptr || !ghostArgDefMap.contains(vDef))
-        {
-            std::stringstream s;
-            s << "Failed to find definition of ghost variable: "
-              << assignment.ghostArg << " at "
-              << assignment.srcLoc.asShortString();
-            throw utils::PallasException(s.str());
-        }
-        auto *gVarMD = ghostArgDefMap.at(vDef);
-        nodes.push_back(gVarMD);
-
-        // Src location
-        nodes.push_back(encodeSrcLoc(assignment.srcLoc));
-
-        // Wrapper function
-        nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
-
-        // Given args
-        auto givenVars = getVarsForWrapperArgs(*irWrapper,
-                                               srcWrapper->givenArgs);
-        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
-        nodes.push_back(givenNode);
-
-        // Yields args
-        auto yieldsVars = getVarsForWrapperArgs(*irWrapper,
-                                                srcWrapper->yieldsArgs);
-        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
-        nodes.push_back(yieldsNode);
-
-        // DIVariables
-        for (auto arg : srcWrapper->argList)
-            nodes.push_back(arg);
 
         return llvm::MDNode::get(*irContext, nodes);
     }
@@ -947,14 +901,6 @@ namespace sourcespec2ir
                 rewriteWrapperLocations(
                     *matchedWrappers->givenBindingWrappers[&b], b.exprLoc, parentFunc);
         }
-        // Ghost assignments
-        for (auto &gAssignBlock : matchedSpecs.matchedGhostAssigns)
-        {
-            auto pFunc = gAssignBlock->instr->getParent()->getParent();
-            for (auto &a : gAssignBlock->assignments)
-                rewriteWrapperLocations(
-                    *matchedWrappers->ghostAssignWrappers[&a], a.exprLoc, pFunc);
-        }
     }
 
     namespace
@@ -1081,30 +1027,41 @@ namespace sourcespec2ir
     void SourceSpecTransformer::checkGhostAssignsWellformed(
         const MatchedSpecifications &matchedSpec) const
     {
-        for (const auto &assignBlock : matchedSpec.matchedGhostAssigns)
+        for (const auto &stmntBlock : matchedSpec.matchedStmntBlocks)
         {
-            // Check that the parent function has a contract
-            auto *parentFunc = assignBlock->instr->getParent()->getParent();
+            auto *parentFunc = stmntBlock->inst->getParent()->getParent();
             auto *parentContr = matchedSpec.getContractForFunc(*parentFunc);
-            if (parentContr == nullptr)
+            for (const auto &stmnt : stmntBlock->statements)
             {
-                std::stringstream s;
-                s << "Ghost assignment ("
-                  << assignBlock->srcLoc.asShortString()
-                  << ") in function without contract ("
-                  << utils::getSrcNameOfFunction(*parentFunc) << ")";
-                throw utils::PallasException(s.str());
-            }
+                if (stmnt->type != GhostAssign)
+                    continue;
 
-            for (const auto &a : assignBlock->assignments)
-            {
-                // Check that the ghost variable is defined in the function
-                if (parentContr->getYieldsArg(a.ghostArg) == nullptr)
+                // Check that the parent function has a contract
+                if (parentContr == nullptr)
                 {
                     std::stringstream s;
-                    s << "Ghost variable " << a.ghostArg
+                    s << "Ghost assignment ("
+                      << stmntBlock->srcLoc.asShortString()
+                      << ") in function without contract ("
+                      << utils::getSrcNameOfFunction(*parentFunc) << ")";
+                    throw utils::PallasException(s.str());
+                }
+
+                // Check that the ghost variable is defined in the function
+                if (!stmnt->ghostVarName.has_value())
+                {
+                    std::stringstream s;
+                    s << "Ghost assignment at "
+                      << stmnt->srcLoc.asShortString()
+                      << " does not have an associated ghost variable! ";
+                    throw utils::PallasException(s.str());
+                }
+                if (parentContr->getYieldsArg(stmnt->ghostVarName.value()) == nullptr)
+                {
+                    std::stringstream s;
+                    s << "Ghost variable " << stmnt->ghostVarName.value()
                       << " is not defined or assignable in assignment at "
-                      << a.srcLoc.asShortString();
+                      << stmnt->srcLoc.asShortString();
                     throw utils::PallasException(s.str());
                 }
             }

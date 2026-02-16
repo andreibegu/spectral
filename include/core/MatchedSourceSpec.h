@@ -35,7 +35,8 @@ namespace sourcespec2ir
         Assert,
         Assume,
         Fold,
-        Unfold
+        Unfold,
+        GhostAssign
     };
 
     /**
@@ -218,10 +219,15 @@ namespace sourcespec2ir
         SrcRange srcLoc;
         // The start-position of the expression in the source-file.
         SrcLocation exprLoc;
+        // If this statement is a ghost assignment, this holds the name of
+        // the ghost-variable
+        std::optional<std::string> ghostVarName;
 
         MatchedSpecStatement(SpecStatementType type, std::string expr,
-                             const SrcRange &srcLoc, const SrcLocation &exprLoc)
-            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc)
+                             const SrcRange &srcLoc, const SrcLocation &exprLoc,
+                             std::optional<std::string> ghostVarName = std::nullopt)
+            : type(type), expr(expr), srcLoc(srcLoc), exprLoc(exprLoc),
+              ghostVarName(ghostVarName)
         {
         }
     };
@@ -298,26 +304,6 @@ namespace sourcespec2ir
     };
 
     /**
-     * Representation of a set of assignments to ghost variables that are
-     * matched to an instruction.
-     */
-    struct MatchedGhostAssignBlock
-    {
-        llvm::Instruction *instr;
-        llvm::SmallVector<MatchedGhostVarBinding, 2> assignments;
-        SrcRange srcLoc;
-
-        MatchedGhostAssignBlock(
-            llvm::Instruction *instr, const SrcRange &srcLoc)
-            : instr(instr), srcLoc(srcLoc) {}
-
-        void addAssignment(MatchedGhostVarBinding assignment)
-        {
-            assignments.push_back(std::move(assignment));
-        }
-    };
-
-    /**
      * Struct that bundles the matched specifications.
      * Contains matched function-contracts and loop-invariants.
      *
@@ -337,8 +323,6 @@ namespace sourcespec2ir
             matchedGivenBindings;
         llvm::SmallVector<std::unique_ptr<MatchedGhostArgBindingBlock>>
             matchedYieldsBindings;
-        llvm::SmallVector<std::unique_ptr<MatchedGhostAssignBlock>>
-            matchedGhostAssigns;
 
         llvm::SmallVector<std::unique_ptr<GhostMethod>> ghostMethods;
 
@@ -349,7 +333,6 @@ namespace sourcespec2ir
               matchedGhostContracts(),
               matchedGivenBindings(),
               matchedYieldsBindings(),
-              matchedGhostAssigns(),
               ghostMethods()
         {
         }

@@ -29,9 +29,6 @@ namespace sourcespec2ir
         matchedYieldsBindings.append(
             std::make_move_iterator(specs2->matchedYieldsBindings.begin()),
             std::make_move_iterator(specs2->matchedYieldsBindings.end()));
-        matchedGhostAssigns.append(
-            std::make_move_iterator(specs2->matchedGhostAssigns.begin()),
-            std::make_move_iterator(specs2->matchedGhostAssigns.end()));
         ghostMethods.append(
             std::make_move_iterator(specs2->ghostMethods.begin()),
             std::make_move_iterator(specs2->ghostMethods.end()));
@@ -134,20 +131,6 @@ namespace sourcespec2ir
                              << "\n";
             }
             matchedYields.insert(callInst);
-        }
-
-        llvm::SmallSet<llvm::Instruction *, 8> matchedGAssign;
-        for (const auto &a : matchedGhostAssigns)
-        {
-            auto *instr = a->instr;
-            if (matchedGAssign.contains(instr))
-            {
-                hasDuplicates = true;
-                llvm::outs() << "WARNING: Multiple ghost assignment blocks "
-                             << "were matched to the same instruction."
-                             << "\n";
-            }
-            matchedGAssign.insert(instr);
         }
 
         return hasDuplicates;

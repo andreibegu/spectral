@@ -30,8 +30,6 @@ namespace sourcespec2ir
             ghostContractWrappers;
         std::map<const MatchedGhostVarBinding *, std::unique_ptr<SrcWrapperFunction>>
             givenBindingWrappers;
-        std::map<const MatchedGhostVarBinding *, std::unique_ptr<SrcWrapperFunction>>
-            ghostAssignWrappers;
             
         MatchedWrapperFunctions();
 

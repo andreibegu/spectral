@@ -97,13 +97,6 @@ namespace sourcespec2ir
         virtual llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) = 0;
 
         /**
-         * Given the location of a block of assignments to ghost arguments, 
-         * returns a pointer to the instruction that the spec refers to.
-         * If the specification cannot be matched, an exception it thrown.
-         */
-        virtual llvm::Instruction *matchGhostAssignBlock(SrcRange loc) = 0;
-
-        /**
          * Returns a SrcRang for the given ParserRuleContext.
          * Sets file and checksum to the file that is opened by this matcher.
          */
@@ -189,9 +182,6 @@ namespace sourcespec2ir
         std::unique_ptr<sourcespec2ir::MatchedGhostArgBindingBlock>
             ghostArgBindingBlock = nullptr;
 
-        std::unique_ptr<sourcespec2ir::MatchedGhostAssignBlock>
-            ghostAssignBlock = nullptr;
-
         // Visitors for function-contracts
         std::any visitSpecContractBlock(
             SpecParser::SpecContractBlockContext *ctx) override;
@@ -208,6 +198,7 @@ namespace sourcespec2ir
         // Visitor for loop-invariants
         std::any visitSpecLoopInvariantBlock(
             SpecParser::SpecLoopInvariantBlockContext *ctx) override;
+
         // Visitor for specification-statement blocks.
         std::any visitSpecStatementBlock(
             SpecParser::SpecStatementBlockContext *ctx) override;
@@ -219,6 +210,8 @@ namespace sourcespec2ir
             SpecParser::FoldStatementContext *ctx) override;
         std::any visitUnfoldStatement(
             SpecParser::UnfoldStatementContext *ctx) override;
+        std::any visitGhostAssignment(
+            SpecParser::GhostAssignmentContext *ctx) override;
 
         // Visitor for ghost methods
         std::any visitGhostDefBlock(
@@ -235,12 +228,6 @@ namespace sourcespec2ir
         std::any visitYieldsArgBinding(
             SpecParser::YieldsArgBindingContext *ctx) override;
 
-        // Visitors for ghost assignments
-        std::any visitGhostAssignBlock(
-            SpecParser::GhostAssignBlockContext *ctx) override;
-        std::any visitGhostAssign(
-            SpecParser::GhostAssignContext *ctx) override;
-
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
@@ -250,7 +237,8 @@ namespace sourcespec2ir
         // Adds a statement to the current block of specification-statements
         void addToStmntBlock(SpecStatementType type,
                              SpecParser::SpecExpressionContext *expr,
-                             const SrcRange &loc);
+                             const SrcRange &loc,
+                             std::optional<std::string> gVarName = std::nullopt);
 
         WrapperSignature getWrapperSignature(
             SpecParser::WrapperSigClauseContext &ctx);

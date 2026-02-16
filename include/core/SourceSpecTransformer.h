@@ -185,24 +185,6 @@ namespace sourcespec2ir
             const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
-         * Encodes a block of assignments to ghost arguments.
-         */
-        void encodeGhostAssignBlock(
-            const MatchedGhostAssignBlock &aBlock,
-            const MatchedFunctionContract &parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes an individual assignment to a ghost variable into a md-node.
-         * Returns a pointer to the new MD-node. Ownership of the new node
-         * lies with the llvm-context.
-         */
-        llvm::MDNode *encodeGhostAssign(
-            const MatchedGhostVarBinding &assignment,
-            const MatchedFunctionContract &parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
          * Encodes a statement of a function contract into a metadata-node.
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.
@@ -227,14 +209,20 @@ namespace sourcespec2ir
         /**
          * Encodes a block of specification-statements into metadata.
          */
-        void encodeStmntBlock(const MatchedSpecStatementBlock &stmntBlock);
+        void encodeStmntBlock(
+            const MatchedSpecStatementBlock &stmntBlock,
+            const MatchedFunctionContract *parentContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Encodes a statement from a block of spec-statements into a md-node.
          * Returns a pointer to the new MD-node. Ownership of the new node
          * lies with the llvm-context.
          */
-        llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
+        llvm::MDNode *encodeSpecStatement(
+            const MatchedSpecStatement &stmnt,
+            const MatchedFunctionContract *parentContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Check if the specifications regarding ghost arguments are wellformed.
