@@ -17,6 +17,7 @@ add_library(spec2ir_core STATIC
     SourceCompilerDriver.cpp
     SourceSpecMatcher.cpp
     SourceSpecTransformer.cpp
+    SourceSyntaxResolver.cpp
     SourceWrapperGenerator.cpp
     SpecDeclarationCollector.cpp
     SpecPredicateCollector.cpp

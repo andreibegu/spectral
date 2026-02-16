@@ -45,8 +45,11 @@ namespace sourcespec2ir
 
         llvm::Instruction *matchStatementBlock(SrcRange loc) override;
 
+        llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) override;
+
+        llvm::Instruction *matchGhostAssignBlock(SrcRange loc) override;
+
     private:
-        const bool printMatchingInfo;
         llvm::FunctionAnalysisManager *fam;
 
         /**
@@ -61,6 +64,8 @@ namespace sourcespec2ir
          * Only functions from the main-file are considered
          */
         llvm::Function *getFirstFunctionAbove(const size_t line);
+
+        llvm::Instruction *getClosestInstructionAfter(const SrcRange &loc);
 
         inline bool isArtificial(const llvm::DISubprogram *sProg)
         {

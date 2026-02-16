@@ -9,7 +9,7 @@
 namespace sourcespec2ir::utils
 {
     /**
-     * Returns the textual representation of the given parser-rule 
+     * Returns the textual representation of the given parser-rule
      * including whitespace.
      */
     std::string getCtxAsStr(const antlr4::ParserRuleContext &argCtx);
@@ -19,7 +19,7 @@ namespace sourcespec2ir::utils
      * returns it as a SrcRange.
      */
     SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx,
-                           const std::string &file, 
+                           const std::string &file,
                            const std::string &md5Checksum);
 
     /**
@@ -28,6 +28,14 @@ namespace sourcespec2ir::utils
      */
     SrcLocation getExprStartLoc(
         const SpecParser::SpecExpressionContext &exprCtx,
+        const std::string &file, const std::string &md5Checksum);
+
+    /**
+     * Returns the location in the source-file where the given definition of a
+     * ghost function starts.
+     */
+    SrcLocation getGhostImplStartLoc(
+        const SpecParser::GhostImplContext &implCtx,
         const std::string &file, const std::string &md5Checksum);
 }
 

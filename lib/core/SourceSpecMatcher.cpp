@@ -1,21 +1,42 @@
 #include "SourceSpecMatcher.h"
+
+#include "FileUtils.h"
 #include "PallasException.h"
 #include "ParsingUtils.h"
-#include "FileUtils.h"
+#include "SpecLexer.h"
 
 #include <cassert>
 #include <optional>
 
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/StringExtras.h>
+
+namespace
+{
+    void printGhostMethodMatchingInfo(const sourcespec2ir::SrcRange &loc,
+                                      std::string name, std::string type)
+    {
+        llvm::outs() << "Found ghost " << type << " " << name << " at "
+                     << loc.getStartLine() << "::" << loc.getStartCol()
+                     << " - "
+                     << loc.getEndLine() << "::" << loc.getEndCol()
+                     << "\n";
+    }
+}
+
 namespace sourcespec2ir
 {
-    SourceSpecMatcher::SourceSpecMatcher(SpecParser::FileContext *specParseTree,
-                                         const std::string file,
-                                         llvm::Module *irModule,
-                                         bool matchExternalOnly)
+    SourceSpecMatcher::SourceSpecMatcher(
+        SpecParser::FileContext *specParseTree,
+        const std::string file,
+        llvm::Module *irModule,
+        const bool printMatchingInfo,
+        bool matchExternalOnly)
         : specParseTree(specParseTree),
           file(file),
           md5Checksum(utils::getChecksumForFile(file)),
           irModule(irModule),
+          printMatchingInfo(printMatchingInfo),
           matchExternalOnly(matchExternalOnly)
     {
     }
@@ -110,6 +131,45 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitGhostDefBlock(
+        SpecParser::GhostDefBlockContext *ctx)
+    {
+        // Safety-check that the state of the object is valid
+        assert(ghostContract == nullptr);
+
+        // Construct a new ghost function:
+        auto defCtx = ctx->ghostDef();
+        auto srcLoc = utils::getLocFromCtx(ctx, file, md5Checksum);
+        auto defLoc = utils::getGhostImplStartLoc(*defCtx->impl, file,
+                                                  md5Checksum);
+        bool isFunction = defCtx->type->getType() == SpecLexer::FUNCTION;
+        auto definition = utils::getCtxAsStr(*defCtx->impl);
+        std::string name = getGhostMethodName(definition);
+        auto ghostMethod = std::make_unique<GhostMethod>(
+            isFunction, name, definition, srcLoc, defLoc);
+
+        if (printMatchingInfo)
+            printGhostMethodMatchingInfo(
+                srcLoc, name, defCtx->type->getText());
+
+        auto *gMethodPtr = ghostMethod.get();
+        matchedSpecs->ghostMethods.push_back(std::move(ghostMethod));
+
+        // Construct contract for ghost function:
+        auto contractCtx = defCtx->contr;
+        auto contractLoc = utils::getLocFromCtx(contractCtx, file, md5Checksum);
+        auto sig = getSigForGhostMethod(definition);
+        ghostContract = std::make_unique<MatchedGhostContract>(
+            gMethodPtr, contractLoc, sig);
+
+        // Add all statements to the contract by traversing the children
+        for (auto c : contractCtx->specContractClause())
+            visit(c);
+        matchedSpecs->matchedGhostContracts.push_back(std::move(ghostContract));
+
+        return 0;
+    }
+
     std::any SourceSpecMatcher::visitPureFlag(SpecParser::PureFlagContext *ctx)
     {
         // Set pure-flag of contract to true
@@ -134,6 +194,7 @@ namespace sourcespec2ir
         // Extract return-type
         auto *retClause = ctx.wrapperRetClause();
         sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
+        sig.returnTy = std::nullopt;
         return sig;
     }
 
@@ -151,17 +212,56 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitGivenDefClause(
+        SpecParser::GivenDefClauseContext *ctx)
+    {
+        if (contract == nullptr)
+            throw utils::PallasException(
+                "Given-clause only allowed in contracts.");
+
+        auto defExpr = ctx->specExpression();
+        auto defStr = utils::getCtxAsStr(*defExpr);
+        GhostArgumentDef argDef(defStr, getArgName(defStr),
+                                getLocFromCtx(ctx), getExprStartLoc(*defExpr));
+        contract->givenArgs.push_back(argDef);
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsDefClause(
+        SpecParser::YieldsDefClauseContext *ctx)
+    {
+        if (contract == nullptr)
+            throw utils::PallasException(
+                "Yields-clause only allowed in contracts.");
+
+        auto defExpr = ctx->specExpression();
+        auto defStr = utils::getCtxAsStr(*defExpr);
+        GhostArgumentDef argDef(defStr, getArgName(defStr),
+                                getLocFromCtx(ctx), getExprStartLoc(*defExpr));
+        contract->yieldsArgs.push_back(argDef);
+        return 0;
+    }
+
     void SourceSpecMatcher::addToFContract(
         ContractStatementType type, SpecParser::SpecExpressionContext *expr,
         const SrcRange &loc)
     {
-        if (!contract)
-            assert("No contract set while adding statement");
         auto exprStr = utils::getCtxAsStr(*expr);
-        auto extContr = contract->type == External;
-        auto stmnt = std::make_unique<MatchedFContractStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr), extContr);
-        contract->addStatement(std::move(stmnt));
+        if (contract && !ghostContract)
+        {
+            auto extContr = contract->type == External;
+            auto stmnt = std::make_unique<MatchedFContractStatement>(
+                type, exprStr, loc, getExprStartLoc(*expr), extContr);
+            contract->addStatement(std::move(stmnt));
+        }
+        else if (ghostContract && !contract)
+        {
+            auto stmnt = std::make_unique<MatchedFContractStatement>(
+                type, exprStr, loc, getExprStartLoc(*expr), false);
+            ghostContract->addStatement(std::move(stmnt));
+        }
+        else
+            throw utils::PallasException("Failed to add contract statement!");
     }
 
     std::any SourceSpecMatcher::visitSpecLoopInvariantBlock(
@@ -253,7 +353,7 @@ namespace sourcespec2ir
     }
 
     std::any SourceSpecMatcher::visitUnfoldStatement(
-        SpecParser::UnfoldStatementContext *ctx) 
+        SpecParser::UnfoldStatementContext *ctx)
     {
         addToStmntBlock(Unfold, ctx->specExpression(), getLocFromCtx(ctx));
         return 0;
@@ -271,6 +371,113 @@ namespace sourcespec2ir
         stmntBlock->addStatement(std::move(stmnt));
     }
 
+    std::any SourceSpecMatcher::visitGivenBindingBlock(
+        SpecParser::GivenBindingBlockContext *ctx)
+    {
+        assert(ghostArgBindingBlock == nullptr);
+
+        // Match to call-instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto callInstr = matchGhostArgBindingBlock(loc);
+        assert(callInstr != nullptr);
+
+        ghostArgBindingBlock = std::make_unique<MatchedGhostArgBindingBlock>(
+            callInstr, loc);
+
+        // Add bindings:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedGivenBindings.push_back(
+            std::move(ghostArgBindingBlock));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitGivenArgBinding(
+        SpecParser::GivenArgBindingContext *ctx)
+    {
+        assert(ghostArgBindingBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->gArg);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = getExprStartLoc(*ctx->expr);
+        ghostArgBindingBlock->addBinding(
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsBindingBlock(
+        SpecParser::YieldsBindingBlockContext *ctx)
+    {
+        assert(ghostArgBindingBlock == nullptr);
+
+        // Match to call-instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto callInstr = matchGhostArgBindingBlock(loc);
+        assert(callInstr != nullptr);
+
+        ghostArgBindingBlock = std::make_unique<MatchedGhostArgBindingBlock>(
+            callInstr, loc);
+
+        // Add bindings:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedYieldsBindings.push_back(
+            std::move(ghostArgBindingBlock));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitYieldsArgBinding(
+        SpecParser::YieldsArgBindingContext *ctx)
+    {
+        assert(ghostArgBindingBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->yArg);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = loc.startLoc;
+        ghostArgBindingBlock->addBinding(
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
+    std::any SourceSpecMatcher::visitGhostAssignBlock(
+        SpecParser::GhostAssignBlockContext *ctx)
+    {
+        assert(ghostAssignBlock == nullptr);
+
+        // Match to instruction
+        auto loc = getLocFromCtx(ctx);
+        const auto instr = matchGhostAssignBlock(loc);
+        assert(instr != nullptr);
+
+        ghostAssignBlock = std::make_unique<MatchedGhostAssignBlock>(
+            instr, loc);
+
+        // Add assignments:
+        for (auto c : ctx->children)
+            visit(c);
+
+        matchedSpecs->matchedGhostAssigns.push_back(
+            std::move(ghostAssignBlock));
+        return 0;
+    }
+    std::any SourceSpecMatcher::visitGhostAssign(
+        SpecParser::GhostAssignContext *ctx)
+    {
+        assert(ghostAssignBlock != nullptr);
+
+        auto argName = utils::getCtxAsStr(*ctx->gVar);
+        auto exprStr = utils::getCtxAsStr(*ctx->expr);
+        auto loc = getLocFromCtx(ctx);
+        auto exprStartLoc = getExprStartLoc(*ctx->expr);
+        ghostAssignBlock->addAssignment(
+            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
+        return 0;
+    }
+
     SrcRange SourceSpecMatcher::getLocFromCtx(
         const antlr4::ParserRuleContext *ctx)
     {
@@ -281,5 +488,81 @@ namespace sourcespec2ir
         const SpecParser::SpecExpressionContext &exprCtx)
     {
         return utils::getExprStartLoc(exprCtx, file, md5Checksum);
+    }
+
+    std::string SourceSpecMatcher::getArgName(llvm::StringRef argDef)
+    {
+        llvm::SmallVector<llvm::StringRef> tokens;
+        argDef.split(tokens, ' ', -1, false);
+        return tokens.back().str();
+    }
+
+    std::string SourceSpecMatcher::getGhostMethodName(llvm::StringRef impl)
+    {
+        // Get index of first '('
+        auto endIdx = impl.find('(');
+        if (endIdx == llvm::StringRef::npos)
+            return "";
+        // Drop '(' and everything after
+        auto prefix = impl.substr(0, endIdx).trim();
+        // Split on whitepace
+        llvm::SmallVector<llvm::StringRef> fragments;
+        llvm::SplitString(prefix, fragments);
+        if (fragments.empty())
+            return "";
+        // Return last fragment
+        return fragments.back().str();
+    }
+
+    llvm::SmallVector<std::string> SourceSpecMatcher::getGhostMethodArgs(
+        llvm::StringRef impl)
+    {
+        // Get the string between the first '(' and ')'
+        auto openIdx = impl.find('(');
+        auto closeIdx = impl.find(')');
+        if (openIdx == llvm::StringRef::npos ||
+            closeIdx == llvm::StringRef::npos ||
+            closeIdx <= openIdx)
+        {
+            throw utils::PallasException(
+                "Invalid argument list of ghost method / function.");
+        }
+        auto argLen = closeIdx - (openIdx + 1);
+        auto argStr = impl.substr(openIdx + 1, argLen);
+
+        // Split arguments on ','
+        llvm::SmallVector<llvm::StringRef> args;
+        argStr.split(args, ',');
+
+        // Trim whitespace and convert to string
+        llvm::SmallVector<std::string> res;
+        for (const auto &arg : args)
+            res.push_back(arg.trim().str());
+
+        return res;
+    }
+
+    std::string SourceSpecMatcher::getGhostMethodRetTy(llvm::StringRef impl)
+    {
+        // We assume that everything in front of the funcion-name is the
+        // return type. I.e. 'TYPE name (....'
+        auto prefix = impl.take_while([](char c)
+                                      { return c != '('; })
+                          .trim();
+        auto tStr = prefix.substr(0, prefix.find_last_of(" \t\n\v\f\r"));
+        return tStr.trim().str();
+    }
+
+    WrapperSignature SourceSpecMatcher::getSigForGhostMethod(
+        llvm::StringRef impl)
+    {
+        // Currently the wrapper can only access the arguments of the function.
+        // If global variables are also suppoed to be supported, this needs to
+        // be extended.
+        WrapperSignature sig;
+        sig.parentRetTy = getGhostMethodRetTy(impl);
+        sig.returnTy = std::nullopt;
+        sig.args = getGhostMethodArgs(impl);
+        return sig;
     }
 }

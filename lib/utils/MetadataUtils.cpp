@@ -20,6 +20,17 @@ namespace sourcespec2ir
             return f.getMetadata(PALLAS_GENERATED_MARKER) != nullptr;
         }
 
+        void markGhostWrapper(llvm::Function &f, llvm::LLVMContext &context)
+        {
+            auto idStr = llvm::MDString::get(context, "");
+            f.setMetadata(PALLAS_GHOST_WRAPPER_MARKER, llvm::MDNode::get(context, idStr));
+        }
+
+        bool isGhostWrapper(const llvm::Function &f)
+        {
+            return f.getMetadata(PALLAS_GHOST_WRAPPER_MARKER) != nullptr;
+        }
+
         void markPredicateDef(llvm::Function &f, llvm::LLVMContext &context,
                               bool isInline)
         {
@@ -32,6 +43,13 @@ namespace sourcespec2ir
         bool isPredicateDef(const llvm::Function &f)
         {
             return f.getMetadata(PALLAS_PREDICATE_DEF_MARKER) != nullptr;
+        }
+
+        void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context)
+        {
+            auto idStr = llvm::MDString::get(context, "");
+            f.setMetadata(PALLAS_GHOST_MARKER,
+                          llvm::MDNode::get(context, idStr));
         }
 
         bool isSubscope(const llvm::DIScope *parentScope,

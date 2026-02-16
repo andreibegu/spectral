@@ -12,6 +12,7 @@
 #include <utility>
 
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/LoopInfo.h>
 #include <llvm/IR/Module.h>
 
@@ -32,7 +33,9 @@ namespace sourcespec2ir
     public:
         SourceSpecMatcher(SpecParser::FileContext *specParseTree,
                           const std::string file,
-                          llvm::Module *irModule, bool matchExternalOnly);
+                          llvm::Module *irModule,
+                          const bool printMatchingInfo,
+                          bool matchExternalOnly);
 
         virtual ~SourceSpecMatcher() = default;
 
@@ -44,6 +47,7 @@ namespace sourcespec2ir
         const std::string file;
         std::string md5Checksum;
         llvm::Module *irModule;
+        const bool printMatchingInfo;
         bool matchExternalOnly;
 
         /**
@@ -86,6 +90,20 @@ namespace sourcespec2ir
         virtual llvm::Instruction *matchStatementBlock(SrcRange loc) = 0;
 
         /**
+         * Given the location of a block of ghost argument-bindings, returns a
+         * pointer to the call instruction that the specification refers to.
+         * If the specification cannot be matched, an exception it thrown.
+         */
+        virtual llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) = 0;
+
+        /**
+         * Given the location of a block of assignments to ghost arguments, 
+         * returns a pointer to the instruction that the spec refers to.
+         * If the specification cannot be matched, an exception it thrown.
+         */
+        virtual llvm::Instruction *matchGhostAssignBlock(SrcRange loc) = 0;
+
+        /**
          * Returns a SrcRang for the given ParserRuleContext.
          * Sets file and checksum to the file that is opened by this matcher.
          */
@@ -98,19 +116,81 @@ namespace sourcespec2ir
         SrcLocation getExprStartLoc(
             const SpecParser::SpecExpressionContext &exprCtx);
 
+        /**
+         * Given a string containing the definition of a function argument,
+         * return the name of the argument.
+         * The default implementation assumes C-style argument definitions.
+         * E.g. for 'int a' this would return 'a'.
+         * Frontends might have to override this to match it to the languages
+         * specific syntax.
+         */
+        virtual std::string getArgName(llvm::StringRef argDef);
+
+        /**
+         * Give the string-representation of a ghost method, returns the name
+         * of the ghost method as a string.
+         * The default-implementation looks for the first occurence of '(' and
+         * returns the whitespace free character sequence in front of it.
+         * If the impl. does not contain a '(' character, an empty string is
+         * returned.
+         * I.e. for 'int foo(...' it would return 'foo'.
+         *
+         * Can be overridden if the default-implementation is not suitable.
+         */
+        virtual std::string getGhostMethodName(llvm::StringRef impl);
+
+        /**
+         * Given a string that represents a language-specific definition of a
+         * ghost method or function, return the arguments of the method.
+         * The default implementation assumes a C-style syntax
+         * (i.e. function arguments are enclosed in '(' and ')' and separated
+         * by ',').
+         * E.g. for 'int foo(int a, int b) { ...' it would return
+         * 'int a' and 'int b'.
+         *
+         * If the default implementation is not suitable for a particular
+         * language, it can be overridden.
+         */
+        virtual llvm::SmallVector<std::string> getGhostMethodArgs(
+            llvm::StringRef impl);
+
+        /**
+         * Given a string that represents a language-specific definition of a
+         * ghost method / function, return the method's return type as a string.
+         * The default implementation assumes a C-style syntax
+         *
+         * If the default implementation is not suitable for a particular
+         * language, it can be overridden.
+         */
+        virtual std::string getGhostMethodRetTy(llvm::StringRef impl);
+
+        /**
+         * Given a string that represents a language-specific definition of a
+         * ghost method or function, return a WrapperSignature for this
+         * function.
+         * Uses getGhostMethodArgs and getGhostMethodRetTy.
+         */
+        virtual WrapperSignature getSigForGhostMethod(llvm::StringRef impl);
+
     private:
         // Struct in which the matched specifications are collected.
         std::unique_ptr<MatchedSpecifications> matchedSpecs = nullptr;
 
-        // Temporarily stores the pointer to the current function-contract
-        // while the contained contract-statements are collected
+        // Temporary pointers to the currently matched specification construct:
         std::unique_ptr<sourcespec2ir::MatchedFunctionContract>
             contract = nullptr;
 
-        // Temporary pointer to the current spec-statement-block while the
-        // statements are matched.
+        std::unique_ptr<sourcespec2ir::MatchedGhostContract>
+            ghostContract = nullptr;
+
         std::unique_ptr<sourcespec2ir::MatchedSpecStatementBlock>
             stmntBlock = nullptr;
+
+        std::unique_ptr<sourcespec2ir::MatchedGhostArgBindingBlock>
+            ghostArgBindingBlock = nullptr;
+
+        std::unique_ptr<sourcespec2ir::MatchedGhostAssignBlock>
+            ghostAssignBlock = nullptr;
 
         // Visitors for function-contracts
         std::any visitSpecContractBlock(
@@ -120,6 +200,10 @@ namespace sourcespec2ir
             SpecParser::RequiresClauseContext *ctx) override;
         std::any visitEnsuresClause(
             SpecParser::EnsuresClauseContext *ctx) override;
+        std::any visitGivenDefClause(
+            SpecParser::GivenDefClauseContext *ctx) override;
+        std::any visitYieldsDefClause(
+            SpecParser::YieldsDefClauseContext *ctx) override;
 
         // Visitor for loop-invariants
         std::any visitSpecLoopInvariantBlock(
@@ -136,6 +220,27 @@ namespace sourcespec2ir
         std::any visitUnfoldStatement(
             SpecParser::UnfoldStatementContext *ctx) override;
 
+        // Visitor for ghost methods
+        std::any visitGhostDefBlock(
+            SpecParser::GhostDefBlockContext *ctx) override;
+
+        // Visitor for bindings of ghost arguments
+        std::any visitGivenBindingBlock(
+            SpecParser::GivenBindingBlockContext *ctx) override;
+        std::any visitGivenArgBinding(
+            SpecParser::GivenArgBindingContext *ctx) override;
+
+        std::any visitYieldsBindingBlock(
+            SpecParser::YieldsBindingBlockContext *ctx) override;
+        std::any visitYieldsArgBinding(
+            SpecParser::YieldsArgBindingContext *ctx) override;
+
+        // Visitors for ghost assignments
+        std::any visitGhostAssignBlock(
+            SpecParser::GhostAssignBlockContext *ctx) override;
+        std::any visitGhostAssign(
+            SpecParser::GhostAssignContext *ctx) override;
+
         // Adds the given statement to the current function-contract
         // (SourceSpecMatcher::contract).
         void addToFContract(ContractStatementType type,
@@ -149,7 +254,6 @@ namespace sourcespec2ir
 
         WrapperSignature getWrapperSignature(
             SpecParser::WrapperSigClauseContext &ctx);
-
     };
 
 }

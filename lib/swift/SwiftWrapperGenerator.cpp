@@ -30,6 +30,9 @@ namespace sourcespec2ir
         const std::string &functionName)
     {
 
+        auto rType = sig.returnTy.has_value()
+                         ? sig.returnTy.value().prefix.str().str()
+                         : "Bool";
         // Generate the required functions for the specification-library
         const auto specFuncs = generateSpecLibFunctions(sig, expr);
 
@@ -48,7 +51,7 @@ namespace sourcespec2ir
             stream << arg;
             firstArg = false;
         }
-        stream << ") -> Bool ";
+        stream << ") -> " << rType << " ";
 
         // Construct body
         stream << "{ \n";
@@ -340,4 +343,8 @@ namespace sourcespec2ir
         return sig;
     }
 
+    SourceSyntaxResolver SwiftWrapperGenerator::getSyntaxResolver()
+    {
+        throw utils::PallasNotImplementedException();
+    }
 }

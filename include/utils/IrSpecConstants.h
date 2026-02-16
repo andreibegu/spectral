@@ -14,6 +14,8 @@ namespace sourcespec2ir
 
     const std::string PALLAS_EXT_FUN_CONTRACT_BLOCK = "pallas.extContract";
 
+    const std::string PALLAS_GHOST_CONTRACT = "pallas.ghostContract";
+
     const std::string PALLAS_ENSURES = "pallas.ensures";
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
@@ -30,14 +32,26 @@ namespace sourcespec2ir
 
     const std::string PALLAS_UNFOLD = "pallas.unfold";
 
+    const std::string PALLAS_GIVEN_BINDING_BLOCK = "pallas.givenBindings";
+
+    const std::string PALLAS_YIELDS_BINDING_BLOCK = "pallas.yieldsBindings";
+
+    const std::string PALLAS_GHOST_ASSIGN_BLOCK = "pallas.ghostAssignments";
+
     // Metadata-identifier that is used to mark the IR specification functions
     const std::string PALLAS_SPEC_LIB_MARKER = "pallas.specLib";
 
     // Metadata-identifier that is used to mark generated functions that wrap specification expressions
     const std::string PALLAS_GENERATED_MARKER = "pallas.exprWrapper";
 
+    // Metadata-identifier that marks generated functions that wrap ghost expressions
+    const std::string PALLAS_GHOST_WRAPPER_MARKER = "pallas.ghostWrapper";
+
     // Identifier to mark predicate definitions
     const std::string PALLAS_PREDICATE_DEF_MARKER = "pallas.predDef";
+
+    // Identifier to mark ghost methods
+    const std::string PALLAS_GHOST_MARKER = "pallas.ghost";
 
     // String that is used to identify a MD-Tuple as a source-location
     const std::string PALLAS_SRC_LOCATION_MARKER = "pallas.srcLoc";

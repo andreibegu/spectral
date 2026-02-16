@@ -57,6 +57,14 @@ define dso_local noundef i32 @_Z3fooii(i32 noundef %0, i32 noundef %1) #0 !palla
 !120 = !DIFile(filename: "/path/filename.c", directory: "")
 ```
 
+### External & Generated Contracts
+External and generated contracts are encoded similarly to regular contracts with the following differences:
+- The metadata-node of the contract is labled as `!pallas.extContract` (instead of being labled as `!pallas.fcontract`)
+- In the metdata-nodes that encode the clauses of the contract, the list of DIVariables is always empty. Instead, the values that should be passed to the wrapper functions are encoded implicitly. I.e. for external contracts, the signature of the corresponding wrapper functions must always be the same as the signature of the function to which the function is applied. The values passed to the wrapper function then correspond to the arguments of the function to which the contract is attached. 
+
+### Ghost contracts
+The encoding of a ghost contract (i.e. a contract that is attached to a ghost function) is identical to the encoding of an external contract. However the metadata node of the contract is attached to the function with ID `!pallas.ghostContract` instead. 
+
 ## Loop invariants
 Loop-invariants are encoded similarly to function-contracts. 
 The metadata-node that encodes the loop-invariant is added to the back of the [`!llvm.loop`-node](https://llvm.org/docs/LangRef.html#llvm-loop) that identifies the loop (`!125` in the example).
@@ -202,9 +210,36 @@ define zeroext i1 @wPred(ptr noundef %0) #0 !dbg !44 !pallas.predDef !45 {
 !45 = !{i1 false}
 ```
 
+## Ghost code 
 
-## Ghost-code
-**Not supported yet**
+### Ghost functions
+A ghost function is represented as a regular LLVM function that is marked with a metadata-node with id `!pallas.ghost`. 
+
+Ghost functions can have an optional contract which is attached to the function as a metadata-node with id `!pallas.ghostContract`.
+The encoding of the metadata-node of the ghost contract is identical to that of an external contract.
+
+#### Example (C)
+*Source definition:*
+```
+/*@
+ghost function
+requires a > 0 && b > 0;
+int ghost_mult(int a, int b) {
+    return a * b;
+}
+@*/
+```
+
+*IR definition:*
+```
+define i32 @ghost_mult(i32 %0, i32 %1) !dbg !102 !pallas.ghost !62 !pallas.ghostContract !103 {
+  [...]
+}
+
+[...]
+
+!62 = !{!""}
+```
 
 ## Expressions:
 Expressions that are used as part of a specifications are wrapped in a boolean function. 

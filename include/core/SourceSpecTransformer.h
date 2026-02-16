@@ -128,7 +128,79 @@ namespace sourcespec2ir
         /**
          * Encodes a block of function-contract statements into metadata
          */
-        void encodeFunctionContractBlock(const MatchedFunctionContract &contract);
+        void encodeFunctionContractBlock(
+            const MatchedFunctionContract &contract,
+            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a ghost contract into metadata
+         */
+        void encodeGhostContract(const MatchedGhostContract &contract);
+
+        /**
+         * Encodes the definition of a ghost argument into a metadata-node
+         */
+        llvm::MDTuple *encodeGhostArgDef(
+            const GhostArgumentDef &argDef,
+            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a block of bindings to given-arguments.
+         */
+        void encodeGivenBindingBlock(
+            const MatchedGhostArgBindingBlock &bBlock,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes an individual binding from a block of given-arg bindings into
+         * a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeGivenBinding(
+            const MatchedGhostVarBinding &binding,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a block of bindings to yields-arguments.
+         */
+        void encodeYieldsBindingBlock(
+            const MatchedGhostArgBindingBlock &bBlock,
+            const MatchedFunctionContract &parentContract,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes an individual binding from a block of yields-arg bindings
+         * into a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeYieldsBinding(
+            const MatchedGhostVarBinding &binding,
+            const MatchedFunctionContract &parentContract,
+            const MatchedFunctionContract &calleeContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes a block of assignments to ghost arguments.
+         */
+        void encodeGhostAssignBlock(
+            const MatchedGhostAssignBlock &aBlock,
+            const MatchedFunctionContract &parentContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
+
+        /**
+         * Encodes an individual assignment to a ghost variable into a md-node.
+         * Returns a pointer to the new MD-node. Ownership of the new node
+         * lies with the llvm-context.
+         */
+        llvm::MDNode *encodeGhostAssign(
+            const MatchedGhostVarBinding &assignment,
+            const MatchedFunctionContract &parentContract,
+            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
 
         /**
          * Encodes a statement of a function contract into a metadata-node.
@@ -137,7 +209,8 @@ namespace sourcespec2ir
          */
         llvm::MDNode *encodeFunctionContractStatement(
             const llvm::Function &function,
-            const MatchedFContractStatement &stmnt);
+            const MatchedFContractStatement &stmnt,
+            const bool inGhostContract);
 
         /**
          * Encodes a block of loop-invariants into metadata.
@@ -164,6 +237,27 @@ namespace sourcespec2ir
         llvm::MDNode *encodeSpecStatement(const MatchedSpecStatement &stmnt);
 
         /**
+         * Check if the specifications regarding ghost arguments are wellformed.
+         * If not, an exception is raised.
+         * Checks that:
+         * - The names of ghost args of the same function do no conflict
+         * - All blocks of given-bindings mention all given-arguments of
+         *      the called function
+         * - All blocks of ghost-argument bindings only mention ghost arguments
+         *    that are defined in the contract of the called function.
+         */
+        void checkGhostArgsWellformed(
+            const MatchedSpecifications &matchedSpec) const;
+
+        /**
+         * Checks that the ghost-assignment annotations only refer to ghost
+         * variables that are in scope.
+         * If not, an exception is raised.
+         */
+        void checkGhostAssignsWellformed(
+            const MatchedSpecifications &matchedSpec) const;
+
+        /**
          * Modifies the debug-locations of the instructions in the generated
          * wrapper-functions and predicate definitions to represent the
          * locations from the original source-file.
@@ -187,7 +281,15 @@ namespace sourcespec2ir
             llvm::DIScope *scope);
 
         /**
-         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions 
+         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions
+         * Uses the given function to get the compile-unit, scopeFile and scope.
+         */
+        void rewriteWrapperLocations(
+            const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
+            llvm::Function *parentFunc);
+
+        /**
+         * Wrapper around rewriteSpecLocations for the use with WrapperFunctions
          */
         void rewriteWrapperLocations(
             const SrcWrapperFunction &wFun, const SrcLocation &exprStartLoc,
@@ -240,6 +342,13 @@ namespace sourcespec2ir
                                llvm::ArrayRef<SpecPredicate> preds);
 
         /**
+         * Adds a metadata-marker to every function that is used as a
+         * ghost method.
+         */
+        void markGhostMethods(llvm::Module &module,
+                              llvm::ArrayRef<GhostMethod *> ghostMethods);
+
+        /**
          * Generates a MDTuple that encodes a source-location.
          */
         llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
@@ -272,6 +381,15 @@ namespace sourcespec2ir
          * Get a DICompileUnit for the given path.
          */
         llvm::DICompileUnit *getCompileUnit(const std::string &path);
+
+        /**
+         * Given a wrapper-function, return the DIVariables that correspond
+         * to the functions arguments with the given names.
+         * The order of the result is the same as that of the input list
+         * of names.
+         */
+        llvm::SmallVector<llvm::DILocalVariable *> getVarsForWrapperArgs(
+            const llvm::Function &wFunc, llvm::ArrayRef<std::string> argNames);
     };
 
 }

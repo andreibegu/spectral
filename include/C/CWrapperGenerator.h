@@ -42,6 +42,7 @@ namespace sourcespec2ir
         void addArrayDim(SrcTypeRepresentation &baseType,
                          const std::string &dimSize);
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
+        SourceSyntaxResolver getSyntaxResolver() override;
     };
 
 }

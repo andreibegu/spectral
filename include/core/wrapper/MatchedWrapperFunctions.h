@@ -26,7 +26,13 @@ namespace sourcespec2ir
             loopInvWrappers;
         std::map<const MatchedSpecStatement *, std::unique_ptr<SrcWrapperFunction>>
             statementWrappers;
-
+        std::map<const MatchedFContractStatement *, std::unique_ptr<SrcWrapperFunction>>
+            ghostContractWrappers;
+        std::map<const MatchedGhostVarBinding *, std::unique_ptr<SrcWrapperFunction>>
+            givenBindingWrappers;
+        std::map<const MatchedGhostVarBinding *, std::unique_ptr<SrcWrapperFunction>>
+            ghostAssignWrappers;
+            
         MatchedWrapperFunctions();
 
         /**

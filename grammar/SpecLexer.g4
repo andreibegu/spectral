@@ -27,9 +27,17 @@ SRC: 'src';
 WRAPPER_LOC: 'wrapper location';
 ARGS: 'args';
 RETURNS: 'returns';
+GIVEN: 'given';
+YIELDS: 'yields';
 PREDICATE: 'predicate';
 PRED_DEF: ':=';
 INLINE: 'inline';
+GHOST: 'ghost';
+METHOD: 'method';
+FUNCTION: 'function';
+EQUALS: '=';
+ASSIGN: 'assign';
+
 
 PRED_SIG_START: '(';
 PRED_SIG_END: ')';

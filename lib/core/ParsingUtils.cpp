@@ -14,7 +14,7 @@ namespace sourcespec2ir::utils
     }
 
     SrcRange getLocFromCtx(const antlr4::ParserRuleContext *ctx,
-                           const std::string &file, 
+                           const std::string &file,
                            const std::string &md5Checksum)
     {
         // We change the column-numbering to start with 1 to be consistent with
@@ -29,7 +29,16 @@ namespace sourcespec2ir::utils
         const std::string &file, const std::string &md5Checksum)
     {
         return SrcLocation(exprCtx.start->getLine(),
-                           exprCtx.start->getCharPositionInLine(), 
+                           exprCtx.start->getCharPositionInLine(),
+                           file, md5Checksum);
+    }
+
+    SrcLocation getGhostImplStartLoc(
+        const SpecParser::GhostImplContext &implCtx,
+        const std::string &file, const std::string &md5Checksum)
+    {
+        return SrcLocation(implCtx.start->getLine(),
+                           implCtx.start->getCharPositionInLine(),
                            file, md5Checksum);
     }
 }

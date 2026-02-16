@@ -20,9 +20,24 @@ namespace sourcespec2ir
         matchedStmntBlocks.append(
             std::make_move_iterator(specs2->matchedStmntBlocks.begin()),
             std::make_move_iterator(specs2->matchedStmntBlocks.end()));
+        matchedGhostContracts.append(
+            std::make_move_iterator(specs2->matchedGhostContracts.begin()),
+            std::make_move_iterator(specs2->matchedGhostContracts.end()));
+        matchedGivenBindings.append(
+            std::make_move_iterator(specs2->matchedGivenBindings.begin()),
+            std::make_move_iterator(specs2->matchedGivenBindings.end()));
+        matchedYieldsBindings.append(
+            std::make_move_iterator(specs2->matchedYieldsBindings.begin()),
+            std::make_move_iterator(specs2->matchedYieldsBindings.end()));
+        matchedGhostAssigns.append(
+            std::make_move_iterator(specs2->matchedGhostAssigns.begin()),
+            std::make_move_iterator(specs2->matchedGhostAssigns.end()));
+        ghostMethods.append(
+            std::make_move_iterator(specs2->ghostMethods.begin()),
+            std::make_move_iterator(specs2->ghostMethods.end()));
     }
 
-    bool MatchedSpecifications::hasDuplicateMappings()
+    bool MatchedSpecifications::hasDuplicateMappings() const
     {
         bool hasDuplicates = false;
 
@@ -68,13 +83,119 @@ namespace sourcespec2ir
                 llvm::outs() << "WARNING: Multiple statement blocks were "
                              << "matched to the same instruction in function "
                              << utils::getSrcNameOfFunction(
-                                *i->getParent()->getParent())
+                                    *i->getParent()->getParent())
                              << "\n";
             }
             matchedInsts.insert(i);
         }
 
+        llvm::SmallSet<GhostMethod *, 8> matchedGMethods;
+        for (const auto &contr : matchedGhostContracts)
+        {
+            auto *m = contr->method;
+            if (matchedGMethods.contains(m))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple contracts were "
+                             << "matched to the same ghost method "
+                             << m->name
+                             << "\n";
+            }
+            matchedGMethods.insert(m);
+        }
+
+        llvm::SmallSet<llvm::CallInst *, 8> matchedGiven;
+        for (const auto &gBinding : matchedGivenBindings)
+        {
+            auto *callInst = gBinding->call;
+            if (matchedGiven.contains(callInst))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple bindings of given-arguments "
+                             << "were matched to the same call to "
+                             << utils::getSrcNameOfFunction(
+                                    *callInst->getFunction())
+                             << "\n";
+            }
+            matchedGiven.insert(callInst);
+        }
+
+        llvm::SmallSet<llvm::CallInst *, 8> matchedYields;
+        for (const auto &yBinding : matchedYieldsBindings)
+        {
+            auto *callInst = yBinding->call;
+            if (matchedYields.contains(callInst))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple bindings of yields-arguments "
+                             << "were matched to the same call to "
+                             << utils::getSrcNameOfFunction(
+                                    *callInst->getFunction())
+                             << "\n";
+            }
+            matchedYields.insert(callInst);
+        }
+
+        llvm::SmallSet<llvm::Instruction *, 8> matchedGAssign;
+        for (const auto &a : matchedGhostAssigns)
+        {
+            auto *instr = a->instr;
+            if (matchedGAssign.contains(instr))
+            {
+                hasDuplicates = true;
+                llvm::outs() << "WARNING: Multiple ghost assignment blocks "
+                             << "were matched to the same instruction."
+                             << "\n";
+            }
+            matchedGAssign.insert(instr);
+        }
+
         return hasDuplicates;
+    }
+
+    llvm::SmallVector<GhostMethod *>
+    MatchedSpecifications::getGhostMethods() const
+    {
+        llvm::SmallVector<GhostMethod *> res;
+        for (auto &g : ghostMethods)
+            res.push_back(g.get());
+        return res;
+    }
+
+    const MatchedFunctionContract *MatchedSpecifications::getContractForFunc(
+        const llvm::Function &f) const
+    {
+        for (const auto &c : matchedFContracts)
+            if (c->function != nullptr && c->function == &f)
+                return c.get();
+        return nullptr;
+    }
+
+    const GhostArgumentDef *MatchedFunctionContract::getGivenArg(
+        const std::string &name) const
+    {
+        for (const auto &gDef : givenArgs)
+            if (gDef.argName == name)
+                return &gDef;
+        return nullptr;
+    }
+
+    const GhostArgumentDef *MatchedFunctionContract::getYieldsArg(
+        const std::string &name) const
+    {
+        for (const auto &gDef : yieldsArgs)
+            if (gDef.argName == name)
+                return &gDef;
+        return nullptr;
+    }
+
+    const GhostArgumentDef *MatchedFunctionContract::getGhostArg(
+        const std::string &name) const
+    {
+        auto gArg = getGivenArg(name);
+        if (gArg != nullptr)
+            return gArg;
+        return getYieldsArg(name);
     }
 
 }
