@@ -563,11 +563,6 @@ namespace sourcespec2ir
 
         // Assume that the DIType is a plain DIType and just get the name
         auto typeName = type->getName().str();
-        if (typeName.empty())
-        {
-            throw utils::PallasException(
-                "Failed to generate string-representation for type.");
-        }
 
         // Recursively construct the namespace
         auto nSpaceStr = getSrcNamespace(type->getScope());
@@ -610,7 +605,15 @@ namespace sourcespec2ir
         for (auto *var : srcVars)
         {
             const auto varName = utils::getSrcVarName(*var);
+            if (varName.empty())
+                throw utils::PallasException(
+                    "Failed to get name for variable!"); 
+
             const auto varType = getSrcReprOfType(var->getType());
+            if (varType.prefix.empty() && varType.suffix.empty())
+                throw utils::PallasException(
+                    "Failed to get string for debug-type!"); 
+
             const auto varStr = buildArgStr(varType, varName);
             sig.addArg(varStr);
         }
@@ -618,7 +621,16 @@ namespace sourcespec2ir
 
         if (parentRetTy != nullptr)
         {
-            // TOOD: Check that suffix is empty
+            auto pRetType = getSrcReprOfType(parentRetTy);
+            if (pRetType.prefix.empty() || !pRetType.suffix.empty()) {
+                std::stringstream s;
+                s << "Invalid string representation of return-type: ("
+                << pRetType.prefix.str().str() 
+                << " - " 
+                << pRetType.suffix.str().str()
+                << ")";
+                throw utils::PallasException(s.str());
+            }
             sig.parentRetTy = getSrcReprOfType(parentRetTy).prefix.str().str();
         }
 
