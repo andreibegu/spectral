@@ -359,15 +359,24 @@ namespace sourcespec2ir
         return 0;
     }
 
+    std::any SourceSpecMatcher::visitGhostAssignment(
+        SpecParser::GhostAssignmentContext *ctx)
+    {
+        auto gVarName = std::make_optional(utils::getCtxAsStr(*ctx->gVar));
+        addToStmntBlock(
+            GhostAssign, ctx->specExpression(), getLocFromCtx(ctx), gVarName);
+        return 0;
+    }
+
     void SourceSpecMatcher::addToStmntBlock(
         SpecStatementType type, SpecParser::SpecExpressionContext *expr,
-        const SrcRange &loc)
+        const SrcRange &loc, std::optional<std::string> gVarName)
     {
         if (!stmntBlock)
             assert("No parent set while adding spec-statement");
         auto exprStr = utils::getCtxAsStr(*expr);
         auto stmnt = std::make_unique<MatchedSpecStatement>(
-            type, exprStr, loc, getExprStartLoc(*expr));
+            type, exprStr, loc, getExprStartLoc(*expr), gVarName);
         stmntBlock->addStatement(std::move(stmnt));
     }
 
@@ -439,41 +448,6 @@ namespace sourcespec2ir
         auto loc = getLocFromCtx(ctx);
         auto exprStartLoc = loc.startLoc;
         ghostArgBindingBlock->addBinding(
-            MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
-        return 0;
-    }
-
-    std::any SourceSpecMatcher::visitGhostAssignBlock(
-        SpecParser::GhostAssignBlockContext *ctx)
-    {
-        assert(ghostAssignBlock == nullptr);
-
-        // Match to instruction
-        auto loc = getLocFromCtx(ctx);
-        const auto instr = matchGhostAssignBlock(loc);
-        assert(instr != nullptr);
-
-        ghostAssignBlock = std::make_unique<MatchedGhostAssignBlock>(
-            instr, loc);
-
-        // Add assignments:
-        for (auto c : ctx->children)
-            visit(c);
-
-        matchedSpecs->matchedGhostAssigns.push_back(
-            std::move(ghostAssignBlock));
-        return 0;
-    }
-    std::any SourceSpecMatcher::visitGhostAssign(
-        SpecParser::GhostAssignContext *ctx)
-    {
-        assert(ghostAssignBlock != nullptr);
-
-        auto argName = utils::getCtxAsStr(*ctx->gVar);
-        auto exprStr = utils::getCtxAsStr(*ctx->expr);
-        auto loc = getLocFromCtx(ctx);
-        auto exprStartLoc = getExprStartLoc(*ctx->expr);
-        ghostAssignBlock->addAssignment(
             MatchedGhostVarBinding(argName, exprStr, loc, exprStartLoc));
         return 0;
     }

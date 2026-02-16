@@ -47,8 +47,6 @@ namespace sourcespec2ir
 
         llvm::CallInst *matchGhostArgBindingBlock(SrcRange loc) override;
 
-        llvm::Instruction *matchGhostAssignBlock(SrcRange loc) override;
-
     private:
         llvm::FunctionAnalysisManager *fam;
 
