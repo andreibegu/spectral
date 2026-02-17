@@ -4,6 +4,7 @@
 #include "IrSpecConstants.h"
 #include "MatchedSourceSpec.h"
 #include "wrapper/MatchedWrapperFunctions.h"
+#include "wrapper/SrcWrapperFunction.h"
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Metadata.h>
@@ -129,6 +130,22 @@ namespace sourcespec2ir
          * Encodes the definition of a ghost argument into a metadata-node
          */
         llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
+
+        /**
+         * Extends the given MD-encoding with a mapping of the wrapper-functions 
+         * arguments to the related values at the 'call-site' of the wrapper. 
+         * Concretely, three nodes are added that encode:
+         * - GivenArgs
+         * - YieldsArgs
+         * - Regular variables
+         * If 'includeYields' is false, the list of mappings for the yields-
+         * arguments is empty.
+         */
+        void addWrapperArgMapping(
+            llvm::SmallVector<llvm::Metadata *> &nodes, 
+            const SrcWrapperFunction &srcWrapper,
+            const MatchedFunctionContract *parentContr, 
+            bool includeYields=true);
 
         /**
          * Encode a set of ghost variables into a MDNode.

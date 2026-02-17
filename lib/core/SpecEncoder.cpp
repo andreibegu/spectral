@@ -163,24 +163,10 @@ namespace sourcespec2ir
         auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
         mdElems.push_back(specFuncAsMd);
 
-        // Given args
-        mdElems.push_back(
-            encodeGhostVarSet(srcWrapperFun->givenArgs, *irWrapperFunction,
-                              parentContract));
-
-        // Yields args (Skip for requires-clauses)
-        llvm::Metadata *yieldsNode = nullptr;
-        if (stmnt.type != Requires)
-            yieldsNode = encodeGhostVarSet(srcWrapperFun->yieldsArgs,
-                                           *irWrapperFunction, parentContract);
-        else
-            yieldsNode = llvm::MDTuple::get(irContext, {});
-        mdElems.push_back(yieldsNode);
-
-        // Add references to the metadata-nodes that describe how the arguments
-        // of the specification-function relate to the original variables.
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
+        // Arg-mapping
+        bool includeYields = stmnt.type != Requires;
+        addWrapperArgMapping(
+            mdElems, *srcWrapperFun, parentContract, includeYields);
 
         return llvm::MDNode::get(irContext, mdElems);
     }
@@ -230,18 +216,8 @@ namespace sourcespec2ir
         // Wrapper Function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
 
-        // Given Args
-        mdElems.push_back(
-            encodeGhostVarSet(srcWrapperFun->givenArgs, *irWrapperFunction,
-                              parentContract));
-        // Yields Args
-        mdElems.push_back(
-            encodeGhostVarSet(srcWrapperFun->yieldsArgs, *irWrapperFunction,
-                              parentContract));
-
-        // Wrapper-Args
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
+        // Arg-mapping
+        addWrapperArgMapping(mdElems, *srcWrapperFun, parentContract);
 
         return llvm::MDNode::get(irContext, mdElems);
     }
@@ -290,7 +266,7 @@ namespace sourcespec2ir
             utils::markGeneratedSpecFunction(*irWrapperFun, irContext);
 
         // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *, 8> mdElems;
+        llvm::SmallVector<llvm::Metadata *> mdElems;
         // Statement identifier
         std::string mdId;
         if (stmnt.type == Assert)
@@ -310,6 +286,7 @@ namespace sourcespec2ir
         // Add info on srcLocation
         mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
+        // TODO: Once the wrapper-args are bundled into one node, move this to the end of the encoing to make getting e.g. the wrapper-function the same for all encodings. 
         // MD-encoding of the variable definition (for ghost assign)
         if (isGhostAssign)
         {
@@ -329,18 +306,8 @@ namespace sourcespec2ir
         // Add reference to function
         mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
 
-        // Given args
-        mdElems.push_back(
-            encodeGhostVarSet(srcWrapperFun->givenArgs, *irWrapperFun,
-                              parentContract));
-        // Yields args
-        mdElems.push_back(
-            encodeGhostVarSet(srcWrapperFun->yieldsArgs, *irWrapperFun,
-                              parentContract));
-
-        // Wrapper-args
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
+        // Arg-mapping
+        addWrapperArgMapping(mdElems, *srcWrapperFun, parentContract);
 
         return llvm::MDNode::get(irContext, mdElems);
     }
@@ -406,7 +373,7 @@ namespace sourcespec2ir
         // Add a metadata-marker to wrapper
         utils::markGhostWrapper(*irWrapper, irContext);
 
-        llvm::SmallVector<llvm::Metadata *, 8> nodes;
+        llvm::SmallVector<llvm::Metadata *> nodes;
 
         // MD-encoding of the arg-definition
         auto argDef = calleeContract.getGivenArg(binding.ghostArg);
@@ -426,17 +393,8 @@ namespace sourcespec2ir
         // Wrapper function
         nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
 
-        // Given args
-        nodes.push_back(
-            encodeGhostVarSet(srcWrapper->givenArgs, *irWrapper,
-                              parentContract));
-        // Yields args
-        nodes.push_back(
-            encodeGhostVarSet(srcWrapper->yieldsArgs, *irWrapper,
-                              parentContract));
-        // DIVariables
-        for (auto arg : srcWrapper->argList)
-            nodes.push_back(arg);
+        // Arg-mapping
+        addWrapperArgMapping(nodes, *srcWrapper, parentContract);
 
         return llvm::MDNode::get(irContext, nodes);
     }
@@ -512,6 +470,40 @@ namespace sourcespec2ir
         // Keep mapping of GhostArgumentDef to MD-nodes
         ghostArgDefMap[&argDef] = mdEncoding;
         return mdEncoding;
+    }
+
+    void SpecEncoder::addWrapperArgMapping(
+        llvm::SmallVector<llvm::Metadata *> &nodes,
+        const SrcWrapperFunction &srcWrapper,
+        const MatchedFunctionContract *parentContr, bool includeYields)
+    {
+        auto irWrapper = utils::getFunctionBySrcName(irModule, srcWrapper.name);
+        if (irWrapper == nullptr)
+        {
+            std::stringstream s;
+            s << "Failed to find IR-function for wrapper with name "
+              << srcWrapper.name;
+            throw utils::PallasException(s.str());
+        }
+
+        // Given args
+        nodes.push_back(
+            encodeGhostVarSet(srcWrapper.givenArgs, *irWrapper, parentContr));
+
+        // Yields args
+        llvm::Metadata *yieldsNode = nullptr;
+        if (includeYields)
+            yieldsNode = encodeGhostVarSet(srcWrapper.yieldsArgs, *irWrapper,
+                                           parentContr);
+        else
+            yieldsNode = llvm::MDTuple::get(irContext, {});
+        nodes.push_back(yieldsNode);
+
+        // TODO: Change this into a list of pairs of the shape
+        // {ParentDIVar, WrapperDIVar}
+        // 'Regular' variables
+        for (auto arg : srcWrapper.argList)
+            nodes.push_back(arg);
     }
 
     llvm::MDNode *SpecEncoder::encodeGhostVarSet(
