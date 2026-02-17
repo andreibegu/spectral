@@ -126,129 +126,6 @@ namespace sourcespec2ir
         matchExternalContract(const std::string &contractPath);
 
         /**
-         * Encodes a block of function-contract statements into metadata
-         */
-        void encodeFunctionContractBlock(
-            const MatchedFunctionContract &contract,
-            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a ghost contract into metadata
-         */
-        void encodeGhostContract(const MatchedGhostContract &contract);
-
-        /**
-         * Encodes the definition of a ghost argument into a metadata-node
-         */
-        llvm::MDTuple *encodeGhostArgDef(
-            const GhostArgumentDef &argDef,
-            std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a block of bindings to given-arguments.
-         */
-        void encodeGivenBindingBlock(
-            const MatchedGhostArgBindingBlock &bBlock,
-            const MatchedFunctionContract &calleeContract,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes an individual binding from a block of given-arg bindings into
-         * a md-node.
-         * Returns a pointer to the new MD-node. Ownership of the new node
-         * lies with the llvm-context.
-         */
-        llvm::MDNode *encodeGivenBinding(
-            const MatchedGhostVarBinding &binding,
-            const MatchedFunctionContract &calleeContract,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a block of bindings to yields-arguments.
-         */
-        void encodeYieldsBindingBlock(
-            const MatchedGhostArgBindingBlock &bBlock,
-            const MatchedFunctionContract &parentContract,
-            const MatchedFunctionContract &calleeContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes an individual binding from a block of yields-arg bindings
-         * into a md-node.
-         * Returns a pointer to the new MD-node. Ownership of the new node
-         * lies with the llvm-context.
-         */
-        llvm::MDNode *encodeYieldsBinding(
-            const MatchedGhostVarBinding &binding,
-            const MatchedFunctionContract &parentContract,
-            const MatchedFunctionContract &calleeContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a statement of a function contract into a metadata-node.
-         * Returns a pointer to the new MD-node. Ownership of the new node
-         * lies with the llvm-context.
-         */
-        llvm::MDNode *encodeFunctionContractStatement(
-            const MatchedFContractStatement &stmnt,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> *ghostArgDefMap,
-            const bool inGhostContract);
-
-        /**
-         * Encodes a block of loop-invariants into metadata.
-         */
-        void encodeLoopInvBlock(
-            const MatchedLoopInvariantBlock &invBlock,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a single loop-invariant into a metadata-node.
-         * The new Metadata node is added to the back of the given vector.
-         */
-        llvm::MDNode *encodeLoopInv(
-            const MatchedLoopInvariant &inv,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a block of specification-statements into metadata.
-         */
-        void encodeStmntBlock(
-            const MatchedSpecStatementBlock &stmntBlock,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encodes a statement from a block of spec-statements into a md-node.
-         * Returns a pointer to the new MD-node. Ownership of the new node
-         * lies with the llvm-context.
-         */
-        llvm::MDNode *encodeSpecStatement(
-            const MatchedSpecStatement &stmnt,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Encode a set of ghost variables into a MDNode.
-         */
-        llvm::MDNode *encodeGhostVarSet(
-            llvm::ArrayRef<std::string> gVarNames,
-            const llvm::Function &irWrapper,
-            const MatchedFunctionContract *parentContract,
-            const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap);
-
-        /**
-         * Maps the DILocalVariables in the given function that refer to an
-         * argument to their name.
-         */
-        llvm::StringMap<llvm::DILocalVariable *> mapDIArgsToNames(
-            const llvm::Function &f);
-
-        /**
          * Check if the specifications regarding ghost arguments are wellformed.
          * If not, an exception is raised.
          * Checks that:
@@ -363,7 +240,7 @@ namespace sourcespec2ir
         /**
          * Generates a MDTuple that encodes a source-location.
          */
-        llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
+        // llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
 
         /**
          * Helper that returns the DIFile for a given function and checks for

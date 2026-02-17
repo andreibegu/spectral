@@ -20,6 +20,7 @@ add_library(spec2ir_core STATIC
     SourceSyntaxResolver.cpp
     SourceWrapperGenerator.cpp
     SpecDeclarationCollector.cpp
+    SpecEncoder.cpp
     SpecPredicateCollector.cpp
     SpecUnifier.cpp
     WrapperLocCollector.cpp
