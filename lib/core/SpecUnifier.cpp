@@ -2,7 +2,6 @@
 #include "IrSpecConstants.h"
 #include "MetadataUtils.h"
 #include "PallasException.h"
-#include "IrLookup.h"
 
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallVector.h>

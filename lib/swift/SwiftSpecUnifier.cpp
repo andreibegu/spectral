@@ -1,5 +1,4 @@
 #include "SwiftSpecUnifier.h"
-#include "IrLookup.h"
 #include "MetadataUtils.h"
 #include "PallasException.h"
 #include "SwiftNameConstants.h"
