@@ -11,6 +11,7 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/GlobalValue.h>
@@ -186,6 +187,12 @@ namespace sourcespec2ir
         if (outputConfig.printDebugInfo)
             verifyModule(*irModule, "After location rewrite");
 
+        // Extend wrappers of ghost contracts with args of the corresponding
+        // ghost function.
+        // This must happen after linking and location rewriting, 
+        // otherwise the DIVars are wrong
+        addArgsToGhostContracts(*matchedSpecs, *irModule);
+
         if (outputConfig.printDebugInfo)
         {
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -227,7 +234,6 @@ namespace sourcespec2ir
         auto extContracts = matcher->matchSpecs();
         return extContracts;
     }
-
 
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
     {
@@ -409,18 +415,19 @@ namespace sourcespec2ir
         // Check that names of ghost args do not conflict
         for (const auto &contr : matchedSpec.matchedFContracts)
         {
-            llvm::StringSet gArgNames;
+            llvm::StringSet argNames;
+            // TODO: Also check for conflicts with non-ghost arguments
             for (auto &gArg : contr->givenArgs)
             {
-                if (gArgNames.contains(gArg.argName))
+                if (argNames.contains(gArg.argName))
                     throwDuplicateGhostArgDefName(gArg.argName, *contr->function);
-                gArgNames.insert(gArg.argName);
+                argNames.insert(gArg.argName);
             }
             for (auto &yArg : contr->yieldsArgs)
             {
-                if (gArgNames.contains(yArg.argName))
+                if (argNames.contains(yArg.argName))
                     throwDuplicateGhostArgDefName(yArg.argName, *contr->function);
-                gArgNames.insert(yArg.argName);
+                argNames.insert(yArg.argName);
             }
         }
 
@@ -903,6 +910,42 @@ namespace sourcespec2ir
 
             // Remove compiler-generated args from function
             utils::removeArgsFromWrapper(wFunc, genArgs);
+        }
+    }
+
+    void SourceSpecTransformer::addArgsToGhostContracts(
+        const MatchedSpecifications &matchedSpecs, llvm::Module &irModule)
+    {
+        for (auto &gContr : matchedSpecs.matchedGhostContracts)
+        {
+            auto fName = gContr->method->name;
+            auto *irGhostF = utils::getFunctionBySrcName(irModule, fName);
+            if (irGhostF == nullptr)
+                throw utils::PallasException(
+                    "Failed to find ghost function " + fName);
+            // Collect DIVariables that point to args of the ghost function
+            llvm::SmallSet<llvm::DILocalVariable *, 8> diArgs;
+            for (auto it = llvm::inst_begin(*irGhostF),
+                      end = llvm::inst_end(*irGhostF);
+                 it != end; ++it)
+            {
+                if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
+                {
+                    auto *v = intr->getVariable();
+                    if (v->getArg() != 0)
+                        diArgs.insert(v);
+                }
+            }
+
+            // Add DIVars to wrappers
+            for (auto &stmnt : gContr->statements)
+            {
+                if (!matchedWrappers->ghostContractWrappers.contains(stmnt.get()))
+                    throw utils::PallasException(
+                        "Failed to find wrapper for ghost contract statement");
+                auto &wrapper = *matchedWrappers->ghostContractWrappers.at(stmnt.get());
+                wrapper.argList.append(diArgs.begin(), diArgs.end());
+            }
         }
     }
 

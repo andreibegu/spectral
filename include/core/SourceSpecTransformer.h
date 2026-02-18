@@ -217,6 +217,17 @@ namespace sourcespec2ir
                               llvm::ArrayRef<SrcWrapperFunction *> wrappers);
 
         /**
+         * Extends the matched wrapper-functions that belong to ghost contracts
+         * with the DIVariables of the corresponding ghost function.
+         *
+         * This has to be done later than for other specifications, because the
+         * ghost function is inlined at the same time as the wrapper-functions
+         * that are used by the function's contract.
+         */
+        void addArgsToGhostContracts(const MatchedSpecifications &matchedSpecs,
+                                     llvm::Module &irModule);
+
+        /**
          * Adds the functions that belong to the given set of wrapper-functions
          * to the module's llvm.used-list.
          */
