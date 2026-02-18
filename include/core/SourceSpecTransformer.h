@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/DebugInfoMetadata.h>
@@ -281,6 +282,13 @@ namespace sourcespec2ir
          * Get a DICompileUnit for the given path.
          */
         llvm::DICompileUnit *getCompileUnit(const std::string &path);
+
+        /**
+         * Collects all DIVariables that refer to arguments of the given
+         * function and adds them to the given set.
+         */
+        llvm::SmallSet<llvm::DILocalVariable *, 8> getDIVarsOfArgs(
+            const llvm::Function &f) const;
     };
 
 }

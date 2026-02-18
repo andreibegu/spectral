@@ -6,7 +6,6 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/StringSet.h>
 #include <llvm/ADT/SmallPtrSet.h>
-#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/BinaryFormat/Dwarf.h>
@@ -189,7 +188,7 @@ namespace sourcespec2ir
 
         // Extend wrappers of ghost contracts with args of the corresponding
         // ghost function.
-        // This must happen after linking and location rewriting, 
+        // This must happen after linking and location rewriting,
         // otherwise the DIVars are wrong
         addArgsToGhostContracts(*matchedSpecs, *irModule);
 
@@ -392,9 +391,9 @@ namespace sourcespec2ir
             const std::string &argName, const llvm::Function &f)
         {
             std::stringstream s;
-            s << "Duplicate name of ghost argument: "
-              << argName << " in function "
-              << utils::getSrcNameOfFunction(f);
+            s << "Duplicate name of ghost argument '"
+              << argName << "' in function '"
+              << utils::getSrcNameOfFunction(f) << "'";
             throw utils::PallasException(s.str());
         }
 
@@ -416,7 +415,9 @@ namespace sourcespec2ir
         for (const auto &contr : matchedSpec.matchedFContracts)
         {
             llvm::StringSet argNames;
-            // TODO: Also check for conflicts with non-ghost arguments
+            auto parentArgs = getDIVarsOfArgs(*contr->function);
+            for (auto *v : parentArgs)
+                argNames.insert(utils::getSrcVarName(*v));
             for (auto &gArg : contr->givenArgs)
             {
                 if (argNames.contains(gArg.argName))
@@ -924,18 +925,7 @@ namespace sourcespec2ir
                 throw utils::PallasException(
                     "Failed to find ghost function " + fName);
             // Collect DIVariables that point to args of the ghost function
-            llvm::SmallSet<llvm::DILocalVariable *, 8> diArgs;
-            for (auto it = llvm::inst_begin(*irGhostF),
-                      end = llvm::inst_end(*irGhostF);
-                 it != end; ++it)
-            {
-                if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
-                {
-                    auto *v = intr->getVariable();
-                    if (v->getArg() != 0)
-                        diArgs.insert(v);
-                }
-            }
+            auto diArgs = getDIVarsOfArgs(*irGhostF);
 
             // Add DIVars to wrappers
             for (auto &stmnt : gContr->statements)
@@ -1036,6 +1026,22 @@ namespace sourcespec2ir
         if (cu == nullptr)
             throw utils::PallasException("Encountered a function without a compile-unit.");
         return cu;
+    }
+
+    llvm::SmallSet<llvm::DILocalVariable *, 8> 
+    SourceSpecTransformer::getDIVarsOfArgs(const llvm::Function &f) const
+    {
+        llvm::SmallSet<llvm::DILocalVariable *, 8> diArgs;
+        for (auto it = llvm::inst_begin(f), end = llvm::inst_end(f); it != end; ++it)
+        {
+            if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
+            {
+                auto *v = intr->getVariable();
+                if (v->getArg() != 0)
+                    diArgs.insert(v);
+            }
+        }
+        return diArgs;
     }
 
     /*
