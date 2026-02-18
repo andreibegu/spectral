@@ -333,7 +333,7 @@ namespace sourcespec2ir
                 *matchedStmnt, nullptr, true));
 
         auto contractNode = llvm::MDTuple::get(irContext, nodes);
-        pFunc->setMetadata(PALLAS_GHOST_CONTRACT, contractNode);
+        pFunc->setMetadata(PALLAS_FUN_CONTRACT_BLOCK, contractNode);
     }
 
     void SpecEncoder::encodeGivenBindingBlock(

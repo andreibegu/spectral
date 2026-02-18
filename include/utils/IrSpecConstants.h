@@ -14,8 +14,6 @@ namespace sourcespec2ir
 
     const std::string PALLAS_EXT_FUN_CONTRACT_BLOCK = "pallas.extContract";
 
-    const std::string PALLAS_GHOST_CONTRACT = "pallas.ghostContract";
-
     const std::string PALLAS_ENSURES = "pallas.ensures";
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
