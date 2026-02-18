@@ -271,7 +271,7 @@ namespace sourcespec2ir
 
         // Generate the metadata that encodes the contract statement:
         llvm::SmallVector<llvm::Metadata *> mdElems;
-        
+
         // Statement identifier
         if (!stmntTypeToID.contains(stmnt.type))
             throw utils::PallasException("Unsupported statement-type");
@@ -369,6 +369,18 @@ namespace sourcespec2ir
 
         llvm::SmallVector<llvm::Metadata *> nodes;
 
+        // ID String
+        nodes.push_back(llvm::MDString::get(irContext, PALLAS_GIVEN_BINDING));
+
+        // Src location
+        nodes.push_back(encodeSrcLoc(binding.srcLoc));
+
+        // Wrapper function
+        nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
+
+        // Arg-mapping
+        addWrapperArgMapping(nodes, *srcWrapper, parentContract);
+
         // MD-encoding of the arg-definition
         auto argDef = calleeContract.getGivenArg(binding.ghostArg);
         if (argDef == nullptr || !ghostArgDefMap.contains(argDef))
@@ -380,15 +392,6 @@ namespace sourcespec2ir
         }
         auto *argMD = ghostArgDefMap.at(argDef);
         nodes.push_back(argMD);
-
-        // Src location
-        nodes.push_back(encodeSrcLoc(binding.srcLoc));
-
-        // Wrapper function
-        nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
-
-        // Arg-mapping
-        addWrapperArgMapping(nodes, *srcWrapper, parentContract);
 
         return llvm::MDNode::get(irContext, nodes);
     }
@@ -419,6 +422,9 @@ namespace sourcespec2ir
         const MatchedFunctionContract &calleeContract)
     {
         llvm::SmallVector<llvm::Metadata *, 8> nodes;
+
+        // ID String
+        nodes.push_back(llvm::MDString::get(irContext, PALLAS_YIELDS_BINDING));
 
         // Src location
         nodes.push_back(encodeSrcLoc(binding.srcLoc));
