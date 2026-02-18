@@ -132,8 +132,19 @@ namespace sourcespec2ir
         llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
 
         /**
-         * Extends the given MD-encoding with a mapping of the wrapper-functions 
-         * arguments to the related values at the 'call-site' of the wrapper. 
+         * Encodes the mapping of non-ghost variables from the call-site of a 
+         * wrapper function to the arguments of the wrapper. 
+         * Returns a MDNode that encodes the arg-mapping as a list of the shape 
+         * {{ParentDIVar1, WrapperArg1}, ..., {ParentDIVarN, WrapperArgN}}.
+         * The list has no particular ordering.
+         */
+        llvm::MDNode *encodeWrapperVarMapping(
+            const SrcWrapperFunction &srcWrapper,
+            const llvm::Function &irWrapper) const;
+
+        /**
+         * Extends the given MD-encoding with a mapping of the wrapper-functions
+         * arguments to the related values at the 'call-site' of the wrapper.
          * Concretely, three nodes are added that encode:
          * - GivenArgs
          * - YieldsArgs
@@ -142,30 +153,31 @@ namespace sourcespec2ir
          * arguments is empty.
          */
         void addWrapperArgMapping(
-            llvm::SmallVector<llvm::Metadata *> &nodes, 
+            llvm::SmallVector<llvm::Metadata *> &nodes,
             const SrcWrapperFunction &srcWrapper,
-            const MatchedFunctionContract *parentContr, 
-            bool includeYields=true);
+            const MatchedFunctionContract *parentContr,
+            bool includeYields = true);
 
         /**
-         * Encode a set of ghost variables into a MDNode.
+         * Encodes the mapping of ghost variables to the arguments of a wrapper
+         * function into a MDNode.
          */
         llvm::MDNode *encodeGhostVarSet(
             llvm::ArrayRef<std::string> gVarNames,
             const llvm::Function &irWrapper,
-            const MatchedFunctionContract *parentContract);
+            const MatchedFunctionContract *parentContract) const;
 
         /**
          * Generates a MDTuple that encodes a source-location.
          */
-        llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc);
+        llvm::MDTuple *encodeSrcLoc(const SrcRange &srcLoc) const;
 
         /**
          * Maps the DILocalVariables in the given function that refer to an
          * argument to their name.
          */
         llvm::StringMap<llvm::DILocalVariable *> mapDIArgsToNames(
-            const llvm::Function &f);
+            const llvm::Function &f) const;
 
         void throwNoContractForFunc(const llvm::Function &func);
     };

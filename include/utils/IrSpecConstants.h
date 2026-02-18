@@ -20,7 +20,9 @@ namespace sourcespec2ir
 
     const std::string PALLAS_REQUIRES = "pallas.requires";
 
-    const std::string PALLAS_LOOP_INV_BLOCK = "pallas.loopInv";
+    const std::string PALLAS_LOOP_INV_BLOCK = "pallas.loopInvBlock";
+
+    const std::string PALLAS_LOOP_INV = "pallas.loopInv";
 
     const std::string PALLAS_STMNT_BLOCK = "pallas.stmntBlock";
 

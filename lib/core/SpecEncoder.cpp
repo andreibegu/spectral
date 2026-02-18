@@ -210,6 +210,10 @@ namespace sourcespec2ir
         utils::markGeneratedSpecFunction(*irWrapperFunction, irContext);
 
         llvm::SmallVector<llvm::Metadata *> mdElems;
+
+        // ID-String
+        mdElems.push_back(llvm::MDString::get(irContext, PALLAS_LOOP_INV));
+
         // Src location
         mdElems.push_back(encodeSrcLoc(inv.srcLoc));
 
@@ -286,7 +290,7 @@ namespace sourcespec2ir
         // Add info on srcLocation
         mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
-        // TODO: Once the wrapper-args are bundled into one node, move this to the end of the encoing to make getting e.g. the wrapper-function the same for all encodings. 
+        // TODO: Once the wrapper-args are bundled into one node, move this to the end of the encoing to make getting e.g. the wrapper-function the same for all encodings.
         // MD-encoding of the variable definition (for ghost assign)
         if (isGhostAssign)
         {
@@ -498,18 +502,39 @@ namespace sourcespec2ir
         else
             yieldsNode = llvm::MDTuple::get(irContext, {});
         nodes.push_back(yieldsNode);
-
-        // TODO: Change this into a list of pairs of the shape
-        // {ParentDIVar, WrapperDIVar}
         // 'Regular' variables
-        for (auto arg : srcWrapper.argList)
-            nodes.push_back(arg);
+        nodes.push_back(encodeWrapperVarMapping(srcWrapper, *irWrapper));
+    }
+
+    llvm::MDNode *SpecEncoder::encodeWrapperVarMapping(
+        const SrcWrapperFunction &srcWrapper, 
+        const llvm::Function &irWrapper) const
+    {
+        auto nameToWArg = mapDIArgsToNames(irWrapper);
+        llvm::SmallVector<llvm::Metadata *> argMappingNodes;
+        for (auto *pVar : srcWrapper.argList)
+        {
+            auto argName = pVar->getName().str();
+            // Find the dbgvar in wrapper that belongs to 'pVar'
+            if (!nameToWArg.contains(argName))
+            {
+                std::stringstream s;
+                s << "Failed to find debug-variable for argument '" << argName
+                  << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
+                throw utils::PallasException(s.str());
+            }
+            auto *wArg = nameToWArg.at(argName);
+            // Build tuple of shape {ParentDIVar, WrapperDIVar}
+            argMappingNodes.push_back(
+                llvm::MDTuple::get(irContext, {pVar, wArg}));
+        }
+        return llvm::MDTuple::get(irContext, argMappingNodes);
     }
 
     llvm::MDNode *SpecEncoder::encodeGhostVarSet(
         llvm::ArrayRef<std::string> gVarNames,
         const llvm::Function &irWrapper,
-        const MatchedFunctionContract *parentContract)
+        const MatchedFunctionContract *parentContract) const
     {
         if (gVarNames.empty())
             return llvm::MDTuple::get(irContext, {});
@@ -567,7 +592,7 @@ namespace sourcespec2ir
         return llvm::MDTuple::get(irContext, nodes);
     }
 
-    llvm::MDTuple *SpecEncoder::encodeSrcLoc(const SrcRange &srcLoc)
+    llvm::MDTuple *SpecEncoder::encodeSrcLoc(const SrcRange &srcLoc) const
     {
         llvm::DIBuilder builder(irModule);
         auto absPath = utils::makeAbsPath(srcLoc.getFile());
@@ -594,7 +619,7 @@ namespace sourcespec2ir
     }
 
     llvm::StringMap<llvm::DILocalVariable *>
-    SpecEncoder::mapDIArgsToNames(const llvm::Function &f)
+    SpecEncoder::mapDIArgsToNames(const llvm::Function &f) const
     {
         llvm::StringMap<llvm::DILocalVariable *> namesToVars;
         for (auto it = llvm::inst_begin(f), end = llvm::inst_end(f);
