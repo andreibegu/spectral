@@ -34,6 +34,13 @@ namespace sourcespec2ir
         void encodeSpecifications(const MatchedSpecifications &specs);
 
     private:
+        const std::map<SpecStatementType, std::string> stmntTypeToID = {
+            {Assert, PALLAS_ASSERT},
+            {Assume, PALLAS_ASSUME},
+            {Fold, PALLAS_FOLD},
+            {Unfold, PALLAS_UNFOLD},
+            {GhostAssign, PALLAS_GHOST_ASSIGN}};
+
         llvm::LLVMContext &irContext;
         llvm::Module &irModule;
         const MatchedWrapperFunctions &matchedWrappers;
@@ -132,9 +139,9 @@ namespace sourcespec2ir
         llvm::MDTuple *encodeGhostArgDef(const GhostArgumentDef &argDef);
 
         /**
-         * Encodes the mapping of non-ghost variables from the call-site of a 
-         * wrapper function to the arguments of the wrapper. 
-         * Returns a MDNode that encodes the arg-mapping as a list of the shape 
+         * Encodes the mapping of non-ghost variables from the call-site of a
+         * wrapper function to the arguments of the wrapper.
+         * Returns a MDNode that encodes the arg-mapping as a list of the shape
          * {{ParentDIVar1, WrapperArg1}, ..., {ParentDIVarN, WrapperArgN}}.
          * The list has no particular ordering.
          */

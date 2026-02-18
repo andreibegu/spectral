@@ -271,26 +271,22 @@ namespace sourcespec2ir
 
         // Generate the metadata that encodes the contract statement:
         llvm::SmallVector<llvm::Metadata *> mdElems;
+        
         // Statement identifier
-        std::string mdId;
-        if (stmnt.type == Assert)
-            mdId = PALLAS_ASSERT;
-        else if (stmnt.type == Assume)
-            mdId = PALLAS_ASSUME;
-        else if (stmnt.type == Fold)
-            mdId = PALLAS_FOLD;
-        else if (stmnt.type == Unfold)
-            mdId = PALLAS_UNFOLD;
-        else if (stmnt.type == GhostAssign)
-            mdId = PALLAS_GHOST_ASSIGN;
-        else
+        if (!stmntTypeToID.contains(stmnt.type))
             throw utils::PallasException("Unsupported statement-type");
-        mdElems.push_back(llvm::MDString::get(irContext, mdId));
+        mdElems.push_back(
+            llvm::MDString::get(irContext, stmntTypeToID.at(stmnt.type)));
 
         // Add info on srcLocation
         mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
 
-        // TODO: Once the wrapper-args are bundled into one node, move this to the end of the encoing to make getting e.g. the wrapper-function the same for all encodings.
+        // Add reference to function
+        mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
+
+        // Arg-mapping
+        addWrapperArgMapping(mdElems, *srcWrapperFun, parentContract);
+
         // MD-encoding of the variable definition (for ghost assign)
         if (isGhostAssign)
         {
@@ -306,12 +302,6 @@ namespace sourcespec2ir
             auto *gVarMD = ghostArgDefMap.at(vDef);
             mdElems.push_back(gVarMD);
         }
-
-        // Add reference to function
-        mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
-
-        // Arg-mapping
-        addWrapperArgMapping(mdElems, *srcWrapperFun, parentContract);
 
         return llvm::MDNode::get(irContext, mdElems);
     }
@@ -507,7 +497,7 @@ namespace sourcespec2ir
     }
 
     llvm::MDNode *SpecEncoder::encodeWrapperVarMapping(
-        const SrcWrapperFunction &srcWrapper, 
+        const SrcWrapperFunction &srcWrapper,
         const llvm::Function &irWrapper) const
     {
         auto nameToWArg = mapDIArgsToNames(irWrapper);
