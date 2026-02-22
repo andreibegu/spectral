@@ -303,7 +303,7 @@ GHOST_ASSIGN ::= 'ghost' 'assign' VAR_NAME '=' EXPR ';'
 ```
 Where `VAR_NAME` is the name of a ghost variable (i.e. a string that does not contain '=' and ';') that is defined in the current scope and `EXPR` is a side-effect free expression from the source-language (i.e. a string that does not contain ';').
 
-**Note:** It is not allowed to assign new values to given-agruments. Therefore, it is currently only allowd to assign values to yields-arguments. 
+**Note:** It is not allowed to assign new values to given-arguments. Therefore, it is currently only allowd to assign values to yields-arguments. 
 
 ## Specification Expressions
 Expressions that are used in the high-level specification costructs (`EXPR` in the examples above) use the syntax of the used source language and must generally return a boolan when used in the high-level specification constructs.
