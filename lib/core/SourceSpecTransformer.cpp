@@ -1053,11 +1053,17 @@ namespace sourcespec2ir
     {
         return std::make_unique<IRBasedSourceSpecMatcher>(
             specParseTree, srcFilePath, irModule, &fam,
-            outputConfig.printMatchingInfo, matchExternalOnly);
+            outputConfig.printMatchingInfo, matchExternalOnly, 
+            createSyntaxResolver());
     }
 
     std::string SourceSpecTransformer::getSrcInPath()
     {
         return srcInPath;
+    }
+
+    std::unique_ptr<SourceSyntaxResolver> 
+    SourceSpecTransformer::createSyntaxResolver() {
+        return std::make_unique<SourceSyntaxResolver>();
     }
 }

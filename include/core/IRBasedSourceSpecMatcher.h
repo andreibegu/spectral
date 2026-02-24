@@ -31,7 +31,8 @@ namespace sourcespec2ir
                                  llvm::Module *irModule,
                                  llvm::FunctionAnalysisManager *fam,
                                  const bool printMatchingInfo,
-                                 bool matchExternalOnly);
+                                 bool matchExternalOnly, 
+                                 std::unique_ptr<SourceSyntaxResolver> syntaxResolver);
 
     protected:
         llvm::Function *matchFContract(SrcRange loc) override;

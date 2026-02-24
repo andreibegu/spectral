@@ -2,6 +2,7 @@
 #include "SwiftSpecUnifier.h"
 #include "SwiftSpecTransformer.h"
 #include "SwiftWrapperGenerator.h"
+#include "SwiftSyntaxResolver.h"
 
 namespace sourcespec2ir
 {
@@ -27,6 +28,13 @@ namespace sourcespec2ir
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
     {
         return std::make_unique<SwiftWrapperGenerator>(
-            getSrcInPath(), specDeclarations, wrapperMarkers);
+            getSrcInPath(), specDeclarations, wrapperMarkers,
+            createSyntaxResolver());
+    }
+
+    std::unique_ptr<SourceSyntaxResolver>
+    SwiftSpecTransformer::createSyntaxResolver()
+    {
+        return std::make_unique<SwiftSyntaxResolver>();
     }
 }

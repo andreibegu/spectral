@@ -22,6 +22,7 @@
 
 #include "SourceSpecMatcher.h"
 #include "SourceCompilerDriver.h"
+#include "SourceSyntaxResolver.h"
 #include "SourceWrapperGenerator.h"
 #include "SpecUnifier.h"
 #include "OutputConfig.h"
@@ -65,6 +66,14 @@ namespace sourcespec2ir
         std::unique_ptr<SourceSpecMatcher> createSpecMatcher(
             SpecParser::FileContext *specParseTree, llvm::Module *irModule,
             std::string srcFilePath, bool matchExternalOnly);
+
+        /**
+         * Returns a SourceSyntaxResolver for the used language. 
+         * The default-implementation returns a resolver for a C-style
+         * expression-syntax. Sub-class can override this to adapt the used 
+         * syntax. 
+         */
+        virtual std::unique_ptr<SourceSyntaxResolver> createSyntaxResolver();
 
         std::string getSrcInPath();
 
