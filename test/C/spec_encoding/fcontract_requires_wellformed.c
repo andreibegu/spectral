@@ -4,22 +4,17 @@
 
 // COM: Contract is attached to function
 // CHECK: float @fun(
-// CHECK-SAME: [[arg1:%[0-9]+]]
-// CHECK-SAME: [[arg2:%[0-9]+]]
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
-// COM: Match the MD-nodes of the function arguments
-// CHECK: store float [[arg1]], ptr [[arg1Loc:%[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr [[arg1Loc]], metadata [[arg1MD:![0-9]+]]
-// CHECK: store float [[arg2]], ptr [[arg2Loc:%[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr [[arg2Loc]], metadata [[arg2MD:![0-9]+]]
-
 // COM: Generated encoding-function is labeled
-// CHECK: define {{.*}} [[wrapperFunc:@PALLAS_SPEC_[0-9]+]]
+// CHECK: define {{.*}} @PALLAS_SPEC_0
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the requires-Clause is wellformed
-// CHECK: !{!"pallas.requires", {{![0-9]+}}, ptr [[wrapperFunc]], [[arg1MD]], [[arg2MD]]}
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[cClauseMD:![0-9]+]]}
+// CHECK-DAG: [[cClauseMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @PALLAS_SPEC_0, [[emp]], [[emp]], {{![0-9]+}}}
+// CHECK-DAG: [[emp]] = !{}
+
 
 /*@
 requires x >= 0;
