@@ -15,8 +15,8 @@ func bar (a: Double) -> Double {
 
 // COM: Collect variables that are available in the encoding
 // CHECK: define hidden swiftcc double @[[bar:"[^"]+"]](double %0) {{#[0-9]+}} !dbg [[barMD:![0-9]+]] {
-// CHECK: call void @llvm.dbg.value(metadata double %0, metadata [[aMD:![0-9]+]]
-// CHECK: call void @llvm.dbg.value(metadata double 1.233400e+00, metadata [[bMD:![0-9]+]]
+// CHECK: call void @llvm.dbg.value(metadata double %0, metadata [[barA:![0-9]+]]
+// CHECK: call void @llvm.dbg.value(metadata double 1.233400e+00, metadata [[barB:![0-9]+]]
 
 
 // MD-encoding is attached to instruction:
@@ -26,5 +26,14 @@ func bar (a: Double) -> Double {
 // CHECK: define hidden swiftcc i1 @[[wrapper:"[^"]+"]](double %0, double %1) #0 !dbg {{![0-9]+}} !pallas.exprWrapper {{![0-9]+}} {
 
 // COM: MD-Node of the assert-statement is wellformed
-// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
-// CHECK: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @[[wrapper]], [[aMD]], [[bMD]]}
+// CHECK-DAG: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
+// CHECK-DAG: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @[[wrapper]], [[emp:![0-9]+]], [[emp]], [[vars:![0-9]+]]}
+// CHECK-DAG: [[emp]] = !{}
+
+// COM: Check variable mapping
+// CHECK-DAG: [[vars]] = !{[[m1:![0-9]+]], [[m2:![0-9]+]]}
+// CHECK-DAG: [[m1]] = !{[[barA]], [[w1A:![0-9]+]]}
+// CHECK-DAG: [[m2]] = !{[[barB]], [[w1B:![0-9]+]]}
+// CHECK-DAG: [[w1SP:![0-9]+]] = distinct !DISubprogram(name: "PALLAS_SPEC_0",
+// CHECK-DAG: [[w1A]] = !DILocalVariable(name: "a", arg: {{[0-9]}}, scope: [[w1SP]]
+// CHECK-DAG: [[w1B]] = !DILocalVariable(name: "b", arg: {{[0-9]}}, scope: [[w1SP]]

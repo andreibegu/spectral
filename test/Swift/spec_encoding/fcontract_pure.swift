@@ -15,7 +15,8 @@ func bar (a: Double) -> Double {
 // CHECK: define hidden swiftcc double @"$s13tmp_ir_source3bar1aS2d_tF"(double %0)
 // CHECK-SAME: !pallas.fcontract [[contrMD:![0-9]+]]
 
-// COM: Check that the contract is well-formed
-// CHECK: [[contrMD]] = !{[[sLoc:![0-9]+]], i1 true, i1 false, {{![0-9]+}}}
+// COM: Check that the contract has its pure-flag set
+// CHECK-DAG: [[contrMD]] = !{[[sLoc:![0-9]+]], i1 true, i1 false, [[emp:![0-9]+]], [[emp]], {{![0-9]+}}}
+// CHECK-DAG: [[emp]] = !{}
 
 // CHECK-DAG: [[sLoc]] = !{!"pallas.srcLoc",
