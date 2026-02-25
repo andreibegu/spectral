@@ -13,13 +13,13 @@ declare using namespace pallasSpec;
 
 ## Operators:
 - Implication: ```_imply(a, b)```
-- Short-circuting conjunction: ```_and(a, b)```
-- Short-circuting disjunction: ```_or(a, b)```
+- Short-circuiting conjunction: ```_and(a, b)```
+- Short-circuiting disjunction: ```_or(a, b)```
 - Separating conjunction: ```_sep(a, b)```
 
 In general, the usual logical operators of C++ can be used in specifications. 
 Due to some limitations of the verification-support for VerCors, 
-short-circuting operators are not supported within quantifiers. In these cases, ```_and``` and ```_or``` can be used instead.
+short-circuiting operators are not supported within quantifiers. In these cases, ```_and``` and ```_or``` can be used instead.
 
 ## Specification-constructs:
 
@@ -75,7 +75,7 @@ _unfolding<T>(PRED, EXPR)
 where ```T``` is the type of the expression, ```PRED``` is the predicate application and ```EXPR``` is the expression.
 
 ### Sequence-ADT
-A sequence containing elements of type ```T``` is representd by the struct-type ```seq<T>```
+A sequence containing elements of type ```T``` is represented by the struct-type ```seq<T>```
 For this type, the following operations are available:
 - Create an empty sequence: ```_seqNew<T>()```
 - Size of a sequence: ```_seqSize<T>(seq)```
