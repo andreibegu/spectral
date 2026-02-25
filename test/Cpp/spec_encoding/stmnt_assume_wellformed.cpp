@@ -4,8 +4,8 @@
 
 // COM: Collect variables that are available in the encoding
 // CHECK: i1 @_Z16fabulousFunctionff(
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{%[0-9]+}}, metadata [[xMD:![0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr {{%[0-9]+}}, metadata [[yMD:![0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{%[0-9]+}}, metadata [[fX:![0-9]+]]
+// CHECK: call void @llvm.dbg.declare(metadata ptr {{%[0-9]+}}, metadata [[fY:![0-9]+]]
 
 // MD-encoding is attached to instruction:
 // CHECK: !pallas.stmntBlock [[blockMD:![0-9]+]]
@@ -15,8 +15,18 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the assert-statement is wellformed
-// CHECK: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
-// CHECK: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0ff, [[xMD]], [[yMD]]}
+// CHECK-DAG: [[blockMD]] = !{{{![0-9]+}}, [[assumeMD:![0-9]+]]}
+// CHECK-DAG: [[assumeMD]] = !{!"pallas.assume", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0ff, [[emp:![0-9]+]], [[emp]], [[vars:![0-9]+]]}
+// CHECK-DAG: [[emp]] = !{}
+
+// COM: Check variable-mapping
+// CHECK-DAG: [[vars]] = !{[[m1:![0-9]+]], [[m2:![0-9]+]]}
+// CHECK-DAG: [[m1]] = !{[[fX]], [[w1X:![0-9]+]]}
+// CHECK-DAG: [[m2]] = !{[[fY]], [[w1Y:![0-9]+]]}
+// CHECK-DAG: [[w1SP:![0-9]+]] = distinct !DISubprogram(name: "PALLAS_SPEC_0",
+// CHECK-DAG: [[w1X]] = !DILocalVariable(name: "x", arg: {{[0-9]}}, scope: [[w1SP]]
+// CHECK-DAG: [[w1Y]] = !DILocalVariable(name: "y", arg: {{[0-9]}}, scope: [[w1SP]]
+
 
 bool fabulousFunction (float x, float y) {
     /*@

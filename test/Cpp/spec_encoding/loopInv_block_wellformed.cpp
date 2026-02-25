@@ -8,11 +8,11 @@
 // CHECK-SAME: !{{{.*}} [[invBlockMD:![0-9]+]]}
 
 // COM: Check that the loop-inv node is wellformed
-// CHECK: [[invBlockMD]] = !{!"pallas.loopInv", {{![0-9]+}}, [[inv1MD:![0-9]+]], [[inv2MD:![0-9]+]]}
+// CHECK-DAG: [[invBlockMD]] = !{!"pallas.loopInvBlock", {{![0-9]+}}, [[inv1MD:![0-9]+]], [[inv2MD:![0-9]+]]}
 
 // COM: Check that the nodes of the individual invariants are wellformed
-// CHECK: [[inv1MD]] = !{{{![0-9]+}}, ptr {{@.+}}, {{![0-9]+}}}
-// CHECK: [[inv2MD]] = !{{{![0-9]+}}, ptr {{@.+}}, {{![0-9]+}}}
+// CHECK-DAG: [[inv1MD]] = !{!"pallas.loopInv", {{![0-9]+}}, ptr {{@.+}}, [[emp:![0-9]+]], [[emp]], {{![0-9]+}}}
+// CHECK-DAG: [[inv2MD]] = !{!"pallas.loopInv", {{![0-9]+}}, ptr {{@.+}}, [[emp]], [[emp]], {{![0-9]+}}}
 
 void test_fun () {
     int cnt = 0;

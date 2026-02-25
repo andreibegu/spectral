@@ -5,7 +5,7 @@
 // COM: requires is encoded in MD
 // CHECK: !pallas.fcontract [[contrMD:![0-9]+]]
 
-// CHECK-DAG: [[contrMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[reqMD:![0-9]+]]}
+// CHECK-DAG: [[contrMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[reqMD:![0-9]+]]}
 // CHECK-DAG: [[reqMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0Pii,
 
 // COM: Call to the pred-function exists
