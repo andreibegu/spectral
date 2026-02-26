@@ -2,6 +2,7 @@
 #include "PallasException.h"
 #include "SrcLookup.h"
 #include "SwiftNameConstants.h"
+#include "SwiftSyntaxResolver.h"
 
 #include <sstream>
 #include <regex>
@@ -18,8 +19,11 @@ namespace sourcespec2ir
     SwiftWrapperGenerator::SwiftWrapperGenerator(
         const std::string srcInFile,
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
-        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
-        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers),
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers,
+        std::unique_ptr<SourceSyntaxResolver> syntaxResolver)
+        : SourceWrapperGenerator(
+              srcInFile, specDeclarations, wrapperMarkers, 
+              std::move(syntaxResolver)),
           demangler()
     {
     }
@@ -341,10 +345,5 @@ namespace sourcespec2ir
         for (auto arg : args)
             sig.addArg(arg.str());
         return sig;
-    }
-
-    SourceSyntaxResolver SwiftWrapperGenerator::getSyntaxResolver()
-    {
-        throw utils::PallasNotImplementedException();
     }
 }

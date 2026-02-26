@@ -104,9 +104,10 @@ namespace sourcespec2ir
         SpecParser::FileContext *specParseTree,
         const std::string &srcFilePath, llvm::Module *irModule,
         llvm::FunctionAnalysisManager *fam, const bool printMatchingInfo,
-        bool matchExternalOnly)
+        bool matchExternalOnly, std::unique_ptr<SourceSyntaxResolver> syntaxResolver)
         : SourceSpecMatcher(specParseTree, srcFilePath,
-                            irModule, printMatchingInfo, matchExternalOnly),
+                            irModule, printMatchingInfo, matchExternalOnly,
+                            std::move(syntaxResolver)),
           fam(fam)
     {
     }

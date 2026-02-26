@@ -19,7 +19,7 @@ spec:
 specDeclarationBlock: SPEC_START specDeclaration+ SPEC_END;
 
 specContractBlock:
-	SPEC_START specMappingClause? givenDefClause* yieldsDefClause* specPureFlag? specContractClause+
+	SPEC_START specMappingClause? specPureFlag? givenDefClause* yieldsDefClause* specContractClause+
 		SPEC_END;
 
 specStatementBlock: SPEC_START specStatement+ SPEC_END;

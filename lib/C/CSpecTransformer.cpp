@@ -29,6 +29,7 @@ namespace sourcespec2ir
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
     {
         return std::make_unique<CWrapperGenerator>(
-            getSrcInPath(), specDeclarations, wrapperMarkers);
+            getSrcInPath(), specDeclarations, wrapperMarkers, 
+            createSyntaxResolver());
     }
 }

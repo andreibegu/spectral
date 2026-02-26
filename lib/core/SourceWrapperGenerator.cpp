@@ -27,10 +27,12 @@ namespace sourcespec2ir
     SourceWrapperGenerator::SourceWrapperGenerator(
         const std::string srcInFile,
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
-        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers,
+        std::unique_ptr<SourceSyntaxResolver> syntaxResolver)
         : srcInFile(srcInFile),
           specDeclarations(specDeclarations),
-          wrapperMarkers(wrapperMarkers)
+          wrapperMarkers(wrapperMarkers),
+          syntaxResolver(std::move(syntaxResolver))
     {
     }
 
@@ -281,7 +283,6 @@ namespace sourcespec2ir
         const MatchedFunctionContract *parentContract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        auto syntaxResolver = getSyntaxResolver();
         // Determine the variables that can be referenced in the statement
         auto argList = getVarsForStatement(stmntBlock.inst);
         // Get insert-location for wrapper-function
@@ -300,7 +301,7 @@ namespace sourcespec2ir
                 if (vDef == nullptr)
                     throw utils::PallasException(
                         "Unknown ghost variable: " + gVarName);
-                wRTy = syntaxResolver.getTypeForGhostArgDef(vDef->defStr);
+                wRTy = syntaxResolver->getTypeForGhostArgDef(vDef->defStr);
             }
 
             // Build wrapper signature
@@ -328,7 +329,6 @@ namespace sourcespec2ir
         const MatchedFunctionContract *calledContract,
         MatchedWrapperFunctions &matchedWrappers)
     {
-        auto syntaxResolver = getSyntaxResolver();
         // Get accessible variables:
         auto argList = getVarsForStatement(bindingBlock.call);
         // Get insert-location for wrapper-function
@@ -345,7 +345,7 @@ namespace sourcespec2ir
                   << binding.ghostArg;
                 throw utils::PallasException(s.str());
             }
-            auto wRetTy = syntaxResolver.getTypeForGhostArgDef(argDef->defStr);
+            auto wRetTy = syntaxResolver->getTypeForGhostArgDef(argDef->defStr);
 
             // Signature of the wrapper
             auto wSig = getWrapperSignature(argList->getArrayRef(), wRetTy);
@@ -557,6 +557,11 @@ namespace sourcespec2ir
         const SrcTypeRepresentation &type, const std::string &name)
     {
         return type.prefix.str().str() + " " + name + type.suffix.str().str();
+    }
+
+    SourceSyntaxResolver *SourceWrapperGenerator::getSyntaxResolver()
+    {
+        return syntaxResolver.get();
     }
 
     WrapperSignature SourceWrapperGenerator::getWrapperSignature(

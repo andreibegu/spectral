@@ -9,8 +9,11 @@ namespace sourcespec2ir
     CWrapperGenerator::CWrapperGenerator(
         const std::string srcInFile,
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
-        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers)
-        : SourceWrapperGenerator(srcInFile, specDeclarations, wrapperMarkers)
+        const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers,
+        std::unique_ptr<SourceSyntaxResolver> syntaxResolver 
+    )
+        : SourceWrapperGenerator(
+            srcInFile, specDeclarations, wrapperMarkers, std::move(syntaxResolver))
     {
     }
 
@@ -135,10 +138,5 @@ namespace sourcespec2ir
         // generated file.
         srcLines.insert(srcLines.begin(),
                         SrcLine("#include <c_spec_lib.h>", 0));
-    }
-
-    SourceSyntaxResolver CWrapperGenerator::getSyntaxResolver()
-    {
-        return SourceSyntaxResolver();
     }
 }

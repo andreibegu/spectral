@@ -6,13 +6,13 @@ Other parts of the specification-library are generated during the [wrapper-gener
 
 ## Operators:
 - Implication: ```a ==> b```
-- Short-circuting conjunction: ```&&&```
-- Short-circuting disjunction: ```|||```
+- Short-circuiting conjunction: ```&&&```
+- Short-circuiting disjunction: ```|||```
 - Separating conjunction: ```**```
 
 In general, the usual logical operators of Swift can be used in specifications. 
 Due to some limitations of the verification-support for VerCors, 
-short-circuting operators are not supported within quantifiers. In these cases, the custom ```&&&``` and ```|||``` operators can be used instead.
+short-circuiting operators are not supported within quantifiers. In these cases, the custom ```&&&``` and ```|||``` operators can be used instead.
 
 ## Specification-constructs:
 
@@ -73,7 +73,7 @@ declare #defSeq<AStruct>;
 @*/
 ```
 
-A sequence containing elements of type ```T``` is then representd by the type ```SeqT``` (i.e. the content-type of the sequence is encoded in the sequence's name).
+A sequence containing elements of type ```T``` is then represented by the type ```SeqT``` (i.e. the content-type of the sequence is encoded in the sequence's name).
 For this type, the following operations are available:
 - Create an empty sequence: ```SeqT()```
 - Size of a sequence: ```seq.size()```

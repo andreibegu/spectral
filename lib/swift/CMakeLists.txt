@@ -5,6 +5,7 @@ add_library(spec2ir_Swift STATIC
     SwiftWrapperGenerator.cpp
     SwiftSpecTransformer.cpp
     SwiftSpecUnifier.cpp
+    SwiftSyntaxResolver.cpp
 )
          
 target_include_directories(spec2ir_Swift PUBLIC

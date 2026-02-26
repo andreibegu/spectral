@@ -25,7 +25,7 @@ bool bar () {
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
 // COM: MD-Nodes of the contract have location-info 
-// CHECK-DAG: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[reqMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{[[contrLoc:![0-9]+]], i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[reqMD:![0-9]+]]}
 // CHECK-DAG: [[contrLoc]] = !{!"pallas.srcLoc", i64 9, i64 5, i64 12, i64 5, [[fileMD:![0-9]+]]}
 
 // CHECK-DAG: [[reqMD]] = !{!"pallas.ensures", [[ensLoc:![0-9]+]], 

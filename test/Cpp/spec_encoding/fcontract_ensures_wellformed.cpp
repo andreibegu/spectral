@@ -7,17 +7,14 @@
 // CHECK-SAME: [[arg:%[0-9]+]]
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
-// COM: Match the MD-nodes of the function arguments
-// CHECK: store float [[arg]], ptr [[argLoc:%[0-9]+]]
-// CHECK: call void @llvm.dbg.declare(metadata ptr [[argLoc]], metadata [[argMD:![0-9]+]]
-
 // COM: Generated encoding-function is labeled
 // CHECK: define {{.*}} [[wrapperFunc:@[^(]+]]
 // CHECK-SAME: !pallas.exprWrapper
 
-// COM: MD-Node of the ensures-Clause is wellformed
-// CHECK: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[rMD:![0-9]+]]}
-// CHECK: [[rMD]] = !{!"pallas.ensures", {{![0-9]+}}, ptr [[wrapperFunc]], [[argMD]]}
+// COM: MD-Node of the ensures-Clause is wellformed (we do not check the mapping here, this is already done in fcontract_requires_wellformed.cpp)
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[rMD:![0-9]+]]}
+// CHECK-DAG: [[rMD]] = !{!"pallas.ensures", {{![0-9]+}}, ptr [[wrapperFunc]], [[emp]], [[emp]], {{![0-9]+}}}
+// CHECK-DAG: [[emp]] = !{}
 
 /*@
 ensures x >= 0;

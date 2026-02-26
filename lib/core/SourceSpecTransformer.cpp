@@ -6,11 +6,11 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/StringSet.h>
 #include <llvm/ADT/SmallPtrSet.h>
-#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfo.h>
 #include <llvm/IR/InstIterator.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/GlobalValue.h>
@@ -30,6 +30,7 @@
 #include "IRBasedSourceSpecMatcher.h"
 #include "SourceSpecTransformer.h"
 #include "SpecDeclarationCollector.h"
+#include "SpecEncoder.h"
 #include "SpecPredicateCollector.h"
 #include "FileUtils.h"
 #include "IrSpecConstants.h"
@@ -71,19 +72,6 @@ namespace sourcespec2ir
         passBuilder.registerLoopAnalyses(lam);
         passBuilder.crossRegisterProxies(lam, fam, cgam, mam);
     }
-
-    namespace
-    {
-
-        void throwNoContractForFunc(const llvm::Function &func)
-        {
-            std::stringstream s;
-            s << "Failed to find contract for function"
-              << utils::getSrcNameOfFunction(func);
-            throw utils::PallasException(s.str());
-        }
-
-    };
 
     void SourceSpecTransformer::transformModule()
     {
@@ -139,10 +127,6 @@ namespace sourcespec2ir
         for (auto contractPath : extContractPaths)
             matchedSpecs->merge(matchExternalContract(contractPath));
 
-        // TODO: In the future, the encoding sholud be extended to allow
-        //       multiple specification blocks to be mapped to the same element.
-        //       However this needs some thought when external / pure contracts
-        //       are involved.
         if (matchedSpecs->hasDuplicateMappings())
             throw utils::PallasException(
                 "Multiple specifications were matched to the same target");
@@ -202,6 +186,12 @@ namespace sourcespec2ir
         if (outputConfig.printDebugInfo)
             verifyModule(*irModule, "After location rewrite");
 
+        // Extend wrappers of ghost contracts with args of the corresponding
+        // ghost function.
+        // This must happen after linking and location rewriting,
+        // otherwise the DIVars are wrong
+        addArgsToGhostContracts(*matchedSpecs, *irModule);
+
         if (outputConfig.printDebugInfo)
         {
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
@@ -210,44 +200,9 @@ namespace sourcespec2ir
             llvm::outs() << "+++++++++++++++++++++++++++++++++++++++++++++++\n";
         }
 
-        std::map<const GhostArgumentDef *, llvm::Metadata *> ghostArgDefMap;
-
-        // Generate metadata for specifications
-        for (const auto &contract : matchedSpecs->matchedFContracts)
-            encodeFunctionContractBlock(*contract, ghostArgDefMap);
-        for (const auto &invBlock : matchedSpecs->matchedLoopInvariants)
-            encodeLoopInvBlock(*invBlock);
-        for (const auto &stmntBlock : matchedSpecs->matchedStmntBlocks)
-        {
-            auto *parentFunc = stmntBlock->inst->getParent()->getParent();
-            auto *parentContr = matchedSpecs->getContractForFunc(*parentFunc);
-            encodeStmntBlock(*stmntBlock, parentContr, ghostArgDefMap);
-        }
-        for (const auto &contract : matchedSpecs->matchedGhostContracts)
-            encodeGhostContract(*contract);
-        for (const auto &bBlock : matchedSpecs->matchedGivenBindings)
-        {
-            auto *calledFunc = bBlock->call->getCalledFunction();
-            auto *calleeContr = matchedSpecs->getContractForFunc(*calledFunc);
-            if (calleeContr == nullptr)
-                throwNoContractForFunc(*calledFunc);
-            encodeGivenBindingBlock(*bBlock, *calleeContr, ghostArgDefMap);
-        }
-
-        for (const auto &bBlock : matchedSpecs->matchedYieldsBindings)
-        {
-            auto *calledFunc = bBlock->call->getCalledFunction();
-            auto *calleeContr = matchedSpecs->getContractForFunc(*calledFunc);
-
-            if (calleeContr == nullptr)
-                throwNoContractForFunc(*calledFunc);
-            auto *parentFunc = bBlock->call->getParent()->getParent();
-            auto *parentContr = matchedSpecs->getContractForFunc(*parentFunc);
-            if (parentContr == nullptr)
-                throwNoContractForFunc(*parentFunc);
-            encodeYieldsBindingBlock(
-                *bBlock, *parentContr, *calleeContr, ghostArgDefMap);
-        }
+        // Encode specifications into metadata
+        SpecEncoder encoder(*irContext, *irModule, *matchedWrappers);
+        encoder.encodeSpecifications(*matchedSpecs);
 
         // Check wellformedness of module
         if (outputConfig.printDebugInfo)
@@ -279,324 +234,6 @@ namespace sourcespec2ir
         return extContracts;
     }
 
-    namespace
-    {
-        llvm::MDTuple *buildGhostArgNode(
-            llvm::LLVMContext &context,
-            llvm::ArrayRef<llvm::DILocalVariable *> vars)
-        {
-
-            llvm::SmallVector<llvm::Metadata *> mdVec(vars.begin(), vars.end());
-            auto *tup = llvm::MDTuple::get(context, mdVec);
-            return tup;
-        }
-    }
-
-    void SourceSpecTransformer::encodeLoopInvBlock(
-        const MatchedLoopInvariantBlock &invBlock)
-    {
-        const auto numInvs = invBlock.invariants.size();
-        if (numInvs == 0)
-            return;
-
-        // Vector of MD-nodes that makes up the tuple with the invariants
-        llvm::SmallVector<llvm::Metadata *> invNodes;
-
-        // MD-String that identifies the tuple as a set of loop-invariants
-        auto invIDNode = llvm::MDString::get(*irContext,
-                                             PALLAS_LOOP_INV_BLOCK);
-        invNodes.push_back(invIDNode);
-
-        // Add info on srcLocation
-        invNodes.push_back(encodeSrcLoc(invBlock.srcLoc));
-
-        // Transform the individual invariants and add them to invNodes
-        for (auto &inv : invBlock.invariants)
-            encodeLoopInv(*inv, invNodes);
-
-        // Construct MD-tuple and add it to the loop's llvm.loop MD-node
-        auto loopMDTuple = invBlock.loopID;
-        auto invNode = llvm::MDTuple::get(*irContext, invNodes);
-        loopMDTuple->push_back(invNode);
-    }
-
-    void SourceSpecTransformer::encodeLoopInv(
-        const MatchedLoopInvariant &inv,
-        llvm::SmallVector<llvm::Metadata *> &nodes)
-    {
-        // Get the ir-version of the wrapper-function
-        auto srcWrapperFun = matchedWrappers->loopInvWrappers.at(&inv).get();
-        auto irWrapperFunction = utils::getFunctionBySrcName(
-            *irModule, srcWrapperFun->name);
-
-        // Add a metadata-marker to the generated function
-        utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
-
-        // Assemble MD-node to represent invariant-statement
-        llvm::SmallVector<llvm::Metadata *> mdElems;
-        // Add source-location info
-        mdElems.push_back(encodeSrcLoc(inv.srcLoc));
-
-        // Add ref to wrapper-function
-        mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFunction));
-
-        // Given args
-        auto givenVars = getVarsForWrapperArgs(*irWrapperFunction,
-                                               srcWrapperFun->givenArgs);
-        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
-        mdElems.push_back(givenNode);
-
-        // Yields args
-        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
-                                                srcWrapperFun->yieldsArgs);
-        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
-        mdElems.push_back(yieldsNode);
-
-        // Add references to the metadata-nodes that describe how the arguments
-        // of the specification-function relate to the original variables.
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
-
-        // Build new node and add it to the vector of the inv-block.
-        auto invAsMd = llvm::MDNode::get(*irContext, mdElems);
-        nodes.push_back(invAsMd);
-    }
-
-    void SourceSpecTransformer::encodeStmntBlock(
-        const MatchedSpecStatementBlock &stmntBlock,
-        const MatchedFunctionContract *parentContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        const auto inst = stmntBlock.inst;
-        if (stmntBlock.inst == nullptr)
-            throw utils::PallasException("Encountered unmatched stmnt-block");
-
-        // Transform specification statements
-        llvm::SmallVector<llvm::Metadata *> stmntNodes;
-
-        // Add location-information
-        stmntNodes.push_back(encodeSrcLoc(stmntBlock.srcLoc));
-
-        for (auto &stmnt : stmntBlock.statements)
-            stmntNodes.push_back(
-                encodeSpecStatement(*stmnt, parentContract, ghostArgDefMap));
-
-        // Build md-node to attach to function
-        auto blockMDNode = llvm::MDTuple::get(*irContext, stmntNodes);
-        inst->setMetadata(PALLAS_STMNT_BLOCK, blockMDNode);
-    }
-
-    llvm::MDNode *SourceSpecTransformer::encodeSpecStatement(
-        const MatchedSpecStatement &stmnt,
-        const MatchedFunctionContract *parentContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        bool isGhostAssign = stmnt.type == GhostAssign;
-
-        if (isGhostAssign && parentContract == nullptr)
-            throw utils::PallasException(
-                "Ghost assignments may only occur in functions that define ghost variables.");
-
-        auto srcWrapperFun = matchedWrappers->statementWrappers.at(&stmnt).get();
-        auto irWrapperFun = utils::getFunctionBySrcName(
-            *irModule, srcWrapperFun->name);
-
-        // Mark wrapper function
-        if (isGhostAssign)
-            utils::markGhostWrapper(*irWrapperFun, *irContext);
-        else
-            utils::markGeneratedSpecFunction(*irWrapperFun, *irContext);
-
-        // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *, 8> mdElems;
-        // Statement identifier
-        std::string mdId;
-        if (stmnt.type == Assert)
-            mdId = PALLAS_ASSERT;
-        else if (stmnt.type == Assume)
-            mdId = PALLAS_ASSUME;
-        else if (stmnt.type == Fold)
-            mdId = PALLAS_FOLD;
-        else if (stmnt.type == Unfold)
-            mdId = PALLAS_UNFOLD;
-        else if (stmnt.type == GhostAssign)
-            mdId = PALLAS_GHOST_ASSIGN;
-        else
-            throw utils::PallasException("Unsupported statement-type");
-        mdElems.push_back(llvm::MDString::get(*irContext, mdId));
-
-        // Add info on srcLocation
-        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
-
-        // MD-encoding of the variable definition (for ghost assign)
-        if (isGhostAssign)
-        {
-            auto vDef = parentContract->getGhostArg(stmnt.ghostVarName.value());
-            if (vDef == nullptr || !ghostArgDefMap.contains(vDef))
-            {
-                std::stringstream s;
-                s << "Failed to find definition of ghost variable: "
-                  << stmnt.ghostVarName.value() << " at "
-                  << stmnt.srcLoc.asShortString();
-                throw utils::PallasException(s.str());
-            }
-            auto *gVarMD = ghostArgDefMap.at(vDef);
-            mdElems.push_back(gVarMD);
-        }
-
-        // Add reference to function
-        mdElems.push_back(llvm::ValueAsMetadata::get(irWrapperFun));
-
-        // Given args
-        auto givenVars = getVarsForWrapperArgs(*irWrapperFun,
-                                               srcWrapperFun->givenArgs);
-        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
-        mdElems.push_back(givenNode);
-
-        // Yields args
-        auto yieldsVars = getVarsForWrapperArgs(*irWrapperFun,
-                                                srcWrapperFun->yieldsArgs);
-        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
-        mdElems.push_back(yieldsNode);
-
-        // Add references to the metadata-nodes that describe how the arguments
-        // of the specification-function relate to the original variables.
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
-
-        return llvm::MDNode::get(*irContext, mdElems);
-    }
-
-    void SourceSpecTransformer::encodeGivenBindingBlock(
-        const MatchedGhostArgBindingBlock &bBlock,
-        const MatchedFunctionContract &calleeContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        llvm::SmallVector<llvm::Metadata *> nodes;
-
-        // Src-location
-        nodes.push_back(encodeSrcLoc(bBlock.srcLoc));
-
-        // Bindings
-        for (auto &b : bBlock.bindings)
-            nodes.push_back(
-                encodeGivenBinding(b, calleeContract, ghostArgDefMap));
-
-        // Attach node to function
-        auto blockNode = llvm::MDTuple::get(*irContext, nodes);
-        bBlock.call->setMetadata(PALLAS_GIVEN_BINDING_BLOCK, blockNode);
-    }
-
-    llvm::MDNode *SourceSpecTransformer::encodeGivenBinding(
-        const MatchedGhostVarBinding &binding,
-        const MatchedFunctionContract &calleeContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        auto srcWrapper = matchedWrappers->givenBindingWrappers.at(&binding).get();
-        auto irWrapper = utils::getFunctionBySrcName(*irModule, srcWrapper->name);
-
-        // Add a metadata-marker to wrapper
-        utils::markGhostWrapper(*irWrapper, *irContext);
-
-        llvm::SmallVector<llvm::Metadata *, 8> nodes;
-
-        // MD-encoding of the arg-definition
-        auto argDef = calleeContract.getGivenArg(binding.ghostArg);
-        if (argDef == nullptr || !ghostArgDefMap.contains(argDef))
-        {
-            std::stringstream s;
-            s << "Failed to find definition of given-argument: "
-              << binding.ghostArg << " at " << binding.srcLoc.asShortString();
-            throw utils::PallasException(s.str());
-        }
-        auto *argMD = ghostArgDefMap.at(argDef);
-        nodes.push_back(argMD);
-
-        // Src location
-        nodes.push_back(encodeSrcLoc(binding.srcLoc));
-
-        // Wrapper function
-        nodes.push_back(llvm::ValueAsMetadata::get(irWrapper));
-
-        // Given args
-        auto givenVars = getVarsForWrapperArgs(*irWrapper,
-                                               srcWrapper->givenArgs);
-        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
-        nodes.push_back(givenNode);
-
-        // Yields args
-        auto yieldsVars = getVarsForWrapperArgs(*irWrapper,
-                                                srcWrapper->yieldsArgs);
-        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
-        nodes.push_back(yieldsNode);
-
-        // DIVariables
-        for (auto arg : srcWrapper->argList)
-            nodes.push_back(arg);
-
-        return llvm::MDNode::get(*irContext, nodes);
-    }
-
-    void SourceSpecTransformer::encodeYieldsBindingBlock(
-        const MatchedGhostArgBindingBlock &bBlock,
-        const MatchedFunctionContract &parentContract,
-        const MatchedFunctionContract &calleeContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        llvm::SmallVector<llvm::Metadata *> nodes;
-
-        // Src-location
-        nodes.push_back(encodeSrcLoc(bBlock.srcLoc));
-
-        // Bindings
-        for (auto &b : bBlock.bindings)
-            nodes.push_back(encodeYieldsBinding(
-                b, parentContract, calleeContract, ghostArgDefMap));
-
-        // Attach node to function
-        auto blockNode = llvm::MDTuple::get(*irContext, nodes);
-        bBlock.call->setMetadata(PALLAS_YIELDS_BINDING_BLOCK, blockNode);
-    }
-
-    llvm::MDNode *SourceSpecTransformer::encodeYieldsBinding(
-        const MatchedGhostVarBinding &binding,
-        const MatchedFunctionContract &parentContract,
-        const MatchedFunctionContract &calleeContract,
-        const std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        llvm::SmallVector<llvm::Metadata *, 8> nodes;
-
-        // Src location
-        nodes.push_back(encodeSrcLoc(binding.srcLoc));
-
-        // Target var (ghost var from parent function)
-        auto targetVarName = llvm::StringRef(binding.exprStr).trim().str();
-        auto targetVarDef = parentContract.getGhostArg(targetVarName);
-        if (targetVarDef == nullptr || !ghostArgDefMap.contains(targetVarDef))
-        {
-            std::stringstream s;
-            s << "Failed to find definition of ghost-argument: "
-              << binding.exprStr << " at " << binding.exprLoc.asShortString();
-            throw utils::PallasException(s.str());
-        }
-        auto targetVarMD = ghostArgDefMap.at(targetVarDef);
-        nodes.push_back(targetVarMD);
-
-        // Source var (yields-arg from called function)
-        auto sourceArgDef = calleeContract.getYieldsArg(binding.ghostArg);
-        if (sourceArgDef == nullptr || !ghostArgDefMap.contains(sourceArgDef))
-        {
-            std::stringstream s;
-            s << "Failed to find definition of yields-argument: "
-              << binding.ghostArg << " at " << binding.srcLoc.asShortString();
-            throw utils::PallasException(s.str());
-        }
-        auto *sourceArgMD = ghostArgDefMap.at(sourceArgDef);
-        nodes.push_back(sourceArgMD);
-
-        return llvm::MDNode::get(*irContext, nodes);
-    }
-
     void SourceSpecTransformer::promoteMemToReg(llvm::Module &module)
     {
         llvm::ModulePassManager mpm;
@@ -612,161 +249,6 @@ namespace sourcespec2ir
             std::string eMessage = "Ill-formed LLVM-module (" + msg + ")";
             throw utils::PallasException(eMessage);
         }
-    }
-
-    void SourceSpecTransformer::encodeFunctionContractBlock(
-        const MatchedFunctionContract &contract,
-        std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        const auto parentFunction = contract.function;
-        llvm::SmallVector<llvm::Metadata *> contractMDNodes;
-
-        // Add src-location information
-        contractMDNodes.push_back(encodeSrcLoc(contract.srcLoc));
-
-        // Add pure-flag
-        auto pureFlagConst = llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(*irContext, contract.isPure));
-        contractMDNodes.push_back(pureFlagConst);
-
-        // Add assumed-flag
-        auto assumedFlagConst = llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(*irContext, contract.isAssumed));
-        contractMDNodes.push_back(assumedFlagConst);
-
-        // Given args
-        llvm::SmallVector<llvm::Metadata *> givenDefs;
-        for (auto &g : contract.givenArgs)
-            givenDefs.push_back(encodeGhostArgDef(g, ghostArgDefMap));
-        auto givenNodes = llvm::MDTuple::get(*irContext, givenDefs);
-        contractMDNodes.push_back(givenNodes);
-
-        // Yields args
-        llvm::SmallVector<llvm::Metadata *> yieldsDefs;
-        for (auto &y : contract.yieldsArgs)
-            yieldsDefs.push_back(encodeGhostArgDef(y, ghostArgDefMap));
-        auto yieldsNodes = llvm::MDTuple::get(*irContext, yieldsDefs);
-        contractMDNodes.push_back(yieldsNodes);
-
-        // Transform specification statements
-        for (auto &matchedStmnt : contract.statements)
-        {
-            auto mdNode = encodeFunctionContractStatement(*parentFunction,
-                                                          *matchedStmnt, false);
-            contractMDNodes.push_back(mdNode);
-        }
-
-        auto contractMDNode = llvm::MDTuple::get(*irContext, contractMDNodes);
-        auto label = contract.type == External ? PALLAS_EXT_FUN_CONTRACT_BLOCK
-                                               : PALLAS_FUN_CONTRACT_BLOCK;
-        parentFunction->setMetadata(label, contractMDNode);
-    }
-
-    llvm::MDTuple *SourceSpecTransformer::encodeGhostArgDef(
-        const GhostArgumentDef &argDef,
-        std::map<const GhostArgumentDef *, llvm::Metadata *> &ghostArgDefMap)
-    {
-        llvm::SmallVector<llvm::Metadata *> nodes;
-        // location
-        nodes.push_back(encodeSrcLoc(argDef.srcLoc));
-        // name
-        nodes.push_back(llvm::MDString::get(*irContext, argDef.argName));
-
-        auto mdEncoding = llvm::MDTuple::get(*irContext, nodes);
-
-        // Keep mapping of GhostArgumentDef to MD-nodes
-        ghostArgDefMap[&argDef] = mdEncoding;
-        return mdEncoding;
-    }
-
-    llvm::MDNode *SourceSpecTransformer::encodeFunctionContractStatement(
-        const llvm::Function &function,
-        const MatchedFContractStatement &stmnt,
-        const bool inGhostContract)
-    {
-        // Get the ir-version of the wrapper-function
-        auto &wrapperMap = inGhostContract
-                               ? matchedWrappers->ghostContractWrappers
-                               : matchedWrappers->fContractWrappers;
-        auto srcWrapperFun = wrapperMap.at(&stmnt).get();
-        auto irWrapperFunction = utils::getFunctionBySrcName(
-            *irModule, srcWrapperFun->name);
-
-        // Add a metadata-marker to generated specification-function
-        utils::markGeneratedSpecFunction(*irWrapperFunction, *irContext);
-
-        // Generate the metadata that encodes the contract statement:
-        llvm::SmallVector<llvm::Metadata *> mdElems;
-
-        // Statement identifier
-        std::string mdId;
-        if (stmnt.type == Requires)
-            mdId = PALLAS_REQUIRES;
-        else if (stmnt.type == Ensures)
-            mdId = PALLAS_ENSURES;
-        else
-            throw utils::PallasException("Unsupported statement-type");
-        auto mdIdentifier = llvm::MDString::get(*irContext, mdId);
-        mdElems.push_back(mdIdentifier);
-
-        // Src-location information
-        mdElems.push_back(encodeSrcLoc(stmnt.srcLoc));
-
-        // Reference to wrapper function
-        auto specFuncAsMd = llvm::ValueAsMetadata::get(irWrapperFunction);
-        mdElems.push_back(specFuncAsMd);
-
-        // Given args
-        auto givenVars = getVarsForWrapperArgs(*irWrapperFunction,
-                                               srcWrapperFun->givenArgs);
-        auto *givenNode = buildGhostArgNode(*irContext, givenVars);
-        mdElems.push_back(givenNode);
-
-        // Yields args (Skip for requires-clauses)
-        llvm::SmallVector<llvm::DILocalVariable *> yieldsVars;
-        if (stmnt.type != Requires)
-        {
-            yieldsVars = getVarsForWrapperArgs(*irWrapperFunction,
-                                               srcWrapperFun->yieldsArgs);
-        }
-        auto *yieldsNode = buildGhostArgNode(*irContext, yieldsVars);
-        mdElems.push_back(yieldsNode);
-
-        // Add references to the metadata-nodes that describe how the arguments
-        // of the specification-function relate to the original variables.
-        for (auto arg : srcWrapperFun->argList)
-            mdElems.push_back(arg);
-
-        return llvm::MDNode::get(*irContext, mdElems);
-    }
-
-    void SourceSpecTransformer::encodeGhostContract(
-        const MatchedGhostContract &contract)
-    {
-        auto pFunc = utils::getFunctionBySrcName(
-            *irModule, contract.method->name);
-        if (pFunc == nullptr)
-            throw utils::PallasException("Failed to get ghost");
-
-        llvm::SmallVector<llvm::Metadata *> nodes;
-        // Src-location
-        nodes.push_back(encodeSrcLoc(contract.srcLoc));
-        // Pure-flag
-        bool isFunction = contract.method->isFunction;
-        nodes.push_back(llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(*irContext, isFunction)));
-        // Assumed-flag
-        // Always false for now, added to ensure consistency with encoding
-        // of external function.
-        nodes.push_back(llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(*irContext, false)));
-        // Specification statements
-        for (auto &matchedStmnt : contract.statements)
-            nodes.push_back(encodeFunctionContractStatement(
-                *pFunc, *matchedStmnt, true));
-
-        auto contractNode = llvm::MDTuple::get(*irContext, nodes);
-        pFunc->setMetadata(PALLAS_GHOST_CONTRACT, contractNode);
     }
 
     llvm::DICompileUnit *SourceSpecTransformer::getCompileUnit(
@@ -909,9 +391,9 @@ namespace sourcespec2ir
             const std::string &argName, const llvm::Function &f)
         {
             std::stringstream s;
-            s << "Duplicate name of ghost argument: "
-              << argName << " in function "
-              << utils::getSrcNameOfFunction(f);
+            s << "Duplicate name of ghost argument '"
+              << argName << "' in function '"
+              << utils::getSrcNameOfFunction(f) << "'";
             throw utils::PallasException(s.str());
         }
 
@@ -932,18 +414,21 @@ namespace sourcespec2ir
         // Check that names of ghost args do not conflict
         for (const auto &contr : matchedSpec.matchedFContracts)
         {
-            llvm::StringSet gArgNames;
+            llvm::StringSet argNames;
+            auto parentArgs = getDIVarsOfArgs(*contr->function);
+            for (auto *v : parentArgs)
+                argNames.insert(utils::getSrcVarName(*v));
             for (auto &gArg : contr->givenArgs)
             {
-                if (gArgNames.contains(gArg.argName))
+                if (argNames.contains(gArg.argName))
                     throwDuplicateGhostArgDefName(gArg.argName, *contr->function);
-                gArgNames.insert(gArg.argName);
+                argNames.insert(gArg.argName);
             }
             for (auto &yArg : contr->yieldsArgs)
             {
-                if (gArgNames.contains(yArg.argName))
+                if (argNames.contains(yArg.argName))
                     throwDuplicateGhostArgDefName(yArg.argName, *contr->function);
-                gArgNames.insert(yArg.argName);
+                argNames.insert(yArg.argName);
             }
         }
 
@@ -1429,6 +914,31 @@ namespace sourcespec2ir
         }
     }
 
+    void SourceSpecTransformer::addArgsToGhostContracts(
+        const MatchedSpecifications &matchedSpecs, llvm::Module &irModule)
+    {
+        for (auto &gContr : matchedSpecs.matchedGhostContracts)
+        {
+            auto fName = gContr->method->name;
+            auto *irGhostF = utils::getFunctionBySrcName(irModule, fName);
+            if (irGhostF == nullptr)
+                throw utils::PallasException(
+                    "Failed to find ghost function " + fName);
+            // Collect DIVariables that point to args of the ghost function
+            auto diArgs = getDIVarsOfArgs(*irGhostF);
+
+            // Add DIVars to wrappers
+            for (auto &stmnt : gContr->statements)
+            {
+                if (!matchedWrappers->ghostContractWrappers.contains(stmnt.get()))
+                    throw utils::PallasException(
+                        "Failed to find wrapper for ghost contract statement");
+                auto &wrapper = *matchedWrappers->ghostContractWrappers.at(stmnt.get());
+                wrapper.argList.append(diArgs.begin(), diArgs.end());
+            }
+        }
+    }
+
     void SourceSpecTransformer::markWrapperFunctionsAsUsed(
         llvm::Module &module, llvm::ArrayRef<SrcWrapperFunction *> wrappers)
     {
@@ -1484,32 +994,6 @@ namespace sourcespec2ir
         return tmpSrcPath.str().str();
     }
 
-    llvm::MDTuple *SourceSpecTransformer::encodeSrcLoc(const SrcRange &srcLoc)
-    {
-        llvm::DIBuilder builder(*irModule);
-        auto absPath = utils::makeAbsPath(srcLoc.getFile());
-        llvm::StringRef checksumStr = srcLoc.getMD5();
-        llvm::DIFile::ChecksumInfo checksum(
-            llvm::DIFile::ChecksumKind::CSK_MD5, checksumStr);
-        auto *file = builder.createFile(absPath, "", checksum);
-        builder.finalize();
-        auto *nTy = llvm::Type::getInt64Ty(*irContext);
-
-        llvm::SmallVector<llvm::Metadata *> mdElems = {
-            llvm::MDString::get(*irContext, PALLAS_SRC_LOCATION_MARKER),
-            llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.startLoc.line)),
-            llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.startLoc.column)),
-            llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.endLoc.line)),
-            llvm::ConstantAsMetadata::get(
-                llvm::ConstantInt::get(nTy, srcLoc.endLoc.column)),
-            file};
-
-        return llvm::MDTuple::get(*irContext, mdElems);
-    }
-
     llvm::DIFile *SourceSpecTransformer::getFileForFunc(llvm::Function *f)
     {
         if (f == nullptr)
@@ -1544,35 +1028,20 @@ namespace sourcespec2ir
         return cu;
     }
 
-    llvm::SmallVector<llvm::DILocalVariable *>
-    SourceSpecTransformer::getVarsForWrapperArgs(
-        const llvm::Function &wFunc, llvm::ArrayRef<std::string> argNames)
+    llvm::SmallSet<llvm::DILocalVariable *, 8> 
+    SourceSpecTransformer::getDIVarsOfArgs(const llvm::Function &f) const
     {
-        // Collect all DIVariables that are referenced in the wrapper function
-        // and marked as an argument and map them to their name.
-        llvm::StringMap<llvm::DILocalVariable *> namesToVars;
-        for (auto it = llvm::inst_begin(wFunc), end = llvm::inst_end(wFunc);
-             it != end; ++it)
+        llvm::SmallSet<llvm::DILocalVariable *, 8> diArgs;
+        for (auto it = llvm::inst_begin(f), end = llvm::inst_end(f); it != end; ++it)
         {
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
             {
-                auto *var = intr->getVariable();
-                auto name = var->getName();
-                if (var->getArg() != 0 && !namesToVars.contains(name))
-                    namesToVars.insert({name, var});
+                auto *v = intr->getVariable();
+                if (v->getArg() != 0)
+                    diArgs.insert(v);
             }
         }
-
-        llvm::SmallVector<llvm::DILocalVariable *> argVars;
-        for (auto name : argNames)
-        {
-            auto i = namesToVars.find(name);
-            if (i == namesToVars.end())
-                throw utils::PallasException(
-                    "Failed to find DIVariable for ghost argument.");
-            argVars.push_back(i->getValue());
-        }
-        return argVars;
+        return diArgs;
     }
 
     /*
@@ -1584,11 +1053,17 @@ namespace sourcespec2ir
     {
         return std::make_unique<IRBasedSourceSpecMatcher>(
             specParseTree, srcFilePath, irModule, &fam,
-            outputConfig.printMatchingInfo, matchExternalOnly);
+            outputConfig.printMatchingInfo, matchExternalOnly, 
+            createSyntaxResolver());
     }
 
     std::string SourceSpecTransformer::getSrcInPath()
     {
         return srcInPath;
+    }
+
+    std::unique_ptr<SourceSyntaxResolver> 
+    SourceSpecTransformer::createSyntaxResolver() {
+        return std::make_unique<SourceSyntaxResolver>();
     }
 }

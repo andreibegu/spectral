@@ -15,7 +15,8 @@ namespace sourcespec2ir
         CWrapperGenerator(
             const std::string srcInFile,
             const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
-            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers);
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers,
+            std::unique_ptr<SourceSyntaxResolver> syntaxResolver);
 
         std::string getWrapperFunctionString(
             const WrapperSignature &sig,
@@ -28,10 +29,9 @@ namespace sourcespec2ir
 
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SrcWrapperFunction &wFun) override;
-            
+
         std::pair<size_t, size_t> getOffsetToExprStart(
             const SpecPredicate &pDef) override;
-
 
     protected:
         SrcTypeRepresentation getVoid() override;
@@ -42,7 +42,6 @@ namespace sourcespec2ir
         void addArrayDim(SrcTypeRepresentation &baseType,
                          const std::string &dimSize);
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
-        SourceSyntaxResolver getSyntaxResolver() override;
     };
 
 }

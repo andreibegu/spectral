@@ -15,7 +15,8 @@ namespace sourcespec2ir
         CppWrapperGenerator(
             const std::string srcInFile,
             const llvm::ArrayRef<SpecDeclaration> specDeclarations,
-            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers);
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers,
+            std::unique_ptr<SourceSyntaxResolver> syntaxResolver);
 
         std::string getWrapperFunctionString(
             const WrapperSignature &sig,
@@ -45,7 +46,6 @@ namespace sourcespec2ir
         std::string addNamespace(const std::string &parentNamespace,
                                  const std::string &childNamespace) override;
         void modifySrcWithWrappers(std::list<SrcLine> &srcLines) override;
-        SourceSyntaxResolver getSyntaxResolver() override;
     };
 
 }

@@ -41,7 +41,8 @@ namespace sourcespec2ir
         SourceWrapperGenerator(
             const std::string srcInFile,
             const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations,
-            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers);
+            const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers, 
+            std::unique_ptr<SourceSyntaxResolver> syntaxResolver);
 
         virtual ~SourceWrapperGenerator() = default;
 
@@ -224,7 +225,6 @@ namespace sourcespec2ir
 
     protected:
         const std::string srcInFile;
-        const SourceSyntaxResolver syntaxResolver;
         const llvm::ArrayRef<sourcespec2ir::SpecDeclaration> specDeclarations;
         const llvm::ArrayRef<sourcespec2ir::WrapperLocMarker> wrapperMarkers;
 
@@ -247,7 +247,7 @@ namespace sourcespec2ir
         /**
          * Return an appropriate SyntaxResolver for the used language.
          */
-        virtual SourceSyntaxResolver getSyntaxResolver() = 0;
+        SourceSyntaxResolver *getSyntaxResolver();
 
         /**
          * Build a wrapper-signature based on the given DILocalVariables that
@@ -365,6 +365,8 @@ namespace sourcespec2ir
          *       names into account.
          */
         int specFunCnt = 0;
+
+        std::unique_ptr<SourceSyntaxResolver> syntaxResolver;
 
         /**
          * Used internally to recursively build the namespace for a given type
