@@ -583,7 +583,7 @@ namespace sourcespec2ir
                 !utils::isPredicateDef(f))
                 continue;
 
-            // Update arguments of function-arguments
+            // Update attributes of function-arguments
             for (auto &arg : f.args())
             {
                 // ByVal
@@ -647,13 +647,57 @@ namespace sourcespec2ir
                         // TODO: Repace call to setAllocatedType with something better (see doxygen)
                         allocInstr->setAllocatedType(newType);
                     }
-                } else if (auto *call = llvm::dyn_cast<llvm::CallBase>(&*it)) {
+                }
+                else if (auto *call = llvm::dyn_cast<llvm::CallBase>(&*it))
+                {
                     // TODO: Also handle types in byref / sret / byval attributes of calls!
-                    for (int argIdx = 0; argIdx < call->arg_size(); ++argIdx) {
-                        if (call->paramHasAttr(argIdx, llvm::Attribute::ByVal)) {
-                            
+                    for (unsigned int argIdx = 0; argIdx < call->arg_size(); ++argIdx)
+                    {
+                        // ByVal
+                        if (call->paramHasAttr(argIdx, llvm::Attribute::ByVal))
+                        {
+                            auto *attrType = llvm::dyn_cast_if_present<llvm::StructType>(
+                                call->getAttributes().getParamByValType(argIdx));
+                            if (attrType == nullptr)
+                                continue;
+                            if (seqTypes.contains(attrType))
+                            {
+                                auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*attrType));
+                                call->removeParamAttr(argIdx, llvm::Attribute::ByVal);
+                                call->addParamAttr(argIdx,
+                                                   llvm::Attribute::getWithByValType(*irContext, newTy));
+                            }
                         }
-                        // TODO: Check and update Attributes
+                        // ByRef
+                        else if (call->paramHasAttr(argIdx, llvm::Attribute::ByRef))
+                        {
+                            auto *attrType = llvm::dyn_cast_if_present<llvm::StructType>(
+                                call->getAttributes().getParamByRefType(argIdx));
+                            if (attrType == nullptr)
+                                continue;
+                            if (seqTypes.contains(attrType))
+                            {
+                                auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*attrType));
+                                call->removeParamAttr(argIdx, llvm::Attribute::ByRef);
+                                call->addParamAttr(argIdx,
+                                                   llvm::Attribute::getWithByRefType(*irContext, newTy));
+                            }
+                            // Sret
+                        }
+                        else if (call->paramHasAttr(argIdx, llvm::Attribute::StructRet))
+                        {
+                            auto *attrType = llvm::dyn_cast_if_present<llvm::StructType>(
+                                call->getAttributes().getParamStructRetType(argIdx));
+                            if (attrType == nullptr)
+                                continue;
+                            if (seqTypes.contains(attrType))
+                            {
+                                auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*attrType));
+                                call->removeParamAttr(argIdx, llvm::Attribute::StructRet);
+                                call->addParamAttr(argIdx,
+                                                   llvm::Attribute::getWithStructRetType(*irContext, newTy));
+                            }
+                        }
                     }
                 }
             }
