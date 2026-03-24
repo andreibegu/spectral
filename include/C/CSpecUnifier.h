@@ -44,6 +44,8 @@ namespace sourcespec2ir
             {"PALLAS_SEQ_AT___", SeqGet},
             {"PALLAS_SEQ_PREPEND___", SeqPrepend},
             {"PALLAS_SEQ_EQ___", SeqEquals},
+            {"PALLAS_SEQ_SLICE___", SeqSlice},
+            {"PALLAS_SEQ_SET___", SeqSet}
         };
 
         const std::string C_SPEC_FRAC_TYPE = "struct.frac";

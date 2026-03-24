@@ -45,6 +45,11 @@ namespace sourcespec2ir
             return f.getMetadata(PALLAS_PREDICATE_DEF_MARKER) != nullptr;
         }
 
+        bool isGhostMethod(llvm::Function &f)
+        {
+            return f.getMetadata(PALLAS_GHOST_MARKER) != nullptr;
+        }
+
         void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context)
         {
             auto idStr = llvm::MDString::get(context, "");

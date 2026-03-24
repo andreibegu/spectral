@@ -55,7 +55,9 @@ namespace sourcespec2ir
             SeqSize,        // Size of sequence
             SeqGet,         // Get element from sequence
             SeqPrepend,     // Prepend element to sequence
-            SeqEquals       // Equality of two sequences
+            SeqEquals,      // Equality of two sequences
+            SeqSlice,       // Slice of a sequence
+            SeqSet          // Update value of sequence
         };
 
         SpecUnifier(const bool printDebugInfo);
@@ -160,6 +162,10 @@ namespace sourcespec2ir
         virtual llvm::CallInst *transformSeqPrepend(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformSeqEquals(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformSeqSlice(llvm::CallInst &oldCall);
+
+        virtual llvm::CallInst *transformSeqSet(llvm::CallInst &oldCall);
 
         /*
          *  General helper functions for subclasses
@@ -300,6 +306,21 @@ namespace sourcespec2ir
         llvm::Function *getUSpecSeqEquals(llvm::Type *type);
 
         /**
+         * Returns a pointer to the unified specification-function for
+         * getting a slice of a sequence with the given content type.
+         */
+        llvm::Function *getUSpecSeqSlice(llvm::Type *type);
+
+        /**
+         * Returns a pointer to the unified specification-function for
+         * updating an element of a sequence with the given content type.
+         * The representation of the updated element is specified through
+         * the passed IRTypeRepresentation.
+         */
+        llvm::Function *getUSpecSeqSet(llvm::Type *type,
+                                       const IRTypeRepresentation &argRepr);
+
+        /**
          * Returns pointer to the type that is used to represent fractions
          * in the unified specification representation.
          */
@@ -422,6 +443,11 @@ namespace sourcespec2ir
             specSeqPrepend;
 
         llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqEquals;
+
+        llvm::DenseMap<llvm::Type *, llvm::Function *> specSeqSlice;
+
+        llvm::SmallVector<std::tuple<
+            llvm::Type *, IRTypeRepresentation, llvm::Function *>> specSeqSet;
 
         llvm::DenseMap<llvm::Type *, llvm::StructType *> specSeqTypes;
 

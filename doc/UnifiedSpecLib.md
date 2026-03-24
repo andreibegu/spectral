@@ -786,3 +786,23 @@ declare !pallas.specLib !130 i1 @"pallas.seq.equals SFX"(ptr noundef byval(%pall
 
 !130 = !{!"pallas.seq.equals"}
 ```
+
+### Sequence-set (Update element at index)
+For every type of sequence (`%pallas.seq.Y` that contains elements of type `T`)
+and representation `<<T>>` of the content-type, a new function is generated.
+
+```
+declare !pallas.specLib !130 void @"pallas.seq.set SFX"(ptr sret(%pallas.seq.Y), ptr noundef byval(%pallas.seq.Y), i64, <<T>>)
+
+!130 = !{!"pallas.seq.set"}
+```
+
+### Sequence slice
+For every type of sequence (`%pallas.seq.Y` that contains elements of type `T`)
+and representation `<<T>>` of the content-type, a new function is generated.
+
+```
+declare !pallas.specLib !130 void @"pallas.seq.slice SFX"(ptr sret(%pallas.seq.Y), ptr noundef byval(%pallas.seq.Y), i64, i64)
+
+!130 = !{!"pallas.seq.slice"}
+```

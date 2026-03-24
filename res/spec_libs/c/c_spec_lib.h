@@ -119,15 +119,6 @@ frac _fracOf(int numerator, int denominator);
 #define _unfolding(type) UNFOLDING_NAME(type)
 
 /*******************************************
- *          Shorthand-notations            *
- *******************************************/
-
-// Macro for write-permission
-#define _write _fracOf(1, 1)
-
-#define _inRange(lower, v, upper) _and(lower <= v , v < upper)
-
-/*******************************************
  *          Sequence-operations            *
  *******************************************/
 
@@ -152,6 +143,14 @@ frac _fracOf(int numerator, int denominator);
 #define _seqEq(type) PALLAS_SEQ_EQ___ ## type
 #define DEF_SEQ_EQ(type) bool _seqEq(type) (SEQ(type) s1, SEQ(type) s2)
 
+// Sequence-slice
+#define _seqSlice(type) PALLAS_SEQ_SLICE___ ## type
+#define DEF_SEQ_SLICE(type) SEQ(type) _seqSlice(type) (SEQ(type) s, size_t start, size_t end)
+
+// Sequence-update / Set element at index
+#define _seqSet(type) PALLAS_SEQ_SET___ ## type
+#define DEF_SEQ_SET(type) SEQ(type) _seqSet(type) (SEQ(type) s, size_t idx, type value)
+
 
 /*********************************************
  *     Convenience macros for ADTs           *
@@ -167,5 +166,21 @@ DEF_SEQ_SIZE(type) ; \
 DEF_SEQ_AT(type) ; \
 DEF_SEQ_PREPEND(type); \
 DEF_SEQ_NEW(type); \
-DEF_SEQ_EQ(type);
+DEF_SEQ_EQ(type); \
+DEF_SEQ_SLICE(type); \
+DEF_SEQ_SET(type);
 
+/*******************************************
+ *          Shorthand-notations            *
+ *******************************************/
+
+// Macro for write-permission
+#define _write _fracOf(1, 1)
+
+#define _inRange(lower, v, upper) _and(lower <= v , v < upper)
+
+// _seqHead(int, s) 
+#define _seqHead(type, s) _seqAt(type)(s, 0)
+
+// _seqTail(int, s)
+#define _seqTail(type, s) _seqSlice(type)(s, 1, _seqSize(int)(s))

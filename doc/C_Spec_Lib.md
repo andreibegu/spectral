@@ -68,6 +68,10 @@ For this type, the following operations are available:
 - Access element at index: ```_seqAt(T)(seq, idx)```
 - Prepend element to sequence: ```_seqPrepend(T)(elem, seq)```
 - Equality of sequences: ```_seqEq(T)(seq1, seq2)```
+- Slice of a sequence: ```_seqSlice(T)(seq, startIdx, endIdx)```
+    - Including start-index
+    - Excluding end-index
+- Update element of a sequence: ```_seqSet(T)(seq, idx, value)```
 
 To use sequences with content-type ```T```, a call to ```DEF_SEQ(T)``` in a declares-clause is required. 
 
@@ -75,3 +79,5 @@ To use sequences with content-type ```T```, a call to ```DEF_SEQ(T)``` in a decl
 The following macros are available to make recurring patterns in specifications less verbose:
 - ```_write``` --> Fractional permission of ```1```
 - ```_inRange(low, v, up)``` --> ```v``` is in the interval ```[low; up)]```
+- ```_seqHead(type, s)``` --> Head-element of sequence `s`
+- ```_seqTail(type, s)``` --> Tail of sequence `s`

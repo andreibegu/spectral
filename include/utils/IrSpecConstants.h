@@ -103,6 +103,10 @@ namespace sourcespec2ir
 
     const std::string PALLAS_SPEC_SEQ_EQUALS_BASE = "pallas.seq.equals";
 
+    const std::string PALLAS_SPEC_SEQ_SLICE_BASE = "pallas.seq.slice";
+
+    const std::string PALLAS_SPEC_SEQ_SET_BASE = "pallas.seq.set";
+
 
     /* Constants used to name specification-types */
     const std::string PALLAS_SPEC_TYPE_FRAC = "pallas.fracT";

@@ -361,6 +361,52 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *SpecUnifier::transformSeqSlice(llvm::CallInst &oldCall)
+    {
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+        auto seqType = getUSpecSeqType(cType);
+        llvm::SmallVector<llvm::Value *> newArgs = {
+            oldCall.getArgOperand(0),
+            oldCall.getArgOperand(1),
+            oldCall.getArgOperand(2),
+            oldCall.getArgOperand(3),
+        };
+        auto newCall = llvm::CallInst::Create(getUSpecSeqSlice(cType), newArgs);
+
+        // Add attributes
+        newCall->addParamAttr(0, llvm::Attribute::NoUndef);
+        addByVal(newCall, 0, seqType);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        addByVal(newCall, 1, seqType);
+
+        return newCall;
+    }
+
+    llvm::CallInst *SpecUnifier::transformSeqSet(llvm::CallInst &oldCall)
+    {
+        auto numArgs = oldCall.getNumOperands() - 1;
+        auto argRepr = IRTypeRepresentation::getArgReprFromCall(oldCall, 3, numArgs - 3);
+
+        // Get the content-type of the sequence from the argument
+        auto cType = getContentTypeOfADT(*oldCall.getArgOperand(1));
+        auto seqType = getUSpecSeqType(cType);
+
+        // Build new arg-list by copying arguments 1:1
+        llvm::SmallVector<llvm::Value *> newArgs;
+        for (unsigned int i = 0; i < numArgs; ++i)
+            newArgs.push_back(oldCall.getArgOperand(i));
+
+        // Build the new call
+        auto newCall = llvm::CallInst::Create(
+            getUSpecSeqSet(cType, *argRepr), newArgs);
+
+        // Add attributes:
+        addSret(newCall, 0, seqType);
+        newCall->addParamAttr(1, llvm::Attribute::NoUndef);
+        addByVal(newCall, 1, seqType);
+        return newCall;
+    }
+
     llvm::Type *SpecUnifier::getContentTypeOfADT(const llvm::Value &v)
     {
         // Get the content-type of the ADT from the first element of the struct
@@ -369,6 +415,15 @@ namespace sourcespec2ir
         if (auto *allocInstr = llvm::dyn_cast<llvm::AllocaInst>(&v))
         {
             return getContentTypeOfADTTy(*allocInstr->getAllocatedType());
+        }
+        else if (auto *arg = llvm::dyn_cast<llvm::Argument>(&v))
+        {
+            if (arg->hasByValAttr())
+                return getContentTypeOfADTTy(*arg->getParamByValType());
+            if (arg->hasByRefAttr())
+                return getContentTypeOfADTTy(*arg->getParamByRefType());
+            if (arg->hasStructRetAttr())
+                return getContentTypeOfADTTy(*arg->getParamStructRetType());
         }
         throw utils::PallasException("Failed to extract the content-type of the the ADT.");
     }
@@ -401,7 +456,7 @@ namespace sourcespec2ir
                 !utils::isPredicateDef(*parentF))
             {
                 throw utils::PallasException(
-                    "Encountered a call to a specification-function from a non-wrapper function.");
+                    "Encountered a call to a specification-function outside of a specification.");
             }
 
             auto newCall = transformSpecCall(*oldCall);
@@ -489,6 +544,10 @@ namespace sourcespec2ir
             return transformSeqPrepend(oldCall);
         case SeqEquals:
             return transformSeqEquals(oldCall);
+        case SeqSlice:
+            return transformSeqSlice(oldCall);
+        case SeqSet:
+            return transformSeqSet(oldCall);
         default:
             throw utils::PallasException(
                 "Encountered an unsupported type of specification-call.");
@@ -524,6 +583,41 @@ namespace sourcespec2ir
                 !utils::isPredicateDef(f))
                 continue;
 
+            // Update arguments of function-arguments
+            for (auto &arg : f.args())
+            {
+                // ByVal
+                if (auto *sTy = llvm::dyn_cast_if_present<llvm::StructType>(arg.getParamByValType()))
+                {
+                    if (seqTypes.contains(sTy))
+                    {
+                        auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*sTy));
+                        arg.removeAttr(llvm::Attribute::ByVal);
+                        arg.addAttr(llvm::Attribute::getWithByValType(*irContext, newTy));
+                    }
+                }
+                // ByRef
+                if (auto *sTy = llvm::dyn_cast_if_present<llvm::StructType>(arg.getParamByRefType()))
+                {
+                    if (seqTypes.contains(sTy))
+                    {
+                        auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*sTy));
+                        arg.removeAttr(llvm::Attribute::ByRef);
+                        arg.addAttr(llvm::Attribute::getWithByRefType(*irContext, newTy));
+                    }
+                }
+                // sret
+                if (auto *sTy = llvm::dyn_cast_if_present<llvm::StructType>(arg.getParamStructRetType()))
+                {
+                    if (seqTypes.contains(sTy))
+                    {
+                        auto *newTy = getUSpecSeqType(getContentTypeOfADTTy(*sTy));
+                        arg.removeAttr(llvm::Attribute::StructRet);
+                        arg.addAttr(llvm::Attribute::getWithStructRetType(*irContext, newTy));
+                    }
+                }
+            }
+
             // Check all instructions in the function
             for (llvm::inst_iterator it = llvm::inst_begin(f), end = llvm::inst_end(f); it != end; ++it)
             {
@@ -552,6 +646,14 @@ namespace sourcespec2ir
                     {
                         // TODO: Repace call to setAllocatedType with something better (see doxygen)
                         allocInstr->setAllocatedType(newType);
+                    }
+                } else if (auto *call = llvm::dyn_cast<llvm::CallBase>(&*it)) {
+                    // TODO: Also handle types in byref / sret / byval attributes of calls!
+                    for (int argIdx = 0; argIdx < call->arg_size(); ++argIdx) {
+                        if (call->paramHasAttr(argIdx, llvm::Attribute::ByVal)) {
+                            
+                        }
+                        // TODO: Check and update Attributes
                     }
                 }
             }
@@ -1066,6 +1168,80 @@ namespace sourcespec2ir
             specSeqEquals[type] = specFun;
         }
         return specSeqEquals[type];
+    }
+
+    llvm::Function *SpecUnifier::getUSpecSeqSlice(llvm::Type *type)
+    {
+        if (specSeqSlice.find(type) == specSeqSlice.end())
+        {
+            auto name = PALLAS_SPEC_SEQ_SLICE_BASE + " " + getTypeAsStr(type);
+
+            // Build arg-list
+            llvm::SmallVector<llvm::Type *> argList;
+            // Pointer for the return-value
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+            // Sequence
+            argList.push_back(llvm::PointerType::get(*irContext, 0));
+            // Start-index
+            argList.push_back(llvm::Type::getInt64Ty(*irContext));
+            // End-index
+            argList.push_back(llvm::Type::getInt64Ty(*irContext));
+
+            auto specFun = createSpecLibFunction(
+                name, getVoidTy(), argList, PALLAS_SPEC_SEQ_SLICE_BASE);
+
+            // Add attributes
+            // Return-type
+            specFun->addParamAttr(
+                0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
+            // Passed-in sequence
+            specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+            specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+            specSeqSlice[type] = specFun;
+        }
+        return specSeqSlice[type];
+    }
+
+    llvm::Function *SpecUnifier::getUSpecSeqSet(llvm::Type *type,
+                                                const IRTypeRepresentation &argRepr)
+    {
+        // Check if an appropriate function has already been generated
+        for (auto t : specSeqSet)
+            if (std::get<0>(t) == type && std::get<1>(t) == argRepr)
+                return std::get<2>(t);
+
+        auto name = PALLAS_SPEC_SEQ_SET_BASE + " " +
+                    getTypeAsStr(type) + "_" +
+                    argRepr.asString();
+
+        // Build arg-list
+        llvm::SmallVector<llvm::Type *> argList;
+        // Pointer for the return-value
+        argList.push_back(llvm::PointerType::get(*irContext, 0));
+        // Pointer to passed-in sequence
+        argList.push_back(llvm::PointerType::get(*irContext, 0));
+        // Insert-index
+        argList.push_back(llvm::Type::getInt64Ty(*irContext));
+        // Type-representation of value
+        for (auto t : argRepr.getTypes())
+            argList.push_back(t);
+
+        auto specFun = createSpecLibFunction(
+            name, getVoidTy(), argList, PALLAS_SPEC_SEQ_SET_BASE);
+
+        // Add attributes:
+        // sret-pointer
+        specFun->addParamAttr(
+            0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
+        // Passed-in sequence
+        specFun->addParamAttr(1, llvm::Attribute::NoUndef);
+        specFun->addParamAttr(1, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
+        // Attributes of type-representation
+        applyAttrToParamRepr(argRepr, specFun, 3);
+
+        specSeqSet.push_back(std::make_tuple(
+            type, IRTypeRepresentation(argRepr), specFun));
+        return specFun;
     }
 
     llvm::Function *SpecUnifier::createSpecLibFunction(

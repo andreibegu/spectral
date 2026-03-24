@@ -47,6 +47,11 @@ namespace sourcespec2ir
         void markGhostMethod(llvm::Function &f, llvm::LLVMContext &context);
 
         /**
+         * Checks if the given function is marked as a ghost method.
+         */
+        bool isGhostMethod(llvm::Function &f);
+
+        /**
          * Checks if the given function is marked as a predicate definition.
          */
         bool isPredicateDef(const llvm::Function &f);
