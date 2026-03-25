@@ -375,7 +375,7 @@ namespace sourcespec2ir
 
         // Add attributes
         newCall->addParamAttr(0, llvm::Attribute::NoUndef);
-        addByVal(newCall, 0, seqType);
+        addSret(newCall, 0, seqType);
         newCall->addParamAttr(1, llvm::Attribute::NoUndef);
         addByVal(newCall, 1, seqType);
 
@@ -1086,7 +1086,7 @@ namespace sourcespec2ir
             // Generate function declaration
             auto specName = PALLAS_SPEC_SEQ_NEW_BASE + " " + getTypeAsStr(type);
             auto retType = llvm::PointerType::get(getUSpecSeqType(type), 0);
-            auto specFun = createSpecLibFunction(specName, getVoidTy(), {retType});
+            auto specFun = createSpecLibFunction(specName, getVoidTy(), {retType}, PALLAS_SPEC_SEQ_NEW_BASE);
             specFun->addParamAttr(0, llvm::Attribute::getWithStructRetType(*irContext, getUSpecSeqType(type)));
             specSeqNew[type] = specFun;
         }
@@ -1101,7 +1101,7 @@ namespace sourcespec2ir
             // Generate function declaration
             auto name = PALLAS_SPEC_SEQ_SIZE_BASE + " " + getTypeAsStr(type);
             auto argType = llvm::PointerType::get(getUSpecSeqType(type), 0);
-            auto specFun = createSpecLibFunction(name, llvm::Type::getInt64Ty(*irContext), {argType});
+            auto specFun = createSpecLibFunction(name, llvm::Type::getInt64Ty(*irContext), {argType}, PALLAS_SPEC_SEQ_SIZE_BASE);
             specFun->addParamAttr(0, llvm::Attribute::NoUndef);
             specFun->addParamAttr(0, llvm::Attribute::getWithByValType(*irContext, getUSpecSeqType(type)));
             specSeqSize[type] = specFun;
