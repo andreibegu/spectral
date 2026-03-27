@@ -11,8 +11,8 @@
 // CHECK-DAG: declare !pallas.specLib [[newMD:![0-9]+]] void @"pallas.seq.new float"(ptr sret(%pallas.seq.float))
 
 // COM: Check that the metadata-annotations are present
-// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size float"}
-// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new float"}
+// CHECK-DAG: [[sizeMD]] = !{!"pallas.seq.size"}
+// CHECK-DAG: [[newMD]] = !{!"pallas.seq.new"}
 
 // COM: Check that the spec-functions are called
 // CHECK-DAG: call void @"pallas.seq.new float"(ptr sret(%pallas.seq.float) %{{[0-9]+}})
