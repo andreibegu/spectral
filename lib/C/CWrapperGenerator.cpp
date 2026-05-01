@@ -73,7 +73,8 @@ namespace sourcespec2ir
         s << "#pragma clang diagnostic push \n"
           << "#pragma clang diagnostic error \"-Wall\" \n"
           << "#pragma clang diagnostic error \"-Wpedantic\" \n"
-          << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n";
+          << "#pragma clang diagnostic ignored \"-Wunused-variable\" \n"
+          << "#pragma clang diagnostic ignored \"-Winfinite-recursion\" \n";
 
         s << "bool " << name << "(" << args << ") { \n"
           << "return " << body << "; \n"
