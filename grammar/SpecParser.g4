@@ -91,7 +91,7 @@ ghostContract: specContractClause*;
 
 predName: (~PRED_SIG_START)+;
 predicateSig: .*?;// (~PRED_SIG_END)+;
-argExpr: (~WRAPPER_ARG_SEP | SPEC_EXPR_END)+;
+argExpr: (~(WRAPPER_ARG_SEP | SPEC_EXPR_END | SPEC_END))+;
 specExpression: (~(SPEC_EXPR_END | SPEC_END))+;
 ghostImpl: (~SPEC_END)+;
 
