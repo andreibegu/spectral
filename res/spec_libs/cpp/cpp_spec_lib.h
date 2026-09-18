@@ -101,12 +101,23 @@ namespace pallasSpec
     template<typename T>
     bool _seqEquals(seq<T> s1, seq<T> s2);
 
+    template<typename T>
+    seq<T> _seqSlice(seq<T> s, std::size_t sIdx, std::size_t eIdx);
+
+    template<typename T>
+    seq<T> _seqSet(seq<T> s, std::size_t idx, T value);
+
+    
     /***************************************************
      *              Convenience macros                 *
      ***************************************************/
     #define _write pallasSpec::_fracOf(1, 1)
 
     #define _inRange(lower, v, upper) pallasSpec::_and(lower <= v , v < upper)
+
+    #define _seqHead(s) _seqGet(s, 0)
+
+    #define _seqTail(s) _seqSlice(s, 1, _seqSize(s))
 }
 
 
