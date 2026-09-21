@@ -81,7 +81,10 @@ Function-contracts are encoded by attaching a metadata-node to the corresponding
 The node is labeled as `!pallas.fcontract` and consists of a MD-tuple that consists of:
 - a reference to a MD-tuple that encodes the location in the source-file
 - a boolean value that specifies if the contract is marked as pure
-- a boolean value that specifies if the contract should be assumed and not checked against the implementation. 
+- a `i8` value that specifies if the contract should be assumed:
+  - `0`: The contract is not assumed
+  - `1`: The contract should be assumed
+  - `2`: The contract should be assumed transitively. I.e. functions that are only called from the assumed function should not be checked. 
 - A reference to a MD-Tuple that defines a set of given-arguments
 - A reference to a MD-Tuple that defines a set of yields-arguments
 - followed by a list of the clauses of the contract. 

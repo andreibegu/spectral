@@ -37,7 +37,7 @@ specContractClause: ('requires' specExpression SPEC_EXPR_END)	# requiresClause
 	| ('ensures' specExpression SPEC_EXPR_END)					# ensuresClause;
 
 specMappingClause:
-	'assumed'? 'contract' 'for' ('external' | 'generated') (
+	('transitively'? 'assumed')? 'contract' 'for' ('external' | 'generated') (
 		'ir'
 		| 'src'
 	)? specExpression SPEC_EXPR_END wrapperSigClause?;

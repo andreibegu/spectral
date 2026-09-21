@@ -17,7 +17,7 @@ int foo (int x) {
 // CHECK-SAME: !pallas.fcontract [[contractMD:![0-9]+]]
 
 
-// CHECK-DAG: [[contractMD]] = !{{{.*}}, i1 false, i1 false, [[gArgs:![0-9]+]], [[yArgs:![0-9]+]], [[req:![0-9]+]], [[ens:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{{{.*}}, i1 false, i8 0, [[gArgs:![0-9]+]], [[yArgs:![0-9]+]], [[req:![0-9]+]], [[ens:![0-9]+]]}
 
 // COM: Ghost arguments are correctly defined in the contract
 // CHECK-DAG: [[gArgs]] = !{[[gDef:![0-9]+]]}

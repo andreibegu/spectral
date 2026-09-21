@@ -75,6 +75,25 @@ namespace sourcespec2ir
         }
     }
 
+    namespace
+    {
+        uint64_t getAssumeValue(AssumeType type)
+        {
+            if (type == TransitiveAssume)
+            {
+                return 2;
+            }
+            else if (type == NormalAssume)
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+    }
+
     void SpecEncoder::encodeFunctionContractBlock(
         const MatchedFunctionContract &contract)
     {
@@ -91,7 +110,9 @@ namespace sourcespec2ir
 
         // Add assumed-flag
         auto assumedFlagConst = llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(irContext, contract.isAssumed));
+            llvm::ConstantInt::get(
+                llvm::IntegerType::get(irContext, 8),
+                getAssumeValue(contract.assumed)));
         contractMDNodes.push_back(assumedFlagConst);
 
         // Given args

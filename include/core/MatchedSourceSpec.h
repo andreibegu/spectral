@@ -89,6 +89,13 @@ namespace sourcespec2ir
         Generated
     };
 
+    enum AssumeType 
+    {
+        NoAssume,         // Non-assumed contract
+        NormalAssume,     // Assumed contract
+        TransitiveAssume  // Transitively assumed contract
+    };
+
     /**
      * A struct that represents a function contract-block
      *  that has been matched to an IR-function.
@@ -103,7 +110,7 @@ namespace sourcespec2ir
         SrcRange srcLoc;
         const ContractType type;
         bool isPure = false;
-        bool isAssumed = false;
+        AssumeType assumed = AssumeType::NoAssume;
         std::optional<WrapperSignature> wrapperSignature = std::nullopt;
 
         MatchedFunctionContract(

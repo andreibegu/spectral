@@ -12,7 +12,7 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the ensures-Clause is wellformed (we do not check the mapping here, this is already done in fcontract_requires_wellformed.cpp)
-// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[rMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i8 0, [[emp:![0-9]+]], [[emp]], [[rMD:![0-9]+]]}
 // CHECK-DAG: [[rMD]] = !{!"pallas.ensures", {{![0-9]+}}, ptr [[wrapperFunc]], [[emp]], [[emp]], {{![0-9]+}}}
 // CHECK-DAG: [[emp]] = !{}
 
