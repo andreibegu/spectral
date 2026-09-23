@@ -37,7 +37,7 @@ int run() {
 
 
 // COM: Check that the contract of the ghost function is wellformed:
-// CHECK-DAG: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], i1 true, i1 false, [[emp:![0-9]+]], [[emp]], [[requiresMD:![0-9]+]]}
+// CHECK-DAG: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], i1 true, i8 0, [[emp:![0-9]+]], [[emp]], [[requiresMD:![0-9]+]]}
 // CHECK-DAG: [[contrLocMD]] = !{!"pallas.srcLoc", i64 14, i64 1, i64 14, i64 24, [[fileMD:![0-9]+]]}
 // CHECK-DAG: [[requiresMD]] = !{!"pallas.requires", [[contrLocMD:![0-9]+]], ptr @_ZN5specs13[[wrapper:PALLAS_SPEC_[0-9]]]Eii, [[emp]], [[emp]], [[vars:![0-9]+]]}
 

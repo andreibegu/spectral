@@ -347,7 +347,10 @@ namespace sourcespec2ir
         // Always false for now, added to ensure consistency with encoding
         // of external function.
         nodes.push_back(llvm::ConstantAsMetadata::get(
-            llvm::ConstantInt::getBool(irContext, false)));
+            llvm::ConstantInt::get(
+                llvm::IntegerType::get(irContext, 8),
+                getAssumeValue(AssumeType::NoAssume))));
+
         // Ghost contracts do not support defining given- / yields args
         // --> Add empty tuples to keep encoding compatible with regular contracts
         nodes.push_back(llvm::MDTuple::get(irContext, {}));

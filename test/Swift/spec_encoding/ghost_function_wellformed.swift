@@ -27,7 +27,7 @@ func run () -> Int {
 // CHECK-DAG: [[ghostMarkerMD]] = !{!""}
 
 // COM: Check that the contract of the ghost function is wellformed
-// CHECK-DAG: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], i1 true, i1 false, [[emp:![0-9]+]], [[emp]], [[requiresMD:![0-9]+]]}
+// CHECK-DAG: [[ghostContrMD]] = !{[[contrLocMD:![0-9]+]], i1 true, i8 0, [[emp:![0-9]+]], [[emp]], [[requiresMD:![0-9]+]]}
 // CHECK-DAG: [[contrLocMD]] = !{!"pallas.srcLoc", i64 7, i64 1, i64 7, i64 15, {{![0-9]+}}
 // CHECK-DAG: [[requiresMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @[[wFunc:"[^"]+"]], [[emp]], [[emp]], [[vars:![0-9]+]]}
 
