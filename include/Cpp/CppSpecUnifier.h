@@ -23,35 +23,35 @@ namespace sourcespec2ir
     {
     public:
 
-        const std::string CPP_SPEC_NAMESPACE = "pallasSpec";
+        const std::string CPP_SPEC_NAMESPACE = "_ZN10pallasSpec";
         // Map names of functions of the specification-library to the 
         // corresponding enum-representation.
         const llvm::StringMap<SpecLibElement> EXACT_MATCH_NAME_MAP = {
-            {"_imply(bool, bool)", Imply},
-            {"_and(bool, bool)", ScAnd},
-            {"_or(bool, bool)", ScOr},
-            {"_exists(bool, bool)", Exists},
-            {"_forall(bool, bool)", Forall},
-            {"_forallS(bool, bool)", ForallSep},
-            {"_fracOf(int, int)", FracOf}, 
-            {"_sep(bool, bool)", SepConj}
+            {"6_implyEbb", Imply},
+            {"4_andEbb", ScAnd},
+            {"3_orEbb", ScOr},
+            {"7_existsEbb", Exists},
+            {"7_forallEbb", Forall},
+            {"8_forallSEbb", ForallSep},
+            {"7_fracOfEii", FracOf}, 
+            {"4_sepEbb", SepConj}
         };
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
-            {"_old<", Old},
-            {"_result<", Result},
-            {"_bv<", BoundVar},
-            {"_seqNew<", SeqNew},
-            {"_seqSize<", SeqSize},
-            {"_seqGet<", SeqGet},
-            {"_seqPrepend<", SeqPrepend},
-            {"_seqEquals<", SeqEquals},
-            {"_seqSlice<", SeqSlice},
-            {"_seqSet<", SeqSet}, 
-            {"_Perm<", Perm}, 
-            {"_ptrBlockLength<", PtrBlockLength},
-            {"_ptrBlockOffset<", PtrBlockOffset},
-            {"_ptrLength<", PtrLength},
-            {"_unfolding<", Unfolding}
+            {"4_oldI", Old},
+            {"7_resultI", Result},
+            {"3_bvI", BoundVar},
+            {"7_seqNewI", SeqNew},
+            {"8_seqSizeI", SeqSize},
+            {"7_seqGetI", SeqGet},
+            {"11_seqPrependI", SeqPrepend},
+            {"10_seqEqualsI", SeqEquals},
+            {"9_seqSliceI", SeqSlice},
+            {"7_seqSetI", SeqSet}, 
+            {"5_PermI", Perm}, 
+            {"15_ptrBlockLengthI", PtrBlockLength},
+            {"15_ptrBlockOffsetI", PtrBlockOffset},
+            {"10_ptrLengthI", PtrLength},
+            {"10_unfoldingI", Unfolding}
         };
 
         const std::string CPP_SPEC_FRAC_TYPE = "struct.pallasSpec::frac";

@@ -17,26 +17,15 @@ namespace sourcespec2ir
     CppSpecUnifier::isSrcSpecificationFunction(const llvm::Function &f)
     {
         // Implement: Make less bad, check scope
-        auto fName = f.getName().str();
-        auto nameDemangle = llvm::demangle(fName);
-        // llvm::outs() << "Demangle " << fName << " --> " << nameDemangle << "\n";
+        auto fName = f.getName();
+        // auto nameDemangle = llvm::demangle(fName);
 
-        // Drop the return-type to avoid problems when the return-type contains
-        // the namespace by finding index of last space before '('
-        // and dropping everything in front.
-        auto openIdx = nameDemangle.find_first_of('(');
-        auto nameWithoutArgs = llvm::StringRef(nameDemangle).substr(0, openIdx);
-        auto lastSpaceIdx = nameWithoutArgs.find_last_of(' ');
-        if (lastSpaceIdx != llvm::StringRef::npos)
-            nameDemangle = nameDemangle.substr(lastSpaceIdx);
-
-        // Check if the name contains the spec-namespace:
-        auto namespacePos = llvm::StringRef(nameDemangle).find(CPP_SPEC_NAMESPACE + "::");
-        if (namespacePos == llvm::StringRef::npos)
+        // Check that the name blongs to the spec-lib namespace: 
+        if (!fName.starts_with(CPP_SPEC_NAMESPACE)) {
             return std::nullopt;
-        // Remove namespace from the demangled name
-        auto nameCrop = nameDemangle.substr(
-            namespacePos + CPP_SPEC_NAMESPACE.length() + 2);
+        } 
+        // Remove the namespace: 
+        auto nameCrop = fName.drop_front(CPP_SPEC_NAMESPACE.size());
 
         // Check exact matches
         auto exactMatch = EXACT_MATCH_NAME_MAP.find(nameCrop);
