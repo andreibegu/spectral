@@ -17,6 +17,7 @@ UNFOLD: 'unfold';
 DECLARE: 'declare';
 LOOP_INVARIANT: 'loop_invariant';
 PURE: 'pure';
+TRANSITIVELY: 'transitively';
 ASSUMED: 'assumed';
 CONTRACT: 'contract';
 FOR: 'for';

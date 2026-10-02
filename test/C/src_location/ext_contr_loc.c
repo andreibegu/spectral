@@ -32,7 +32,7 @@ int foobar(int i, int j) {
 
 // RUN: %Spec2IR c_ext_contr_enc.c -lib %CSpecLib -cLib c_ext_contr_enc.h | %FileCheck c_ext_contr_enc.c
 // CHECK: declare !pallas.extContract [[contractMD:![0-9]+]] i32 @inc(i32 noundef)
-// CHECK-DAG: [[contractMD]] = !{[[cLoc:![0-9]+]], i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[ensMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{[[cLoc:![0-9]+]], i1 false, i8 0, [[emp:![0-9]+]], [[emp]], [[ensMD:![0-9]+]]}
 // CHECK-DAG: [[cLoc]] = !{!"pallas.srcLoc", i64 2, i64 1, i64 7, i64 1, [[cFile:![0-9]+]]}
 // CHECK-DAG: [[ensMD]] = !{!"pallas.ensures", [[ensLoc:![0-9]+]], ptr {{@PALLAS_SPEC_[0-9]+}}, [[emp]], [[emp]], [[emp]]}
 // CHECK-DAG: [[ensLoc]] = !{!"pallas.srcLoc", i64 6, i64 1, i64 6, i64 30, [[cFile:![0-9]+]]}

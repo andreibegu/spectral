@@ -19,7 +19,7 @@
 // CHECK-DAG: [[w1X:![0-9]+]] = !DILocalVariable(name: "x", arg: {{[0-9]}}, scope: [[w1SP]]
 
 // COM: MD-Node of the ensures-Clause is wellformed
-// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[cClauseMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i8 0, [[emp:![0-9]+]], [[emp]], [[cClauseMD:![0-9]+]]}
 // CHECK-DAG: [[cClauseMD]] = !{!"pallas.ensures", {{![0-9]+}}, ptr @PALLAS_SPEC_0, [[emp]], [[emp]], [[vars:![0-9]+]]}
 // CHECK-DAG: [[emp]] = !{}
 // CHECK-DAG: [[vars]] = !{[[m1:![0-9]+]]}

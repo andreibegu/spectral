@@ -29,7 +29,7 @@ func run() -> () {
 
 // COM: Get ghost-arg definitions of foo
 // CHECK-DAG: !dbg [[fooSP]] !pallas.fcontract [[fooContr:![0-9]+]] 
-// CHECK-DAG: [[fooContr]] = !{!{{[0-9]+}}, i1 false, i1 false, [[fooGList:![0-9]+]], [[fooYList:![0-9]+]], !{{[0-9]+}}, !{{[0-9]+}}}
+// CHECK-DAG: [[fooContr]] = !{!{{[0-9]+}}, i1 false, i8 0, [[fooGList:![0-9]+]], [[fooYList:![0-9]+]], !{{[0-9]+}}, !{{[0-9]+}}}
 // CHECK-DAG: [[fooGList]] = !{[[fooGDef:![0-9]+]]}
 // CHECK-DAG: [[fooGDef]] = !{!{{[0-9]+}}, !"g"}
 // CHECK-DAG: [[fooYList]] = !{[[fooYDef:![0-9]+]]}
@@ -37,7 +37,7 @@ func run() -> () {
 
 // COM: Get ghost-arg definitions of run
 // CHECK-DAG: !dbg [[runSP]] !pallas.fcontract [[runContr:![0-9]+]] 
-// CHECK-DAG: [[runContr]] = !{!{{[0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[runYList:![0-9]+]], !{{[0-9]+}}}
+// CHECK-DAG: [[runContr]] = !{!{{[0-9]+}}, i1 false, i8 0, [[emp:![0-9]+]], [[runYList:![0-9]+]], !{{[0-9]+}}}
 // CHECK-DAG: [[runYList]] = !{[[runYDef:![0-9]+]]}
 // CHECK-DAG: [[runYDef]] = !{!{{[0-9]+}}, !"r"}
 // CHECK-DAG: [[emp]] = !{}

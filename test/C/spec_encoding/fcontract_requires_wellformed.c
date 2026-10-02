@@ -11,7 +11,7 @@
 // CHECK-SAME: !pallas.exprWrapper
 
 // COM: MD-Node of the requires-Clause is wellformed
-// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[cClauseMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i8 0, [[emp:![0-9]+]], [[emp]], [[cClauseMD:![0-9]+]]}
 // CHECK-DAG: [[cClauseMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @PALLAS_SPEC_0, [[emp]], [[emp]], {{![0-9]+}}}
 // CHECK-DAG: [[emp]] = !{}
 

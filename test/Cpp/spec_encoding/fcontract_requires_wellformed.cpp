@@ -24,7 +24,7 @@
 // CHECK-DAG: [[w1Y:![0-9]+]] = !DILocalVariable(name: "y", arg: {{[0-9]}}, scope: [[w1SP]]
 
 // COM: MD-Node of the requires-Clause is wellformed
-// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i1 false, [[emp:![0-9]+]], [[emp]], [[rMD:![0-9]+]]}
+// CHECK-DAG: [[contractMD]] = !{{{![0-9]+}}, i1 false, i8 0, [[emp:![0-9]+]], [[emp]], [[rMD:![0-9]+]]}
 // CHECK-DAG: [[rMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @_Z13PALLAS_SPEC_0ff, [[emp]], [[emp]], [[vars:![0-9]+]]}
 // CHECK-DAG: [[emp]] = !{}
 // CHECK-DAG: [[vars]] = !{[[m1:![0-9]+]], [[m2:![0-9]+]]}

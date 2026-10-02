@@ -30,7 +30,7 @@ int foo(int i, int j) {
 
 // CHECK: define {{.*}} void @_ZN13CheerfulClassC2Ev(ptr noundef nonnull align 4 dereferenceable(8) %0)
 // CHECK-SAME: !pallas.fcontract [[contrMD:![0-9]+]]
-// CHECK-DAG: [[contrMD]] = !{{{![0-9]+}}, i1 false, i1 true, [[emp:![0-9]+]], [[emp]], [[reqMD:![0-9]+]], [[ens1MD:![0-9]+]], [[ens2MD:![0-9]+]]}
+// CHECK-DAG: [[contrMD]] = !{{{![0-9]+}}, i1 false, i8 1, [[emp:![0-9]+]], [[emp]], [[reqMD:![0-9]+]], [[ens1MD:![0-9]+]], [[ens2MD:![0-9]+]]}
 // CHECK-DAG: [[emp]] = !{}
 // CHECK-DAG: [[reqMD]] = !{!"pallas.requires", {{![0-9]+}}, ptr @_ZN13CheerfulClass13PALLAS_SPEC_0Ev, [[emp]], [[emp]], [[vars:![0-9]+]]}
 

@@ -82,6 +82,8 @@ namespace sourcespec2ir
                             mappingClause->wrapperSigClause() != nullptr;
         bool isAssumed = hasMappingClause &&
                          mappingClause->ASSUMED() != nullptr;
+        bool isTransitive = hasMappingClause && isAssumed &&
+                         mappingClause->TRANSITIVELY() != nullptr;
 
         if (matchExternalOnly && type == Normal)
             throw utils::PallasException(
@@ -120,7 +122,13 @@ namespace sourcespec2ir
             // Create new matched contract
             contract = std::make_unique<MatchedFunctionContract>(
                 irFunction, loc, type);
-            contract->isAssumed = isAssumed;
+            if (isTransitive) {
+                contract->assumed = TransitiveAssume;
+            } else if (isAssumed) {
+                contract->assumed = NormalAssume;
+            } else {
+                contract->assumed = NoAssume;
+            }
             contract->wrapperSignature = sig;
 
             // Add all statements to the contract by traversing the children
