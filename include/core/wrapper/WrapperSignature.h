@@ -31,6 +31,13 @@ namespace sourcespec2ir
          */
         std::optional<std::string> parentRetTy;
 
+        /**
+         * Flag that specifies if the signature was specified manually 
+         * (in the signature-clause of an external contract) as oposed to being 
+         * inferred from the LLVM-IR of the program.
+         */
+        bool specifiedManually = false;
+
         inline void addArg(const std::string &arg) { args.push_back(arg); }
     };
 

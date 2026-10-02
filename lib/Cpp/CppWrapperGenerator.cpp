@@ -38,8 +38,10 @@ namespace sourcespec2ir
         for (auto &arg : sig.args)
         // for (auto it = srcVars.begin(), end = srcVars.end(); it != end; ++it)
         {
-            // Skip the 'this' argument as it gets added implicitly
-            if (arg.ends_with(" this"))
+            // Skip the 'this' argument if the signature was inferred as it gets 
+            // added implicitly by the compiler. 
+            // Keep 'this' if it was specified manually on an external contract.
+            if (arg.ends_with(" this") && !sig.specifiedManually)
                 continue;
             if (!firstArg)
                 stream << ", ";
