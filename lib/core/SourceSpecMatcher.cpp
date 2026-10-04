@@ -205,6 +205,7 @@ namespace sourcespec2ir
         auto *retClause = ctx.wrapperRetClause();
         sig.parentRetTy = utils::getCtxAsStr(*retClause->specExpression());
         sig.returnTy = std::nullopt;
+        sig.specifiedManually = true;
         return sig;
     }
 

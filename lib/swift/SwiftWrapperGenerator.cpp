@@ -48,7 +48,9 @@ namespace sourcespec2ir
         for (auto &arg : sig.args)
         {
             // Skip 'self'-arg as it gets added implicitly
-            if (arg.ends_with(" self"))
+            // Keep 'self'-arg if it was specified manually on an 
+            // external contract.
+            if (arg.ends_with(" self") && !sig.specifiedManually)
                 continue;
             if (!firstArg)
                 stream << ", ";
