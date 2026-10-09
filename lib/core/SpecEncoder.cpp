@@ -138,8 +138,10 @@ namespace sourcespec2ir
         }
 
         auto contractMDNode = llvm::MDTuple::get(irContext, contractMDNodes);
-        auto label = contract.type == External ? PALLAS_EXT_FUN_CONTRACT_BLOCK
-                                               : PALLAS_FUN_CONTRACT_BLOCK;
+        auto label =
+            (contract.type == External && contract.function->isDeclaration())
+                ? PALLAS_EXT_FUN_CONTRACT_BLOCK
+                : PALLAS_FUN_CONTRACT_BLOCK;
         parentFunction->setMetadata(label, contractMDNode);
     }
 
@@ -512,7 +514,7 @@ namespace sourcespec2ir
             s << "Failed to find IR-function for wrapper with name "
               << srcWrapper.getName();
             throw utils::PallasException(s.str());
-        } 
+        }
 
         // Given args
         nodes.push_back(
@@ -540,9 +542,10 @@ namespace sourcespec2ir
         {
             // Lookup the arg-name that corresponds to pVar
             auto argName = srcWrapper.getArgNameForVar(*pVar);
-            if (!argName.has_value()) {
+            if (!argName.has_value())
+            {
                 std::stringstream s;
-                s << "Failed to find arg-name for debug-variable '" 
+                s << "Failed to find arg-name for debug-variable '"
                   << pVar->getName().str()
                   << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
                 throw utils::PallasException(s.str());
