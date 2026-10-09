@@ -204,14 +204,14 @@ namespace sourcespec2ir
          * that are accessible from the contract of the given function.
          * Global variables are currently not considered.
          */
-        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        virtual llvm::SmallVector<llvm::DILocalVariable *>
         getSrcVariablesForFunction(const llvm::Function &fun);
 
         /**
          * Collects the DILocalVariable-nodes that refer to variables that are
          * accessible in the loop-invariant of the given loop.
          */
-        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        virtual llvm::SetVector<llvm::DILocalVariable *>
         getVarsForLoopInv(llvm::Function *parentFunc,
                           const llvm::BasicBlock *loopHeader);
 
@@ -220,7 +220,7 @@ namespace sourcespec2ir
          * be referenced in a block of specification-statements that is
          * attached to the given instruction
          */
-        virtual std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+        virtual llvm::SetVector<llvm::DILocalVariable *>
         getVarsForStatement(llvm::Instruction *inst);
 
     protected:
