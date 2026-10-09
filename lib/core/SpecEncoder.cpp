@@ -538,18 +538,25 @@ namespace sourcespec2ir
         llvm::SmallVector<llvm::Metadata *> argMappingNodes;
         for (auto *pVar : srcWrapper.getPVars())
         {
-            auto argName = pVar->getName().str();
-            // TODO: This does not work in the case of an external contract
-            //       where the args got renamed! 
-            // Find the dbgvar in wrapper that belongs to 'pVar'
-            if (!nameToWArg.contains(argName))
-            {
+            // Lookup the arg-name that corresponds to pVar
+            auto argName = srcWrapper.getArgNameForVar(*pVar);
+            if (!argName.has_value()) {
                 std::stringstream s;
-                s << "Failed to find debug-variable for argument '" << argName
+                s << "Failed to find arg-name for debug-variable '" 
+                  << pVar->getName().str()
                   << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
                 throw utils::PallasException(s.str());
             }
-            auto *wArg = nameToWArg.at(argName);
+
+            // Find the dbgvar in wrapper that belongs to 'pVar'
+            if (!nameToWArg.contains(*argName))
+            {
+                std::stringstream s;
+                s << "Failed to find debug-variable for argument '" << *argName
+                  << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
+                throw utils::PallasException(s.str());
+            }
+            auto *wArg = nameToWArg.at(*argName);
             // Build tuple of shape {ParentDIVar, WrapperDIVar}
             argMappingNodes.push_back(
                 llvm::MDTuple::get(irContext, {pVar, wArg}));

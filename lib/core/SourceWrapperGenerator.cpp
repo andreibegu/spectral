@@ -87,12 +87,41 @@ namespace sourcespec2ir
 
         // Get Wrapper-signature
         llvm::SmallVector<llvm::DILocalVariable *> argList;
+        std::optional<llvm::SmallVector<std::string>> argNames = std::nullopt;
         std::optional<WrapperSignature> baseSig = std::nullopt;
-        if (contract.type == External && contract.wrapperSignature.has_value())
+        if (contract.type == External &&
+            contract.wrapperSignature.has_value() && pFunc->isDeclaration())
         {
+            // External contract on declaration
             // Get signature that was explicitly defined in contract
             baseSig = contract.wrapperSignature.value();
             argList = llvm::SmallVector<llvm::DILocalVariable *>();
+        }
+        else if (contract.type == External &&
+                 contract.wrapperSignature.has_value() &&
+                 !pFunc->isDeclaration() && pFunc->getSubprogram() != nullptr &&
+                 pFunc->getSubprogram()->getType() != nullptr)
+        {
+            // External contract on definition
+            // Use the manually specified signature from the sig-clause
+            // and combine it with the DIVars of the implementation.
+            // This relies on the fact that the DIVars are sorted by arg-idx!
+            baseSig = contract.wrapperSignature.value();
+            argList = getSrcVariablesForFunction(*pFunc);
+            if (baseSig->args.size() != argList.size())
+            {
+                throw utils::PallasException(
+                    "An external contract was applied to a function definition,"
+                    " but the number of arguments does not match.");
+            }
+            // TODO: Check if the types in the manual signature exactly match
+            //  the user-specified signature (might be too strict / brittle)
+            argNames = std::make_optional(llvm::SmallVector<std::string>());
+            for (auto argStr : baseSig.value().args)
+            {
+                auto argName = syntaxResolver->getArgName(argStr);
+                argNames->push_back(argName);
+            }
         }
         else if (pFunc->getSubprogram() != nullptr &&
                  pFunc->getSubprogram()->getType() != nullptr)
@@ -129,9 +158,21 @@ namespace sourcespec2ir
             auto &sig = isRequires ? requiresSig : ensuresSig;
             auto &yields = isRequires ? emptyYields : yieldsArgs;
             auto wStr = getWrapperFunctionString(sig, stmnt->expr, wName);
-            matchedWrappers.fContractWrappers[stmnt.get()] =
-                std::make_unique<SrcWrapperFunction>(
-                    wName, wStr, argList, givenArgs, yields, insertPos);
+            if (argNames.has_value())
+            {
+                // Wrapper with arg-renaming
+                matchedWrappers.fContractWrappers[stmnt.get()] =
+                    std::make_unique<SrcWrapperFunction>(
+                        wName, wStr, argList, argNames.value(),
+                        givenArgs, yields, insertPos);
+            }
+            else
+            {
+                // Wrapper without arg-renaming
+                matchedWrappers.fContractWrappers[stmnt.get()] =
+                    std::make_unique<SrcWrapperFunction>(
+                        wName, wStr, argList, givenArgs, yields, insertPos);
+            }
         }
     };
 
@@ -381,9 +422,14 @@ namespace sourcespec2ir
             // Only consider calls to llvm intrinsics
             if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
             {
+                // Skip inined debug-intrinsics
+                if (intrinsic->getDebugLoc() && 
+                    intrinsic->getDebugLoc().getInlinedAt() != nullptr) {
+                    continue;
+                }
+
                 auto *srcVar = intrinsic->getVariable();
                 // Filter on function arguments
-                // TODO: Skip if the dbg-arg was inlined from somewhere else!
                 if (srcVar->getArg() != 0)
                     varSet.insert(srcVar);
             }
