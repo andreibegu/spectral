@@ -295,6 +295,8 @@ namespace sourcespec2ir
         /**
          * Collects all DIVariables that refer to arguments of the given
          * function and adds them to the given set.
+         * TODO: This should be a VectorSet or similar to make sure that the 
+         * ordering is stable!
          */
         llvm::SmallSet<llvm::DILocalVariable *, 8> getDIVarsOfArgs(
             const llvm::Function &f) const;

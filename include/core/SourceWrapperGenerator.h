@@ -203,6 +203,7 @@ namespace sourcespec2ir
          * Collects the DILocalVariable-nodes that refer to variables
          * that are accessible from the contract of the given function.
          * Global variables are currently not considered.
+         * The result is sorted based on the arg-idx of the DIVariables.
          */
         virtual llvm::SmallVector<llvm::DILocalVariable *>
         getSrcVariablesForFunction(const llvm::Function &fun);

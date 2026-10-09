@@ -881,8 +881,8 @@ namespace sourcespec2ir
         for (auto wrapper : wrapperFunctions)
         {
             // Insert lines of the wrapper-function
-            auto insertPos = findInsertPos(wrapper->insertLoc, *srcLines);
-            insertLines(*srcLines, wrapper->stringRepr, insertPos);
+            auto insertPos = findInsertPos(wrapper->getInsertLoc(), *srcLines);
+            insertLines(*srcLines, wrapper->getStringRepr(), insertPos);
         }
 
         // Insert the predicate definitions

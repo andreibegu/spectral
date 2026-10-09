@@ -161,11 +161,11 @@ namespace sourcespec2ir
         promoteMemToReg(*moduleWithWrappers);
 
         // Remove compiler-generated arguments from wrapper-functions
-        // that belong to an external function.
+        // that belong to an external function. 
         auto extWrappers = matchedWrappers->getExternalWrappers();
         pruneWrapperArgs(*moduleWithWrappers, extWrappers);
 
-        // Add all generated wrapper to the llvm.used-list of the module
+        // Add all generated wrappers to the llvm.used-list of the module
         // to ensure that they are copied over during linking.
         markWrapperFunctionsAsUsed(*moduleWithWrappers, *wrappers);
         // Mark specification functions
@@ -569,7 +569,7 @@ namespace sourcespec2ir
         llvm::DIScope *scope)
     {
         // Get the wrapper-function
-        auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.name);
+        auto irWrapperF = utils::getFunctionBySrcName(*irModule, wFun.getName());
         if (irWrapperF == nullptr)
             throw utils::PallasException("Failed to get wrapper-function by name");
         auto offset = wrapperGenerator->getOffsetToExprStart(wFun);
@@ -864,7 +864,7 @@ namespace sourcespec2ir
     {
         for (auto *wrapper : wrappers)
         {
-            auto wFunc = utils::getFunctionBySrcName(irModule, wrapper->name);
+            auto wFunc = utils::getFunctionBySrcName(irModule, wrapper->getName());
             if (wFunc == nullptr)
                 throw utils::PallasException("Failed to get wrapper-function");
 
@@ -925,7 +925,7 @@ namespace sourcespec2ir
                 throw utils::PallasException(
                     "Failed to find ghost function " + fName);
             // Collect DIVariables that point to args of the ghost function
-            auto diArgs = getDIVarsOfArgs(*irGhostF);
+            auto diArgs = llvm::to_vector(getDIVarsOfArgs(*irGhostF));
 
             // Add DIVars to wrappers
             for (auto &stmnt : gContr->statements)
@@ -934,7 +934,8 @@ namespace sourcespec2ir
                     throw utils::PallasException(
                         "Failed to find wrapper for ghost contract statement");
                 auto &wrapper = *matchedWrappers->ghostContractWrappers.at(stmnt.get());
-                wrapper.argList.append(diArgs.begin(), diArgs.end());
+                // wrapper.argList.append(diArgs.begin(), diArgs.end());
+                wrapper.addArgs(diArgs);
             }
         }
     }
@@ -945,7 +946,7 @@ namespace sourcespec2ir
         llvm::SmallVector<llvm::GlobalValue *> irWrappers;
         for (auto &wrapper : wrappers)
         {
-            auto wrapperF = utils::getFunctionBySrcName(module, wrapper->name);
+            auto wrapperF = utils::getFunctionBySrcName(module, wrapper->getName());
             if (wrapperF == nullptr)
                 throw utils::PallasException("Failed to get wrapper-function");
             irWrappers.push_back(wrapperF);
@@ -1037,6 +1038,7 @@ namespace sourcespec2ir
             if (auto *intr = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(&*it))
             {
                 auto *v = intr->getVariable();
+                // TODO: Also check if the DIVar was inlined from somewhere else
                 if (v->getArg() != 0)
                     diArgs.insert(v);
             }
