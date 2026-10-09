@@ -69,7 +69,7 @@ namespace sourcespec2ir
         getArgNameForVar(llvm::DILocalVariable &v) const { 
             auto r = pVarsToArgNames.find(&v);
             if (r == pVarsToArgNames.end()) {
-                return nullptr;
+                return std::nullopt;
             } else {
                 return std::make_optional(r->second);
             }

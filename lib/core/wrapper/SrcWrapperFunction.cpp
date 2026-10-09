@@ -33,7 +33,8 @@ namespace sourcespec2ir
       : name(name),
         stringRepr(stringRepr),
         givenArgs(givenArgs),
-        yieldsArgs(yieldsArgs)
+        yieldsArgs(yieldsArgs), 
+        insertLoc(insertLoc)
   {
     if (argList.size() != argNames.size()) {
       throw utils::PallasException(
