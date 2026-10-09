@@ -138,9 +138,9 @@ Here:
 - Node `!20` encodes the definitions of yields-arguments, concretely, node `!21` encodes the definition of 'min'
 
 ### External & Generated Contracts
-Generated contracts are encoded identically to function contracts. 
+Generated contracts and external contracts that are attached to a function *definition* are encoded identically to function contracts. 
 
-External contracts are encoded similarly to regular contracts with the following differences:
+External contracts that are attached to a function *declaration* are encoded similarly to regular contracts with the following differences:
 - The metadata-node of the contract is labelled as `!pallas.extContract` (instead of being labelled as `!pallas.fcontract`)
 - In the metadata nodes that encode the clauses of the contract, the mappings of variables to arguments of the wrapper-function are always empty. Instead, the values that should be passed to the wrapper functions are encoded implicitly. I.e. for external contracts, the signature of the corresponding wrapper functions must always be the same as the signature of the function to which the function is applied. The values passed to the wrapper function then correspond to the arguments of the function to which the contract is attached. 
 
