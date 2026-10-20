@@ -10,6 +10,7 @@
 #include <map>
 #include <regex>
 #include <sstream>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/BinaryFormat/Dwarf.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/Constants.h>
@@ -85,13 +86,42 @@ namespace sourcespec2ir
         const auto pFunc = contract.function;
 
         // Get Wrapper-signature
-        std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>> argList;
+        llvm::SmallVector<llvm::DILocalVariable *> argList;
+        std::optional<llvm::SmallVector<std::string>> argNames = std::nullopt;
         std::optional<WrapperSignature> baseSig = std::nullopt;
-        if (contract.type == External && contract.wrapperSignature.has_value())
+        if (contract.type == External &&
+            contract.wrapperSignature.has_value() && pFunc->isDeclaration())
         {
+            // External contract on declaration
             // Get signature that was explicitly defined in contract
             baseSig = contract.wrapperSignature.value();
-            argList = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+            argList = llvm::SmallVector<llvm::DILocalVariable *>();
+        }
+        else if (contract.type == External &&
+                 contract.wrapperSignature.has_value() &&
+                 !pFunc->isDeclaration() && pFunc->getSubprogram() != nullptr &&
+                 pFunc->getSubprogram()->getType() != nullptr)
+        {
+            // External contract on definition
+            // Use the manually specified signature from the sig-clause
+            // and combine it with the DIVars of the implementation.
+            // This relies on the fact that the DIVars are sorted by arg-idx!
+            baseSig = contract.wrapperSignature.value();
+            argList = getSrcVariablesForFunction(*pFunc);
+            if (baseSig->args.size() != argList.size())
+            {
+                throw utils::PallasException(
+                    "An external contract was applied to a function definition,"
+                    " but the number of arguments does not match.");
+            }
+            // TODO: Check if the types in the manual signature exactly match
+            //  the user-specified signature (might be too strict / brittle)
+            argNames = std::make_optional(llvm::SmallVector<std::string>());
+            for (auto argStr : baseSig.value().args)
+            {
+                auto argName = syntaxResolver->getArgName(argStr);
+                argNames->push_back(argName);
+            }
         }
         else if (pFunc->getSubprogram() != nullptr &&
                  pFunc->getSubprogram()->getType() != nullptr)
@@ -99,8 +129,7 @@ namespace sourcespec2ir
             // Construct signature from debug-info
             argList = getSrcVariablesForFunction(*pFunc);
             auto rType = pFunc->getSubprogram()->getType()->getTypeArray()[0];
-            baseSig = getWrapperSignature(
-                argList->getArrayRef(), std::nullopt, rType);
+            baseSig = getWrapperSignature(argList, std::nullopt, rType);
         }
 
         if (!baseSig.has_value())
@@ -129,10 +158,21 @@ namespace sourcespec2ir
             auto &sig = isRequires ? requiresSig : ensuresSig;
             auto &yields = isRequires ? emptyYields : yieldsArgs;
             auto wStr = getWrapperFunctionString(sig, stmnt->expr, wName);
-            matchedWrappers.fContractWrappers[stmnt.get()] =
-                std::make_unique<SrcWrapperFunction>(
-                    wName, wStr, argList->getArrayRef(),
-                    givenArgs, yields, insertPos);
+            if (argNames.has_value())
+            {
+                // Wrapper with arg-renaming
+                matchedWrappers.fContractWrappers[stmnt.get()] =
+                    std::make_unique<SrcWrapperFunction>(
+                        wName, wStr, argList, argNames.value(),
+                        givenArgs, yields, insertPos);
+            }
+            else
+            {
+                // Wrapper without arg-renaming
+                matchedWrappers.fContractWrappers[stmnt.get()] =
+                    std::make_unique<SrcWrapperFunction>(
+                        wName, wStr, argList, givenArgs, yields, insertPos);
+            }
         }
     };
 
@@ -257,7 +297,7 @@ namespace sourcespec2ir
         auto insertPos = getWrapperInsertLoc(invBlock);
 
         // Build signature for the wrapper functions
-        auto wSig = getWrapperSignature(argList->getArrayRef(), std::nullopt);
+        auto wSig = getWrapperSignature(argList.getArrayRef(), std::nullopt);
 
         llvm::SmallVector<std::string> givenArgs;
         llvm::SmallVector<std::string> yieldsArgs;
@@ -273,7 +313,7 @@ namespace sourcespec2ir
                 wSig, inv->expr, wrapperName);
             matchedWrappers.loopInvWrappers[inv.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    wrapperName, wrapperStr, argList.getArrayRef(),
                     givenArgs, yieldsArgs, insertPos);
         }
     }
@@ -305,7 +345,7 @@ namespace sourcespec2ir
             }
 
             // Build wrapper signature
-            auto wSig = getWrapperSignature(argList->getArrayRef(), wRTy);
+            auto wSig = getWrapperSignature(argList.getArrayRef(), wRTy);
 
             llvm::SmallVector<std::string> givenArgs;
             llvm::SmallVector<std::string> yieldsArgs;
@@ -318,7 +358,7 @@ namespace sourcespec2ir
                 wSig, stmnt->expr, wrapperName);
             matchedWrappers.statementWrappers[stmnt.get()] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    wrapperName, wrapperStr, argList.getArrayRef(),
                     givenArgs, yieldsArgs, insertPos);
         }
     }
@@ -348,7 +388,7 @@ namespace sourcespec2ir
             auto wRetTy = syntaxResolver->getTypeForGhostArgDef(argDef->defStr);
 
             // Signature of the wrapper
-            auto wSig = getWrapperSignature(argList->getArrayRef(), wRetTy);
+            auto wSig = getWrapperSignature(argList.getArrayRef(), wRetTy);
 
             // Extend signature with ghost-arguments
             llvm::SmallVector<std::string> givenArgs;
@@ -362,19 +402,19 @@ namespace sourcespec2ir
                 wSig, binding.exprStr, wrapperName);
             matchedWrappers.givenBindingWrappers[&binding] =
                 std::make_unique<SrcWrapperFunction>(
-                    wrapperName, wrapperStr, argList->getArrayRef(),
+                    wrapperName, wrapperStr, argList.getArrayRef(),
                     givenArgs, yieldsArgs, insertPos);
         }
     }
 
-    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    llvm::SmallVector<llvm::DILocalVariable *>
     SourceWrapperGenerator::getSrcVariablesForFunction(const llvm::Function &fun)
     {
         if (fun.isDeclaration())
             throw utils::PallasException("Cannot determine variables for declaration.");
 
         // SetVector is used to keep insertion-order and prevent duplicates
-        auto varSet = std::make_unique<llvm::SetVector<llvm::DILocalVariable *>>();
+        llvm::SmallSet<llvm::DILocalVariable *, 8> varSet;
         // Iterate over all of the llvm.dbg.-intrinsics and get the names and types of the variables
         for (auto i = llvm::inst_begin(fun), end = llvm::inst_end(fun); i != end; ++i)
         {
@@ -382,24 +422,41 @@ namespace sourcespec2ir
             // Only consider calls to llvm intrinsics
             if (auto *intrinsic = llvm::dyn_cast<llvm::DbgVariableIntrinsic>(instr))
             {
+                // Skip inined debug-intrinsics
+                if (intrinsic->getDebugLoc() && 
+                    intrinsic->getDebugLoc().getInlinedAt() != nullptr) {
+                    continue;
+                }
+
                 auto *srcVar = intrinsic->getVariable();
                 // Filter on function arguments
                 if (srcVar->getArg() != 0)
-                    varSet->insert(srcVar);
+                    varSet.insert(srcVar);
             }
         }
 
-        return varSet;
+        // Sort vars by arg-idx
+        llvm::SmallVector<llvm::DILocalVariable *> vars(
+            varSet.begin(), varSet.end());
+        llvm::stable_sort(
+            vars,
+            [](const llvm::DILocalVariable *a, const llvm::DILocalVariable *b)
+            { return a->getArg() < b->getArg(); });
+
+        return vars;
     }
 
-    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    llvm::SetVector<llvm::DILocalVariable *>
     SourceWrapperGenerator::getVarsForLoopInv(llvm::Function *parentFunc,
                                               const llvm::BasicBlock *loopHeader)
     {
         // Since some compilers place the debug-intrinsics for the function-arguments
         // later in the code, we add them explicitly.
         // TODO: This might break wrapper-generation, if there is shadowing!
-        auto varSet = getSrcVariablesForFunction(*parentFunc);
+        auto contrVars = getSrcVariablesForFunction(*parentFunc);
+        // Use set-vector to keep sorting stable
+        llvm::SetVector<llvm::DILocalVariable *> varSet(
+            contrVars.begin(), contrVars.end());
         const llvm::DominatorTree domTree(*parentFunc);
 
         // Get the scope of the loop header:
@@ -421,14 +478,14 @@ namespace sourcespec2ir
                     !domTree.dominates(intr, loopHeader) ||
                     !utils::isSubscope(srcVar->getScope(), loopScope))
                     continue;
-                varSet->insert(srcVar);
+                varSet.insert(srcVar);
             }
         }
 
         return varSet;
     }
 
-    std::unique_ptr<llvm::SetVector<llvm::DILocalVariable *>>
+    llvm::SetVector<llvm::DILocalVariable *>
     SourceWrapperGenerator::getVarsForStatement(llvm::Instruction *inst)
     {
         // Get the parent-function of the instruction
@@ -449,7 +506,10 @@ namespace sourcespec2ir
         // Some compilers place the debug-intrinsics for the function-arguments
         // later in the code, we add them explicitly.
         // TODO: This might break wrapper-generation, if there is shadowing!
-        auto varSet = getSrcVariablesForFunction(*parentFunc);
+        auto contrVars = getSrcVariablesForFunction(*parentFunc);
+        // Use set-vector to keep sorting stable
+        llvm::SetVector<llvm::DILocalVariable *> varSet(
+            contrVars.begin(), contrVars.end());
 
         // Collect all variables from the llvm.dbg.-intrinsics that
         // dominate the instruction and that are in scope
@@ -470,7 +530,7 @@ namespace sourcespec2ir
                     !domTree.dominates(&*i, inst) ||
                     !utils::isSubscope(srcVar->getScope(), instScope))
                     continue;
-                varSet->insert(srcVar);
+                varSet.insert(srcVar);
             }
         }
         return varSet;
@@ -867,8 +927,8 @@ namespace sourcespec2ir
         for (auto wrapper : wrapperFunctions)
         {
             // Insert lines of the wrapper-function
-            auto insertPos = findInsertPos(wrapper->insertLoc, *srcLines);
-            insertLines(*srcLines, wrapper->stringRepr, insertPos);
+            auto insertPos = findInsertPos(wrapper->getInsertLoc(), *srcLines);
+            insertLines(*srcLines, wrapper->getStringRepr(), insertPos);
         }
 
         // Insert the predicate definitions

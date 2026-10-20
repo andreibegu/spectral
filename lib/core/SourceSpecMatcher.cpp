@@ -119,6 +119,11 @@ namespace sourcespec2ir
 
         for (auto *irFunction : irFunctions)
         {
+            if (irFunction->isDeclaration() && type != External) {
+                throw utils::PallasException(
+                    "A non-external contract was matched to a function declaration!");
+            }
+
             // Create new matched contract
             contract = std::make_unique<MatchedFunctionContract>(
                 irFunction, loc, type);

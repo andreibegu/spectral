@@ -129,7 +129,7 @@ namespace sourcespec2ir
         auto yieldsNodes = llvm::MDTuple::get(irContext, yieldsDefs);
         contractMDNodes.push_back(yieldsNodes);
 
-        // Transform specification statements
+        // Transform contract clauses
         for (auto &matchedStmnt : contract.statements)
         {
             auto mdNode = encodeFunctionContractStatement(*matchedStmnt,
@@ -138,8 +138,10 @@ namespace sourcespec2ir
         }
 
         auto contractMDNode = llvm::MDTuple::get(irContext, contractMDNodes);
-        auto label = contract.type == External ? PALLAS_EXT_FUN_CONTRACT_BLOCK
-                                               : PALLAS_FUN_CONTRACT_BLOCK;
+        auto label =
+            (contract.type == External && contract.function->isDeclaration())
+                ? PALLAS_EXT_FUN_CONTRACT_BLOCK
+                : PALLAS_FUN_CONTRACT_BLOCK;
         parentFunction->setMetadata(label, contractMDNode);
     }
 
@@ -158,7 +160,7 @@ namespace sourcespec2ir
                                : matchedWrappers.fContractWrappers;
         auto srcWrapperFun = wrapperMap.at(&stmnt).get();
         auto irWrapperFunction = utils::getFunctionBySrcName(
-            irModule, srcWrapperFun->name);
+            irModule, srcWrapperFun->getName());
 
         // Add a metadata-marker to generated specification-function
         utils::markGeneratedSpecFunction(*irWrapperFunction, irContext);
@@ -226,7 +228,7 @@ namespace sourcespec2ir
         // IR-version of wrapper
         auto srcWrapperFun = matchedWrappers.loopInvWrappers.at(&inv).get();
         auto irWrapperFunction = utils::getFunctionBySrcName(
-            irModule, srcWrapperFun->name);
+            irModule, srcWrapperFun->getName());
 
         utils::markGeneratedSpecFunction(*irWrapperFunction, irContext);
 
@@ -282,7 +284,7 @@ namespace sourcespec2ir
 
         auto srcWrapperFun = matchedWrappers.statementWrappers.at(&stmnt).get();
         auto irWrapperFun = utils::getFunctionBySrcName(
-            irModule, srcWrapperFun->name);
+            irModule, srcWrapperFun->getName());
 
         // Mark wrapper function
         if (isGhostAssign)
@@ -390,7 +392,7 @@ namespace sourcespec2ir
         const MatchedFunctionContract *parentContract)
     {
         auto srcWrapper = matchedWrappers.givenBindingWrappers.at(&binding).get();
-        auto irWrapper = utils::getFunctionBySrcName(irModule, srcWrapper->name);
+        auto irWrapper = utils::getFunctionBySrcName(irModule, srcWrapper->getName());
 
         // Add a metadata-marker to wrapper
         utils::markGhostWrapper(*irWrapper, irContext);
@@ -505,23 +507,23 @@ namespace sourcespec2ir
         const SrcWrapperFunction &srcWrapper,
         const MatchedFunctionContract *parentContr, bool includeYields)
     {
-        auto irWrapper = utils::getFunctionBySrcName(irModule, srcWrapper.name);
+        auto irWrapper = utils::getFunctionBySrcName(irModule, srcWrapper.getName());
         if (irWrapper == nullptr)
         {
             std::stringstream s;
             s << "Failed to find IR-function for wrapper with name "
-              << srcWrapper.name;
+              << srcWrapper.getName();
             throw utils::PallasException(s.str());
         }
 
         // Given args
         nodes.push_back(
-            encodeGhostVarSet(srcWrapper.givenArgs, *irWrapper, parentContr));
+            encodeGhostVarSet(srcWrapper.getGivenArgs(), *irWrapper, parentContr));
 
         // Yields args
         llvm::Metadata *yieldsNode = nullptr;
         if (includeYields)
-            yieldsNode = encodeGhostVarSet(srcWrapper.yieldsArgs, *irWrapper,
+            yieldsNode = encodeGhostVarSet(srcWrapper.getYieldsArgs(), *irWrapper,
                                            parentContr);
         else
             yieldsNode = llvm::MDTuple::get(irContext, {});
@@ -536,18 +538,28 @@ namespace sourcespec2ir
     {
         auto nameToWArg = mapDIArgsToNames(irWrapper);
         llvm::SmallVector<llvm::Metadata *> argMappingNodes;
-        for (auto *pVar : srcWrapper.argList)
+        for (auto *pVar : srcWrapper.getPVars())
         {
-            auto argName = pVar->getName().str();
-            // Find the dbgvar in wrapper that belongs to 'pVar'
-            if (!nameToWArg.contains(argName))
+            // Lookup the arg-name that corresponds to pVar
+            auto argName = srcWrapper.getArgNameForVar(*pVar);
+            if (!argName.has_value())
             {
                 std::stringstream s;
-                s << "Failed to find debug-variable for argument '" << argName
+                s << "Failed to find arg-name for debug-variable '"
+                  << pVar->getName().str()
                   << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
                 throw utils::PallasException(s.str());
             }
-            auto *wArg = nameToWArg.at(argName);
+
+            // Find the dbgvar in wrapper that belongs to 'pVar'
+            if (!nameToWArg.contains(*argName))
+            {
+                std::stringstream s;
+                s << "Failed to find debug-variable for argument '" << *argName
+                  << "' in wrapper " << utils::getSrcNameOfFunction(irWrapper);
+                throw utils::PallasException(s.str());
+            }
+            auto *wArg = nameToWArg.at(*argName);
             // Build tuple of shape {ParentDIVar, WrapperDIVar}
             argMappingNodes.push_back(
                 llvm::MDTuple::get(irContext, {pVar, wArg}));
