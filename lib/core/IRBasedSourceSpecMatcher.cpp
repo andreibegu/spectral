@@ -199,12 +199,20 @@ namespace sourcespec2ir
             if (sProg != nullptr && isArtificial(sProg))
                 continue;
 
+            if (sProg != nullptr && !isFromMainFile(*sProg))
+                continue;
+
             for (auto it = inst_begin(f), end = inst_end(f); it != end; ++it)
             {
                 auto dbgLoc = it->getDebugLoc();
                 // Skip check if no dbg-info is present
                 if (!dbgLoc)
                     continue;
+                
+                while (dbgLoc.getInlinedAt() != nullptr) {
+                    dbgLoc = dbgLoc.getInlinedAt();
+                }
+
                 const auto iLine = dbgLoc.getLine();
                 auto isDebugIntrinsic = llvm::isa<llvm::DbgVariableIntrinsic>(&*it);
                 if (iLine >= endLine && iLine < closestLine)
