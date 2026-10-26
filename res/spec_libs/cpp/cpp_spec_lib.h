@@ -47,6 +47,9 @@ namespace pallasSpec
     template<typename T>
     T _result();
 
+    template<typename T>
+    const T& _resultRef();
+
     /***************************************************
      *                Predicates                       *
      ***************************************************/

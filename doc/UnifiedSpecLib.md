@@ -602,6 +602,19 @@ declare !pallas.specLib !129 void @"pallas.result SFX"(<<T>>)
 !129 = !{!"pallas.result"}
 ```
 
+### Result reference
+To be used in the ensures-clause of a function-contract. 
+Returns a pointer to the return-value of the function. 
+The returned pointer can be assumed to be non-null.
+
+Can be used instead of the regular result-construct to e.g. avoid that destructor-calls are inseted by the compiler. 
+
+```
+declare !pallas.specLib !130 ptr @pallas.resultRef()
+
+!130 = !{!"pallas.resultRef"}
+```
+
 ### Bound variables
 Defines a reference to a bound variable. May only be used within a quantifier. 
 
