@@ -40,7 +40,8 @@ namespace sourcespec2ir
             ScOr,           // Short-circuting or
             SepConj,        // Separating conjunction
             Old,            // Old value of variable
-            Result,         // Result in fucntion contract
+            Result,         // Result in function contract
+            ResultRef,      // Reference to the result
             BoundVar,       // Bound variable of a quantifier
             Exists,         // Existential quantifier
             Forall,         // Universal quantifier
@@ -133,6 +134,8 @@ namespace sourcespec2ir
 
         virtual llvm::CallInst *transformResult(llvm::CallInst &oldCall);
 
+        virtual llvm::CallInst *transformResultRef(llvm::CallInst &oldCall);
+
         virtual llvm::CallInst *transformBoundVar(llvm::CallInst &oldCall);
 
         virtual llvm::CallInst *transformExists(llvm::CallInst &oldCall);
@@ -217,6 +220,12 @@ namespace sourcespec2ir
          * \result-construct of the given type.
          */
         llvm::Function *getUSpecResult(const IRTypeRepresentation &retRepr);
+
+        /**
+         * Returns pointer to the unified specification-function for the
+         * reference-variant of the \result-construct.
+         */
+        llvm::Function *getUSpecResultRef();
 
         /**
          * Returns pointer to the specification-function for the bound-variables
@@ -406,6 +415,8 @@ namespace sourcespec2ir
             specOld;
 
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specResult;
+
+        llvm::Function *specResultRef = nullptr;
 
         llvm::SmallVector<std::pair<IRTypeRepresentation, llvm::Function *>> specBoundVar;
 

@@ -18,7 +18,7 @@ As an example, look at `transformSepConj` un `SpecUnifier.h` and `SpecUnifier.cp
 4. Extend `transformSpecCall` to call the new transformation-functions. 
 In most cases you will only need to add the new enum-case that you added in 1. to the switch statement and call the 
 method that you added in 3.
-5. Extend the documentation of the unified specification-library. This is currently located in `res/spec_libs/UnifiedSpecLib.md`.
+5. Extend the documentation of the unified specification-library. This is currently located in [`doc/UnifiedSpecLib.md`](UnifiedSpecLib.md).
 
 ### Extend the language-specific frontend(s)
 

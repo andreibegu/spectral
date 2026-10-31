@@ -140,6 +140,23 @@ namespace sourcespec2ir
         return newCall;
     }
 
+    llvm::CallInst *SpecUnifier::transformResultRef(llvm::CallInst &oldCall)
+    {
+        if (oldCall.arg_size() != 0 || !oldCall.getType()->isPointerTy())
+        {
+            auto fName = oldCall.getCalledFunction()->getName().str();
+            throw utils::PallasException(
+                "Unexpected signature of resultRef-construct (" + fName + ").");
+        }
+        auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
+        auto newCall = llvm::CallInst::Create(getUSpecResultRef());
+
+        // Copy attributes to new call
+        applyAttrToReturn(*retRepr, newCall);
+
+        return newCall;
+    }
+
     llvm::CallInst *SpecUnifier::transformBoundVar(llvm::CallInst &oldCall)
     {
         auto retRepr = IRTypeRepresentation::getRetReprFromCall(oldCall);
@@ -499,6 +516,8 @@ namespace sourcespec2ir
             return transformOld(oldCall);
         case Result:
             return transformResult(oldCall);
+        case ResultRef:
+            return transformResultRef(oldCall);
         case BoundVar:
             return transformBoundVar(oldCall);
         case Exists:
@@ -888,6 +907,17 @@ namespace sourcespec2ir
             std::make_pair(IRTypeRepresentation(retRepr), specFun));
 
         return specFun;
+    }
+
+    llvm::Function *SpecUnifier::getUSpecResultRef()
+    {
+        if (!specResultRef)
+        {
+            specResultRef = createSpecLibFunction(
+                PALLAS_SPEC_RESULT_REF_BASE,
+                llvm::PointerType::get(*irContext, 0), {});
+        }
+        return specResultRef;
     }
 
     llvm::Function *SpecUnifier::getUSpecBoundVar(

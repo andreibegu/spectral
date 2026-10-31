@@ -39,6 +39,7 @@ namespace sourcespec2ir
         const llvm::StringMap<SpecLibElement> PREFIX_MATCH_NAME_MAP = {
             {"4_oldI", Old},
             {"7_resultI", Result},
+            {"10_resultRefI", ResultRef},
             {"3_bvI", BoundVar},
             {"7_seqNewI", SeqNew},
             {"8_seqSizeI", SeqSize},

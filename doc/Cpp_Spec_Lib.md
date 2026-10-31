@@ -31,13 +31,26 @@ _old<T>(e)
 Where ```T``` is the type of the expression.
 
 ### Return-value of a function
-Reference to the return-value of a function:
+Represents the the return-value of a function:
 ```
 _result<T>()
 ```
 
 Where ```T``` is the return-type of the function.
 Can only  be used in ensures-clauses. 
+
+### Reference to the return-value of a function
+Represents a const-reference to the return-value of a function:
+```
+_resultRef<T>()
+```
+
+Where ```T``` is the return-type of the function.
+Can only be used in ensures-clauses. 
+
+Compared to ```_result```, this can be useful when a function returns class- or 
+struct-types with a non-trivial destructor. 
+For these ```_result``` would insert a destructor-call into the specification, making the specification no longe side-effect free.
 
 ### Quantifiers
 Quantifiers are expressed by calling 
