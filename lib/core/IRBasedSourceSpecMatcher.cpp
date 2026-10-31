@@ -423,8 +423,8 @@ namespace sourcespec2ir
                 closestCall = call;
             else
             {
-                auto closestLine = closestCall->getDebugLoc().getCol();
-                auto closestCol = closestCall->getDebugLoc().getLine();
+                auto closestLine = closestCall->getDebugLoc().getLine();
+                auto closestCol = closestCall->getDebugLoc().getCol();
                 if (iLine > closestLine ||
                     (iLine == closestLine && iCol > closestCol))
                 {
