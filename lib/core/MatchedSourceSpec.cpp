@@ -111,8 +111,10 @@ namespace sourcespec2ir
                 llvm::outs() << "WARNING: Multiple bindings of given-arguments "
                              << "were matched to the same call to "
                              << utils::getSrcNameOfFunction(
-                                    *callInst->getFunction())
-                             << "\n";
+                                    *callInst->getCalledFunction())
+                             << " (" << callInst->getDebugLoc().getLine()
+                             << "::" << callInst->getDebugLoc().getCol()
+                             << ")\n";
             }
             matchedGiven.insert(callInst);
         }
@@ -127,8 +129,10 @@ namespace sourcespec2ir
                 llvm::outs() << "WARNING: Multiple bindings of yields-arguments "
                              << "were matched to the same call to "
                              << utils::getSrcNameOfFunction(
-                                    *callInst->getFunction())
-                             << "\n";
+                                    *callInst->getCalledFunction())
+                             << " (" << callInst->getDebugLoc().getLine()
+                             << "::" << callInst->getDebugLoc().getCol()
+                             << ")\n";
             }
             matchedYields.insert(callInst);
         }

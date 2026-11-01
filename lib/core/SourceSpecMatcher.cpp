@@ -110,8 +110,14 @@ namespace sourcespec2ir
                 irFunctions.push_back(irFunction);
         }
 
-        if (irFunctions.empty() && !hasMappingClause)
-            throw utils::PallasException("Failed to match contract to function.");
+        if (irFunctions.empty() && !hasMappingClause) {
+            std::stringstream s;
+            s << "Failed to match contract at "
+              << loc.asShortString(false)
+              << " to function.";
+            throw utils::PallasException(s.str());
+        }
+
 
         std::optional<WrapperSignature> sig = std::nullopt;
         if (hasSigClause)
@@ -295,7 +301,10 @@ namespace sourcespec2ir
         {
             // Should never happen, since matchLoopInvBlock should
             // throw the error.
-            throw utils::PallasException("Failed to match loop-invariant");
+            std::stringstream s;
+            s << "Failed to match loop-invariant at "
+              << loc.asShortString(false);
+            throw utils::PallasException(s.str());
         }
 
         auto loopID = llvm::dyn_cast_or_null<llvm::MDTuple>(loop->getLoopID());

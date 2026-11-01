@@ -312,8 +312,12 @@ namespace sourcespec2ir
             }
         }
 
-        if (closestLoop == nullptr)
-            throw utils::PallasException("Failed to match the loop-invariant");
+        if (closestLoop == nullptr) {
+            std::stringstream s;
+            s << "Failed to match loop-invariant at "
+              << loc.asShortString(false);
+            throw utils::PallasException(s.str());
+        }
 
         if (printMatchingInfo)
             printInvMatchingInfo(loc, closestLoopStart);
@@ -419,8 +423,8 @@ namespace sourcespec2ir
                 closestCall = call;
             else
             {
-                auto closestLine = closestCall->getDebugLoc().getCol();
-                auto closestCol = closestCall->getDebugLoc().getLine();
+                auto closestLine = closestCall->getDebugLoc().getLine();
+                auto closestCol = closestCall->getDebugLoc().getCol();
                 if (iLine > closestLine ||
                     (iLine == closestLine && iCol > closestCol))
                 {
@@ -429,9 +433,12 @@ namespace sourcespec2ir
             }
         }
 
-        if (closestCall == nullptr)
-            throw utils::PallasException(
-                "Failed to match ghost argument binding");
+        if (closestCall == nullptr) {
+            std::stringstream s;
+            s << "Failed to match ghost argument binding at "
+              << loc.asShortString(false);
+            throw utils::PallasException(s.str());
+        }
 
         if (printMatchingInfo)
             printGhostArgBindingMatchingInfo(loc, closestCall);
