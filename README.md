@@ -126,6 +126,7 @@ To build the specification-library for Swift, run `ninja BuildSwiftLib` in the b
 The library is build in `res/swift/PallasSpec/.build/debug/`.
 
 ## Licence 
-Copyright (c) 2024 - 2025 Formal Methods and Tools, University of Twente All rights reserved.
+Copyright (c) 2024 - 2026 Formal Methods and Tools, University of Twente. All rights reserved.
 
 This project is licenced under the Apache License 2.0 as described in LICENSE.txt in the root of this project.
+This project uses third-party dependencies. Check THIRD-PARTY-LICENSES.md for the licenses of the included dependencies.
