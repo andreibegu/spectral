@@ -14,8 +14,8 @@ class CheerfulClass {
     // Contract for the generated constructor
     /*@
     assumed contract for generated src CheerfulClass;
-    requires _sep(_Perm(&this->i, _write), _Perm(&this->j, _write)); 
-    ensures _sep(_Perm(&this->i, _write), _Perm(&this->j, _write));
+    requires _sep(_Perm(&this->i, _writePerm), _Perm(&this->j, _writePerm));
+    ensures _sep(_Perm(&this->i, _writePerm), _Perm(&this->j, _writePerm));
     ensures (this->i == 0) && (this->j == 2);
     @*/
 

@@ -9,7 +9,7 @@ declare DEF_BV(int);
 @*/
 
 /*@
-requires _Perm(c, _write);
+requires _Perm(c, _writePerm);
 @*/
 int foo (int a, int b, int c[]) {
     int x[4];

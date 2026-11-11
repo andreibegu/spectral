@@ -175,7 +175,7 @@ DEF_SEQ_SET(type);
  *******************************************/
 
 // Macro for write-permission
-#define _write _fracOf(1, 1)
+#define _writePerm _fracOf(1, 1)
 
 #define _inRange(lower, v, upper) _and(lower <= v , v < upper)
 

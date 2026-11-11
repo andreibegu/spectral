@@ -102,7 +102,7 @@ For this type, the following operations are available:
 
 ## Convenience-Macros:
 The following macros are available to make recurring patterns in specifications less verbose:
-- ```_write``` --> Fractional permission of ```1```
+- ```_writePerm``` --> Fractional permission of ```1```
 - ```_inRange(low, v, up)``` --> ```v``` is in the interval ```[low ; up)]```
 - ```_seqHead(s)``` --> Head-element of sequence `s`
 - ```_seqTail(s)``` --> Tail of sequence `s`

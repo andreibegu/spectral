@@ -77,7 +77,7 @@ To use sequences with content-type ```T```, a call to ```DEF_SEQ(T)``` in a decl
 
 ## Convenience-Macros:
 The following macros are available to make recurring patterns in specifications less verbose:
-- ```_write``` --> Fractional permission of ```1```
+- ```_writePerm``` --> Fractional permission of ```1```
 - ```_inRange(low, v, up)``` --> ```v``` is in the interval ```[low; up)]```
 - ```_seqHead(type, s)``` --> Head-element of sequence `s`
 - ```_seqTail(type, s)``` --> Tail of sequence `s`

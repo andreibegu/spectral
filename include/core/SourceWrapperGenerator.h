@@ -78,12 +78,12 @@ namespace sourcespec2ir
          *
          * E.g. for C a call with the following inputs
          * sig:  'hasVal(int *ptr, int val)'
-         * body: '_sep(_Perm(ptr, _write),
+         * body: '_sep(_Perm(ptr, _writePerm),
          *             *ptr == val)'
          * could be represented with the following function:
          * '
          * bool hasVal(int *ptr, int val) {
-         *      return _sep(_Perm(ptr, _write),
+         *      return _sep(_Perm(ptr, _writePerm),
          *             *ptr == val);
          * }
          * '

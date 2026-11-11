@@ -22,7 +22,7 @@ contract for external ir _ZN10SomeStructD2Ev;
 args SomeStruct* _this;
 returns void;
 requires _sep(_this != nullptr, 
-              _Perm(_this, _write));
+              _Perm(_this, _writePerm));
 @*/
 
 

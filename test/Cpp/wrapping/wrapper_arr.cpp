@@ -21,7 +21,7 @@ int bar (int a0[]) {
     loop_invariant _forall(_inRange(0, _bv<int>("i"), 42), 
                            _Perm(&a0[_bv<int>("i")], _fracOf(1, 2)));
     loop_invariant _forall(_inRange(0, _bv<int>("i"), 42), 
-                           _Perm(&a1[_bv<int>("i")], _write));
+                           _Perm(&a1[_bv<int>("i")], _writePerm));
     @*/
     for (int i = 0; i < 42; ++i) {
         a1[i] = a0[i];
@@ -32,7 +32,7 @@ int bar (int a0[]) {
     loop_invariant _forall(_inRange(0, _bv<int>("i"), 42), 
                            _Perm(&a0[_bv<int>("i")], _fracOf(1, 2)));
     loop_invariant _forall(_inRange(0, _bv<int>("i"), 42), 
-                           _Perm(&a2[_bv<int>("i")], _write));
+                           _Perm(&a2[_bv<int>("i")], _writePerm));
     @*/
     for (int i = 0; i < 42; ++i) {
         a2[i] = (double) i;

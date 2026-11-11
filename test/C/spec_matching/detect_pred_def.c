@@ -8,9 +8,9 @@ declare DEF_RESULT(int);
 @*/
 
 /*@
-predicate pZero(int *p) := _Perm(p, _write) 
+predicate pZero(int *p) := _Perm(p, _writePerm)
                             && *p == 0;
-predicate pOne(int *p) := _Perm(p, _write) && *p == 1;
+predicate pOne(int *p) := _Perm(p, _writePerm) && *p == 1;
 @*/
 
 /*@
@@ -26,4 +26,4 @@ int foo (int *a) {
     return 42;
 }
 // CHECK: Found predicate at 11::1 - 12::39
-// CHECK: Found predicate at 13::1 - 13::54
+// CHECK: Found predicate at 13::1 - 13::58

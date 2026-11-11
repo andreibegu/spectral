@@ -7,7 +7,7 @@ declare using namespace pallasSpec;
 
 /*@
 predicate arr(int *a, int n) :=  _forall(_inRange(0, _bv<int>("i"), n), 
-                                         _Perm(&a[_bv<int>("i")], _write));
+                                         _Perm(&a[_bv<int>("i")], _writePerm));
 @*/
 
-// CHECK: Found predicate at 9::1 - 10::75
+// CHECK: Found predicate at 9::1 - 10::79

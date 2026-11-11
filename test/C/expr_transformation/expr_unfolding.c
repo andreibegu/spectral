@@ -54,7 +54,7 @@ declare DEF_UNFOLDING(ARatherBigStruct);
 
 /*@
 predicate wPred(int *p) := _sep(p != NULL,
-                                _Perm(p, _write));
+                                _Perm(p, _writePerm));
 @*/
 
 /*@

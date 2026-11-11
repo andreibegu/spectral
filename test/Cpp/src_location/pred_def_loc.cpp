@@ -8,7 +8,7 @@ declare using namespace pallasSpec;
 
 /*@
 predicate pArr(int *a, int n) :=  _forall(_inRange(0, _bv<int>("i"), n), 
-                                         _Perm(&a[_bv<int>("i")], _write));
+                                         _Perm(&a[_bv<int>("i")], _writePerm));
 @*/
 
 

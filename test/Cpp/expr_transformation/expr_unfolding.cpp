@@ -21,7 +21,7 @@ class ABigClass {
 };
 
 /*@
-predicate pPtrWrite(int *a) := _sep(a != NULL, _Perm(a, _write));
+predicate pPtrWrite(int *a) := _sep(a != NULL, _Perm(a, _writePerm));
 @*/
 
 /*@

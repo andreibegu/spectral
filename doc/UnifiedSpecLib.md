@@ -262,7 +262,7 @@ This node contains a boolean flag that specifies if the predicate is an inline p
 **Source definition:**
 ```
 /*@
-predicate wPred(int *p) := _sep(p != NULL, _Perm(p, _write));
+predicate wPred(int *p) := _sep(p != NULL, _Perm(p, _writePerm));
 @*/
 ```
 

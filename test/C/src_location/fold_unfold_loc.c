@@ -2,7 +2,7 @@
 // Test that source-locations are correctly translated in fold/ unfold statements
 // RUN: %Spec2IR %s -lib %CSpecLib -lang C | %FileCheck %s
 /*@
-predicate pZero(int *p) := _Perm(p, _write) 
+predicate pZero(int *p) := _Perm(p, _writePerm)
                             && *p == 0;
 @*/
 

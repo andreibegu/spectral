@@ -13,8 +13,8 @@ class CheesyClass {
     // Contract for the generated constructor
     /*@
     transitively assumed contract for generated src CheesyClass;
-    requires _Perm(&*this, _write); 
-    ensures  _Perm(&*this, _write); 
+    requires _Perm(&*this, _writePerm);
+    ensures  _Perm(&*this, _writePerm);
     ensures this->a == 0;
     @*/
 
